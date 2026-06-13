@@ -588,7 +588,40 @@ function JobDetailPage() {
         <h2 className="text-sm font-semibold tracking-tight mb-2">{tr("Notes")}</h2>
         <p className="rounded-2xl border border-border bg-card p-3.5 text-sm leading-relaxed">{job.notes}</p>
       </section>
+
+      {/* Spacer for sticky actions */}
+      <div className="h-28" />
+
+      {/* Sticky Bottom Actions */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur px-4 py-3">
+        <div className="mx-auto max-w-md space-y-2">
+          <div className="grid grid-cols-4 gap-1.5">
+            <StickyBtn icon={<Play className="h-4 w-4" />} label={tr("Start")} />
+            <StickyBtn icon={<Pause className="h-4 w-4" />} label={tr("Pause")} />
+            <StickyBtn icon={<Camera className="h-4 w-4" />} label={tr("Photo")} />
+            <StickyBtn icon={<CheckCheck className="h-4 w-4" />} label={tr("Complete")} primary />
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            <StickyBtn icon={<CheckCircle2 className="h-3.5 w-3.5" />} label={tr("Approve")} small />
+            <StickyBtn icon={<Shuffle className="h-3.5 w-3.5" />} label={tr("Reassign")} small />
+            <StickyBtn icon={<ShieldCheck className="h-3.5 w-3.5" />} label={tr("Final Approve")} small />
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function StickyBtn({ icon, label, primary, small }: { icon: React.ReactNode; label: string; primary?: boolean; small?: boolean }) {
+  return (
+    <button
+      className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl active:scale-95 transition-transform ${
+        small ? "py-1.5 text-[10px]" : "py-2 text-[11px]"
+      } ${primary ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-foreground"}`}
+    >
+      {icon}
+      <span className="leading-none">{label}</span>
+    </button>
   );
 }
 
