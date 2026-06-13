@@ -268,7 +268,6 @@ const ZH: Dict = {
   "ETA": "预计完工",
   "Customer Walk-in": "散客",
   "Walk-in": "散客",
-  "Fleet": "车队",
   "Source": "来源",
   "Assigned Manager": "负责经理",
   "Job Status": "工单状态",
