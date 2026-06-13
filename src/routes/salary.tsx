@@ -11,7 +11,6 @@ import {
   fmtMYR,
   netSalary,
   advanceBalance,
-  type Salary,
 } from "@/lib/mock-data";
 import {
   Wallet,
