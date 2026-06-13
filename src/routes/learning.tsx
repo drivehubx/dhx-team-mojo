@@ -344,12 +344,21 @@ function DocCard({
   const isPhoto = item.source === "photo" && item.thumb;
   return (
     <Card className="p-3">
-      <div className="flex gap-3">
+      <button
+        type="button"
+        onClick={() => {
+          onView();
+          toast(tr("Opening: {a}", { a: tr(item.title) }));
+        }}
+        className="flex w-full gap-3 text-left active:opacity-90"
+      >
         {isPhoto ? (
           <img
             src={item.thumb}
             alt={item.title}
             className="h-16 w-16 shrink-0 rounded-lg object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
@@ -372,7 +381,7 @@ function DocCard({
             <SourceBadge source={item.source} />
           </div>
         </div>
-      </div>
+      </button>
       <MarkButtons viewed={viewed} learned={learned} onView={onView} onLearn={onLearn} />
     </Card>
   );
