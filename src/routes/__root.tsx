@@ -15,7 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BottomNav } from "../components/BottomNav";
 import { I18nProvider, useI18n } from "../lib/i18n-context";
 
-const PUBLIC_PATHS = new Set(["/welcome", "/auth"]);
+const PUBLIC_PATHS = new Set(["/auth"]);
 
 function NotFoundComponent() {
   return (
