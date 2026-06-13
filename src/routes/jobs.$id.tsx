@@ -392,10 +392,47 @@ function JobDetailPage() {
               style={{ width: `${hourPct}%` }}
             />
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {actualHours > estHours ? tr("Over budget") : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}
-          </p>
+          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{actualHours > estHours ? tr("Over budget") : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}</span>
+            <span>{tr("Variance")}: <span className={`font-semibold ${actualHours > estHours ? "text-[--color-warning]" : "text-foreground"}`}>{actualHours - estHours}h</span></span>
+          </div>
+          <div className="mt-3 pt-3 border-t border-border">
+            <p className="text-[11px] text-muted-foreground mb-1.5">{tr("Staff involved")}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {job.assignedIds.map((eid) => {
+                const e = getEmployee(eid);
+                return (
+                  <span key={eid} className="text-[11px] rounded-full bg-secondary px-2 py-1">{e.name}</span>
+                );
+              })}
+            </div>
+          </div>
         </div>
+      </section>
+
+      {/* Parts Tracking */}
+      <section className="px-5 mt-6">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
+          <Package className="h-4 w-4 text-primary" /> {tr("Parts Tracking")}
+        </h2>
+        <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
+          {parts.map((p) => (
+            <li key={p.name} className="flex items-center gap-3 p-3.5">
+              <span className="text-sm flex-1 truncate">{p.name}</span>
+              <span
+                className={`text-[11px] rounded-full px-2 py-0.5 font-medium ${
+                  p.status === "installed"
+                    ? "bg-[--color-success]/15 text-[--color-success]"
+                    : p.status === "waiting"
+                    ? "bg-[--color-warning]/15 text-[--color-warning]"
+                    : "bg-secondary text-muted-foreground"
+                }`}
+              >
+                {p.status === "installed" ? tr("Installed") : p.status === "waiting" ? tr("Waiting") : tr("Returned")}
+              </span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Completion */}
