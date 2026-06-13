@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
 import { currentUser, salaries, fmtMYR, netSalary, advanceBalance } from "@/lib/mock-data";
-import { Phone, IdCard, FileText, Settings, LogOut, ChevronRight, Wallet, Clock4, HandCoins } from "lucide-react";
+import { useI18n } from "@/lib/i18n-context";
+import { langMeta, UI } from "@/lib/i18n";
+import { Phone, IdCard, FileText, Settings, LogOut, ChevronRight, Wallet, Clock4, HandCoins, Languages } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
