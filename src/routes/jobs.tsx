@@ -6,6 +6,7 @@ import { jobs, getEmployee, type JobStatus, type Job } from "@/lib/mock-data";
 import { StatusBadge } from "./index";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Calendar, MapPin, FileText } from "lucide-react";
+import { useT, tStatus } from "@/lib/i18n";
 
 export const Route = createFileRoute("/jobs")({
   head: () => ({
