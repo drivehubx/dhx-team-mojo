@@ -230,7 +230,7 @@ function JobDetailPage() {
 
       {/* Team Assignment */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Team Assignment</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Team Assignment")}</h2>
         <ul className="space-y-2">
           {job.assignedIds.map((eid) => {
             const e = getEmployee(eid);
@@ -241,7 +241,7 @@ function JobDetailPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{e.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{e.role}</p>
+                  <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
                 </div>
                 <span className="text-[11px] rounded-full bg-secondary px-2 py-1 text-muted-foreground">{e.phone.slice(-4)}</span>
               </li>
@@ -251,16 +251,16 @@ function JobDetailPage() {
         <div className="mt-2.5 rounded-2xl border border-border bg-card p-3.5">
           <div className="flex items-center gap-2 mb-1.5">
             <MessageSquare className="h-3.5 w-3.5 text-primary" />
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Manager Notes</p>
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Manager Notes")}</p>
           </div>
           <p className="text-sm leading-relaxed">{managerNote}</p>
         </div>
       </section>
 
       {/* Photo Timeline */}
-      <PhotoGroup title="Before Photos" photos={beforePhotos} />
-      <PhotoGroup title="During Photos" photos={duringPhotos} />
-      <PhotoGroup title="After Photos" photos={afterPhotos} empty="Pending — job not complete" />
+      <PhotoGroup tKey="Before Photos" photos={beforePhotos} />
+      <PhotoGroup tKey="During Photos" photos={duringPhotos} />
+      <PhotoGroup tKey="After Photos" photos={afterPhotos} emptyKey="Pending — job not complete" />
 
       {/* Workshop Checklist */}
       <section className="px-5 mt-6">
