@@ -1,31 +1,46 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n-context";
-import { UI } from "@/lib/i18n";
-import { User2 } from "lucide-react";
+import { UI, LANGS, type Lang } from "@/lib/i18n";
+import { User2, Check } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — DHX Team Ops" },
+      { title: "Create Account — DHX Team Ops" },
       { name: "description", content: "Create your DHX Team Ops account." },
     ],
   }),
   component: AuthPage,
 });
 
+const roleDefaultLang: Record<"Owner" | "Manager" | "Worker", Lang> = {
+  Owner: "en",
+  Manager: "ms",
+  Worker: "id",
+};
+
 function AuthPage() {
-  const { lang, setUser } = useI18n();
-  const labels = UI[lang ?? "en"];
-  const navigate = useNavigate();
-  const [name, setName] = useState("");
+  const { lang, setUser, setLang } = useI18n();
   const [role, setRole] = useState<"Owner" | "Manager" | "Worker">("Worker");
+  const [pickedLang, setPickedLang] = useState<Lang>(lang ?? roleDefaultLang["Worker"]);
+  const [langTouched, setLangTouched] = useState(false);
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const navigate = useNavigate();
+
+  const labels = UI[pickedLang];
+
+  const onRoleChange = (r: "Owner" | "Manager" | "Worker") => {
+    setRole(r);
+    if (!langTouched) setPickedLang(roleDefaultLang[r]);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const clean = name.trim().slice(0, 60);
     if (!clean) return;
+    setLang(pickedLang);
     setUser({ name: clean, role, phone: phone.trim().slice(0, 24) || undefined });
     navigate({ to: "/" });
   };
@@ -56,7 +71,7 @@ function AuthPage() {
               <button
                 type="button"
                 key={r}
-                onClick={() => setRole(r)}
+                onClick={() => onRoleChange(r)}
                 className={`rounded-2xl border px-3 py-3 text-xs font-semibold transition-colors ${
                   role === r
                     ? "border-primary bg-primary text-primary-foreground"
@@ -66,6 +81,35 @@ function AuthPage() {
                 {labels[r.toLowerCase() as "owner" | "manager" | "worker"]}
               </button>
             ))}
+          </div>
+        </Field>
+
+        <Field label={labels.preferredLang}>
+          <div className="grid grid-cols-2 gap-2">
+            {LANGS.map((l) => {
+              const active = pickedLang === l.code;
+              return (
+                <button
+                  type="button"
+                  key={l.code}
+                  onClick={() => {
+                    setPickedLang(l.code);
+                    setLangTouched(true);
+                  }}
+                  className={`flex items-center gap-2 rounded-2xl border px-3 py-3 text-left transition-colors ${
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-foreground"
+                  }`}
+                >
+                  <span className="text-lg leading-none">{l.flag}</span>
+                  <span className="flex-1 text-[11px] font-semibold leading-tight">
+                    {l.native}
+                  </span>
+                  {active && <Check className="h-4 w-4" />}
+                </button>
+              );
+            })}
           </div>
         </Field>
 
