@@ -458,7 +458,13 @@ function JobDetailPage() {
 
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2">Notes</h2>
-        <p className="rounded-2xl border border-border bg-card p-3.5 text-sm leading-relaxed">{job.notes}</p>
+        <TranslatedText
+          as="p"
+          className="rounded-2xl border border-border bg-card p-3.5 text-sm leading-relaxed block"
+          text={job.notes}
+          showBadge
+        />
+
       </section>
     </div>
   );
