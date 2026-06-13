@@ -113,21 +113,19 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function AppGate({ children }: { children: ReactNode }) {
-  const { ready, lang, user } = useI18n();
+  const { ready, user } = useI18n();
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isPublic = PUBLIC_PATHS.has(pathname);
 
   useEffect(() => {
     if (!ready) return;
-    if (!lang && pathname !== "/welcome") {
-      router.navigate({ to: "/welcome" });
-    } else if (lang && !user && !isPublic) {
+    if (!user && !isPublic) {
       router.navigate({ to: "/auth" });
-    } else if (lang && user && pathname === "/welcome") {
+    } else if (user && (pathname === "/auth" || pathname === "/welcome")) {
       router.navigate({ to: "/" });
     }
-  }, [ready, lang, user, pathname, isPublic, router]);
+  }, [ready, user, pathname, isPublic, router]);
 
   if (!ready) return null;
   return (
