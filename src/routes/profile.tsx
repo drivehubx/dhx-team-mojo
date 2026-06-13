@@ -18,6 +18,9 @@ export const Route = createFileRoute("/profile")({
 function ProfilePage() {
   const mySalary = salaries.find((s) => s.employeeId === currentUser.id);
   const myAdvance = advanceBalance(currentUser.id);
+  const { lang } = useI18n();
+  const labels = UI[lang ?? "en"];
+  const flagInfo = lang ? langMeta(lang) : null;
 
   return (
     <div>
