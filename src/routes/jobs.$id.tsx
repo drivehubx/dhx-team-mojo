@@ -796,16 +796,19 @@ function StickyBtn({
   label,
   primary,
   onClick,
+  disabled,
 }: {
   icon: ReactNode;
   label: string;
   primary?: boolean;
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[11px] active:scale-95 transition-transform ${
+      disabled={disabled}
+      className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[11px] active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100 ${
         primary ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-foreground"
       }`}
     >
