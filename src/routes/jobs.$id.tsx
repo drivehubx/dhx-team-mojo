@@ -141,15 +141,15 @@ function JobDetailPage() {
 
       {/* Vehicle Info */}
       <section className="px-5 mt-4">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Vehicle Info</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Vehicle Info")}</h2>
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <p className="text-muted-foreground">Model</p>
+              <p className="text-muted-foreground">{tr("Model")}</p>
               <p className="mt-0.5 font-medium text-sm">{job.vehicle}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Plate Number</p>
+              <p className="text-muted-foreground">{tr("Plate Number")}</p>
               <p className="mt-0.5 font-medium text-sm">{job.plate}</p>
             </div>
             <div className="col-span-2 flex items-center gap-2.5 pt-2 border-t border-border">
@@ -157,8 +157,8 @@ function JobDetailPage() {
                 <User className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground">Customer (optional)</p>
-                <p className="text-sm font-medium truncate">{owner}</p>
+                <p className="text-[11px] text-muted-foreground">{tr("Customer (optional)")}</p>
+                <p className="text-sm font-medium truncate">{owner === "Walk-in" ? tr("Walk-in") : owner}</p>
                 <p className="text-[11px] text-muted-foreground">{ownerPhone}</p>
               </div>
             </div>
@@ -166,10 +166,10 @@ function JobDetailPage() {
 
           <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
-            Started {job.startedAt}
+            {tr("Started")} {job.startedAt}
             <span className="mx-1">·</span>
             <CalendarClock className="h-3.5 w-3.5" />
-            ETA {job.due}
+            {tr("ETA")} {job.due}
           </div>
 
           <div className="mt-3 flex items-center gap-2">
