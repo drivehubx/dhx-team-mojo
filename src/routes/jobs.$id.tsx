@@ -474,16 +474,19 @@ function CostRow({ label, value }: { label: string; value: number }) {
   );
 }
 
-function PhotoGroup({ title, photos, empty }: { title: string; photos: string[]; empty?: string }) {
+function PhotoGroup({ tKey, photos, emptyKey }: { tKey: string; photos: string[]; emptyKey?: string }) {
+  const { tr } = useT();
   return (
     <section className="px-5 mt-6">
       <div className="flex items-center justify-between mb-2.5">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        <span className="text-[11px] text-muted-foreground">{photos.length} photo{photos.length !== 1 ? "s" : ""}</span>
+        <h2 className="text-sm font-semibold tracking-tight">{tr(tKey)}</h2>
+        <span className="text-[11px] text-muted-foreground">
+          {tr(photos.length === 1 ? "{n} photo" : "{n} photos", { n: photos.length })}
+        </span>
       </div>
       {photos.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-xs text-muted-foreground">
-          {empty ?? "No photos yet"}
+          {emptyKey ? tr(emptyKey) : tr("No photos yet")}
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2">
