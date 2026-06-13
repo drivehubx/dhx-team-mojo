@@ -33,7 +33,6 @@ const stageColor: Record<Stage, string> = {
   Completed: "bg-emerald-500/15 text-emerald-300",
 };
 
-// mock per-worker stage & attendance
 const workerMeta: Record<string, { attendance: Attendance; stage: Stage; score: number; training: number }> = {
   e1: { attendance: "Present", stage: "QC", score: 95, training: 100 },
   e2: { attendance: "Present", stage: "Paint", score: 88, training: 75 },
@@ -48,7 +47,7 @@ function workerCurrentJob(empId: string) {
 }
 
 function TeamPage() {
-  const { t } = useT();
+  const { tr } = useT();
   const active = employees.filter((e) => workerMeta[e.id]?.attendance !== "Off");
   const present = employees.filter((e) => workerMeta[e.id]?.attendance === "Present").length;
   const late = employees.filter((e) => workerMeta[e.id]?.attendance === "Late").length;
@@ -65,57 +64,53 @@ function TeamPage() {
 
   return (
     <div>
-      <AppHeader title={t("page.team.title")} subtitle="Today's overview" />
+      <AppHeader title={tr("Team")} subtitle={tr("Today's overview")} />
 
       <div className="px-5 -mt-4 space-y-4">
-        {/* Today Attendance */}
         <Card className="p-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">Today Attendance</p>
-            <span className="text-xs text-muted-foreground">{employees.length} staff</span>
+            <p className="text-sm font-semibold">{tr("Today Attendance")}</p>
+            <span className="text-xs text-muted-foreground">{tr("{n} staff", { n: employees.length })}</span>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-lg bg-emerald-500/10 p-3">
               <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-400" />
               <p className="mt-1 text-lg font-semibold text-emerald-300">{present}</p>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Present</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{tr("Present")}</p>
             </div>
             <div className="rounded-lg bg-amber-500/10 p-3">
               <Clock className="mx-auto h-4 w-4 text-amber-400" />
               <p className="mt-1 text-lg font-semibold text-amber-300">{late}</p>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Late</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{tr("Late")}</p>
             </div>
             <div className="rounded-lg bg-rose-500/10 p-3">
               <XCircle className="mx-auto h-4 w-4 text-rose-400" />
               <p className="mt-1 text-lg font-semibold text-rose-300">{off}</p>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Off</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{tr("Off")}</p>
             </div>
           </div>
         </Card>
 
-        {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Current Jobs" value={currentJobs} />
-          <StatCard label="Worker Load" value={`${load}%`} />
-          <StatCard label="Team Score" value={teamScore} />
+          <StatCard label={tr("Current Jobs")} value={currentJobs} />
+          <StatCard label={tr("Worker Load")} value={`${load}%`} />
+          <StatCard label={tr("Team Score")} value={teamScore} />
         </div>
 
-        {/* Training */}
         <Card className="p-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">Training Progress</p>
+            <p className="text-sm font-semibold">{tr("Training Progress")}</p>
             <span className="text-xs font-medium text-primary">{training}%</span>
           </div>
           <Progress value={training} className="mt-3" />
           <p className="mt-2 text-xs text-muted-foreground">
-            Average completion across all team members.
+            {tr("Average completion across all team members.")}
           </p>
         </Card>
 
-        {/* Worker cards */}
         <div>
           <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Workers
+            {tr("Workers")}
           </p>
           <div className="space-y-3">
             {employees.map((e) => {
@@ -133,11 +128,11 @@ function TeamPage() {
                         <p className="truncate text-sm font-semibold">{e.name}</p>
                         <AttendancePill state={meta.attendance} />
                       </div>
-                      <p className="text-xs text-muted-foreground">{e.role}</p>
+                      <p className="text-xs text-muted-foreground">{tr(e.role)}</p>
 
                       <div className="mt-2 flex items-center justify-between gap-2 text-xs">
                         <div className="min-w-0">
-                          <p className="text-muted-foreground">Vehicle</p>
+                          <p className="text-muted-foreground">{tr("Vehicle")}</p>
                           <p className="truncate font-medium">
                             {job ? `${job.vehicle} · ${job.plate}` : "—"}
                           </p>
@@ -146,14 +141,14 @@ function TeamPage() {
                           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${stageColor[meta.stage]}`}
                         >
                           <Icon className="h-3 w-3" />
-                          {meta.stage}
+                          {tr(meta.stage)}
                         </div>
                       </div>
 
                       <div className="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <span>Score {meta.score}</span>
+                        <span>{tr("Score")} {meta.score}</span>
                         <span>·</span>
-                        <span>Training {meta.training}%</span>
+                        <span>{tr("Training")} {meta.training}%</span>
                       </div>
                     </div>
                   </div>
@@ -177,6 +172,7 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 }
 
 function AttendancePill({ state }: { state: Attendance }) {
+  const { tr } = useT();
   const map: Record<Attendance, string> = {
     Present: "bg-emerald-500/15 text-emerald-300",
     Late: "bg-amber-500/15 text-amber-300",
@@ -184,10 +180,9 @@ function AttendancePill({ state }: { state: Attendance }) {
   };
   return (
     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${map[state]}`}>
-      {state}
+      {tr(state)}
     </span>
   );
 }
 
-// suppress unused import warning
 void getEmployee;

@@ -16,7 +16,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { t, lang } = useT();
+  const { t, tr, lang } = useT();
   const [pickerOpen, setPickerOpen] = useState(false);
   const mySalary = salaries.find((s) => s.employeeId === currentUser.id);
   const myAdvance = advanceBalance(currentUser.id);
@@ -33,7 +33,7 @@ function ProfilePage() {
           </div>
           <div className="min-w-0">
             <p className="text-base font-semibold truncate">{currentUser.name}</p>
-            <p className="text-xs text-muted-foreground">{currentUser.role}</p>
+            <p className="text-xs text-muted-foreground">{tr(currentUser.role)}</p>
             <p className="mt-1 text-[11px] text-muted-foreground flex items-center gap-1">
               <IdCard className="h-3 w-3" /> EMP-{currentUser.id.toUpperCase()}
             </p>
@@ -54,7 +54,7 @@ function ProfilePage() {
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{t("page.profile.account")}</h2>
         <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
           <Row icon={Phone} label={t("page.profile.phone")} value={currentUser.phone} />
-          <Row icon={FileText} label={t("page.profile.documents")} value="2 files" />
+          <Row icon={FileText} label={t("page.profile.documents")} value={tr("{n} files", { n: 2 })} />
           <button onClick={() => setPickerOpen(true)} className="w-full text-left">
             <Row
               icon={Languages}

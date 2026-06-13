@@ -21,7 +21,7 @@ export const Route = createFileRoute("/jobs")({
 const filters: (JobStatus | "All")[] = ["All", "In Progress", "Pending QC", "Waiting Parts", "Completed"];
 
 function JobsPage() {
-  const { t } = useT();
+  const { t, tr } = useT();
   const [filter, setFilter] = useState<(JobStatus | "All")>("All");
   const [openJob, setOpenJob] = useState<Job | null>(null);
 
@@ -99,12 +99,12 @@ function JobsPage() {
               <div className="mt-3 flex items-center gap-2">
                 <StatusBadge status={openJob.status} />
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" /> Started {openJob.startedAt} · Due {openJob.due}
+                  <Calendar className="h-3.5 w-3.5" /> {tr("Started")} {openJob.startedAt} · {tr("Due")} {openJob.due}
                 </span>
               </div>
 
               <div className="mt-4">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Progress</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">{tr("Progress")}</p>
                 <div className="flex items-center gap-2">
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
                     <div className="h-full bg-primary" style={{ width: `${openJob.progress}%` }} />
@@ -114,7 +114,7 @@ function JobsPage() {
               </div>
 
               <div className="mt-5">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Photos</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">{tr("Photos")}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {openJob.photos.map((src, i) => (
                     <img key={i} src={src} alt="" className="aspect-square w-full rounded-xl object-cover bg-secondary" loading="lazy" />
@@ -123,7 +123,7 @@ function JobsPage() {
               </div>
 
               <div className="mt-5">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Assigned staff</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">{tr("Assigned staff")}</p>
                 <ul className="space-y-2">
                   {openJob.assignedIds.map((id) => {
                     const e = getEmployee(id);
@@ -134,7 +134,7 @@ function JobsPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{e.name}</p>
-                          <p className="text-[11px] text-muted-foreground">{e.role}</p>
+                          <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
                         </div>
                       </li>
                     );
@@ -144,7 +144,7 @@ function JobsPage() {
 
               <div className="mt-5 mb-2">
                 <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5" /> Notes
+                  <FileText className="h-3.5 w-3.5" /> {tr("Notes")}
                 </p>
                 <p className="text-sm text-foreground rounded-xl bg-secondary p-3 leading-relaxed">{openJob.notes}</p>
               </div>

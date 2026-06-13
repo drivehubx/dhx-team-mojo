@@ -24,6 +24,7 @@ import {
   type SkillCategory,
 } from "@/lib/mock-data";
 import { StatusBadge } from "./index";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/jobs/$id")({
   head: ({ params }) => ({
@@ -33,10 +34,13 @@ export const Route = createFileRoute("/jobs/$id")({
     ],
   }),
   component: JobDetailPage,
-  notFoundComponent: () => (
-    <div className="p-8 text-center text-sm text-muted-foreground">Job not found.</div>
-  ),
+  notFoundComponent: () => <NotFound />,
 });
+
+function NotFound() {
+  const { tr } = useT();
+  return <div className="p-8 text-center text-sm text-muted-foreground">{tr("Job not found.")}</div>;
+}
 
 type Stage = "Received" | "Panel" | "Paint" | "QC" | "Ready";
 const WORKFLOW: Stage[] = ["Received", "Panel", "Paint", "QC", "Ready"];
@@ -54,10 +58,10 @@ function currentStep(job: Job): number {
 function checklistFor(job: Job) {
   const step = currentStep(job);
   return [
-    { label: "Panel", done: step >= 1 },
-    { label: "Paint", done: step >= 2 },
-    { label: "Parts", done: job.status !== "Waiting Parts" && step >= 2 },
-    { label: "QC", done: step >= 4 },
+    { key: "Panel", done: step >= 1 },
+    { key: "Paint", done: step >= 2 },
+    { key: "Parts", done: job.status !== "Waiting Parts" && step >= 2 },
+    { key: "QC", done: step >= 4 },
   ];
 }
 
@@ -70,6 +74,7 @@ function jobSkillFocus(job: Job): SkillCategory {
 }
 
 function JobDetailPage() {
+  const { tr } = useT();
   const { id } = Route.useParams();
   const job = jobs.find((j) => j.id === id);
   if (!job) throw notFound();
@@ -262,17 +267,17 @@ function JobDetailPage() {
 
       {/* Workshop Checklist */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Workshop Checklist</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Workshop Checklist")}</h2>
         <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
           {checklist.map((c) => (
-            <li key={c.label} className="flex items-center gap-3 p-3.5">
+            <li key={c.key} className="flex items-center gap-3 p-3.5">
               {c.done ? (
                 <CheckCircle2 className="h-5 w-5 text-[--color-success]" />
               ) : (
                 <Circle className="h-5 w-5 text-muted-foreground/50" />
               )}
-              <span className={`text-sm ${c.done ? "font-medium" : "text-muted-foreground"}`}>{c.label}</span>
-              <span className="ml-auto text-[11px] text-muted-foreground">{c.done ? "Done" : "Pending"}</span>
+              <span className={`text-sm ${c.done ? "font-medium" : "text-muted-foreground"}`}>{tr(c.key === "Parts" ? "Parts" : c.key)}</span>
+              <span className="ml-auto text-[11px] text-muted-foreground">{c.done ? tr("Done") : tr("Pending")}</span>
             </li>
           ))}
         </ul>

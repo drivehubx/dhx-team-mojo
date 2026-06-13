@@ -38,19 +38,19 @@ function KpiCard({
 }
 
 function Dashboard() {
-  const { t } = useT();
+  const { t, tr } = useT();
   const todayJobs = jobs.filter((j) => j.status !== "Completed").slice(0, 3);
 
   const activity = [
-    { icon: CheckCircle2, color: "text-[--color-success]", text: "PNG 2210 marked Completed", time: "1h ago" },
-    { icon: HandCoins, color: "text-[--color-warning]", text: "Rizal requested RM250 advance", time: "3h ago" },
-    { icon: Wallet, color: "text-primary", text: "Suresh's salary paid for May", time: "Yesterday" },
-    { icon: AlertCircle, color: "text-destructive", text: "JKL 4421 waiting for parts", time: "2d ago" },
+    { icon: CheckCircle2, color: "text-[--color-success]", text: tr("PNG 2210 marked Completed"), time: tr("1h ago") },
+    { icon: HandCoins, color: "text-[--color-warning]", text: tr("Rizal requested RM250 advance"), time: tr("3h ago") },
+    { icon: Wallet, color: "text-primary", text: tr("Suresh's salary paid for May"), time: tr("Yesterday") },
+    { icon: AlertCircle, color: "text-destructive", text: tr("JKL 4421 waiting for parts"), time: tr("2d ago") },
   ];
 
   return (
     <div>
-      <AppHeader title={`${t("page.dashboard.greet")}, ${currentUser.name.split(" ")[0]}`} subtitle={currentUser.role} />
+      <AppHeader title={`${t("page.dashboard.greet")}, ${currentUser.name.split(" ")[0]}`} subtitle={tr(currentUser.role)} />
 
       <div className="px-5 -mt-4">
         <div className="grid grid-cols-2 gap-3">
