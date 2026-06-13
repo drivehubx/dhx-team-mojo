@@ -292,9 +292,17 @@ function VideoCard({
   const { tr } = useT();
   return (
     <Card className="overflow-hidden">
-      <div className="relative aspect-video bg-muted">
+      <button
+        type="button"
+        onClick={() => {
+          onView();
+          toast(tr("Opening: {a}", { a: tr(item.title) }));
+        }}
+        className="relative block aspect-video w-full bg-muted active:opacity-90"
+        aria-label={tr("Play")}
+      >
         {item.thumb && (
-          <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" />
+          <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
         )}
         <div className="absolute inset-0 grid place-items-center bg-black/30">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-primary">
@@ -306,7 +314,7 @@ function VideoCard({
             {item.duration}
           </span>
         )}
-      </div>
+      </button>
       <div className="p-3">
         <p className="text-sm font-semibold leading-snug">{tr(item.title)}</p>
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
