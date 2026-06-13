@@ -813,9 +813,22 @@ function CollapsibleSection({
   );
 }
 
-function StickyBtn({ icon, label, primary, small }: { icon: ReactNode; label: string; primary?: boolean; small?: boolean }) {
+function StickyBtn({
+  icon,
+  label,
+  primary,
+  small,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  primary?: boolean;
+  small?: boolean;
+  onClick?: () => void;
+}) {
   return (
     <button
+      onClick={onClick}
       className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl active:scale-95 transition-transform ${
         small ? "py-1.5 text-[10px]" : "py-2 text-[11px]"
       } ${primary ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-foreground"}`}
