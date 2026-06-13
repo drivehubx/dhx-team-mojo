@@ -13,6 +13,16 @@ import {
   GraduationCap,
   History,
   MessageSquare,
+  Play,
+  Pause,
+  Camera,
+  CheckCheck,
+  UserPlus,
+  Shuffle,
+  ShieldCheck,
+  AlertTriangle,
+  Package,
+  Undo2,
 } from "lucide-react";
 import {
   jobs,
