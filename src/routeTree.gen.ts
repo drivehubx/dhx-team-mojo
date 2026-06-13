@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamRouteImport } from './routes/team'
+import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as SalaryRouteImport } from './routes/salary'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LearningRouteImport } from './routes/learning'
@@ -21,6 +22,11 @@ import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 const TeamRoute = TeamRouteImport.update({
   id: '/team',
   path: '/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SkillsRoute = SkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SalaryRoute = SalaryRouteImport.update({
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/learning'
     | '/profile'
     | '/salary'
+    | '/skills'
     | '/team'
     | '/jobs/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/learning'
     | '/profile'
     | '/salary'
+    | '/skills'
     | '/team'
     | '/jobs/$id'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/learning'
     | '/profile'
     | '/salary'
+    | '/skills'
     | '/team'
     | '/jobs/$id'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   LearningRoute: typeof LearningRoute
   ProfileRoute: typeof ProfileRoute
   SalaryRoute: typeof SalaryRoute
+  SkillsRoute: typeof SkillsRoute
   TeamRoute: typeof TeamRoute
 }
 
@@ -140,6 +153,13 @@ declare module '@tanstack/react-router' {
       path: '/team'
       fullPath: '/team'
       preLoaderRoute: typeof TeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/skills': {
+      id: '/skills'
+      path: '/skills'
+      fullPath: '/skills'
+      preLoaderRoute: typeof SkillsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/salary': {
@@ -211,8 +231,19 @@ const rootRouteChildren: RootRouteChildren = {
   LearningRoute: LearningRoute,
   ProfileRoute: ProfileRoute,
   SalaryRoute: SalaryRoute,
+  SkillsRoute: SkillsRoute,
   TeamRoute: TeamRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
