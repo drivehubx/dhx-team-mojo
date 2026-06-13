@@ -304,13 +304,13 @@ function SkillsPage() {
                   <div className="min-w-0">
                     <p className="text-sm font-semibold">{emp.name}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {r.category}: {r.currentLevel} → {r.requestedLevel} · {r.date}
+                      {tr(r.category)}: {r.currentLevel} → {r.requestedLevel} · {r.date}
                     </p>
                   </div>
                   <StatusPill status={r.status} />
                 </div>
                 <p className="mt-2 rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
-                  "{r.reason}"
+                  "{tr(r.reason)}"
                 </p>
                 {canAct && (
                   <div className="mt-2 flex gap-2">
