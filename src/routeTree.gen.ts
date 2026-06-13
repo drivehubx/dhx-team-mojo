@@ -9,8 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SalaryRouteImport } from './routes/salary'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as JobsRouteImport } from './routes/jobs'
+import { Route as AdvanceRouteImport } from './routes/advance'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SalaryRoute = SalaryRouteImport.update({
+  id: '/salary',
+  path: '/salary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsRoute = JobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdvanceRoute = AdvanceRouteImport.update({
+  id: '/advance',
+  path: '/advance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +43,72 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/advance': typeof AdvanceRoute
+  '/jobs': typeof JobsRoute
+  '/profile': typeof ProfileRoute
+  '/salary': typeof SalaryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/advance': typeof AdvanceRoute
+  '/jobs': typeof JobsRoute
+  '/profile': typeof ProfileRoute
+  '/salary': typeof SalaryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/advance': typeof AdvanceRoute
+  '/jobs': typeof JobsRoute
+  '/profile': typeof ProfileRoute
+  '/salary': typeof SalaryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/advance' | '/jobs' | '/profile' | '/salary'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/advance' | '/jobs' | '/profile' | '/salary'
+  id: '__root__' | '/' | '/advance' | '/jobs' | '/profile' | '/salary'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdvanceRoute: typeof AdvanceRoute
+  JobsRoute: typeof JobsRoute
+  ProfileRoute: typeof ProfileRoute
+  SalaryRoute: typeof SalaryRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/salary': {
+      id: '/salary'
+      path: '/salary'
+      fullPath: '/salary'
+      preLoaderRoute: typeof SalaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs': {
+      id: '/jobs'
+      path: '/jobs'
+      fullPath: '/jobs'
+      preLoaderRoute: typeof JobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/advance': {
+      id: '/advance'
+      path: '/advance'
+      fullPath: '/advance'
+      preLoaderRoute: typeof AdvanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,7 +121,21 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdvanceRoute: AdvanceRoute,
+  JobsRoute: JobsRoute,
+  ProfileRoute: ProfileRoute,
+  SalaryRoute: SalaryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
