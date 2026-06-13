@@ -273,6 +273,45 @@ const ZH: Dict = {
   "Choose your language": "选择您的语言",
   "Select your preferred language to continue.": "请选择您的首选语言以继续。",
   "Continue": "继续",
+
+  // Skills — dynamic / mock content
+  "Completed 12 full respray jobs solo this quarter.": "本季度独立完成 12 单全车重喷。",
+  "Led QC sign-off on 8 vehicles, zero rework.": "主导 8 台车辆质检签收，零返工。",
+  "Assisted Suresh on 6 panel replacements.": "协助 Suresh 完成 6 次钣金更换。",
+  "Requested without log evidence.": "申请时未附记录证据。",
+  "Completed 10 paint jobs independently.": "独立完成 10 单喷漆工单。",
+  "Passed internal QC audit.": "通过内部质检审核。",
+  "Completed onboarding panel module.": "完成新人钣金模块培训。",
+  "Mentor sign-off on advanced colour matching.": "导师签核高级调色能力。",
+
+  "Panel Repair & Alignment Workshop": "钣金修复与校正工作坊",
+  "Spray Technique & Colour Mixing": "喷涂技巧与调色训练",
+  "Quality Control Inspection Cert": "质检员认证课程",
+  "Standard Operating Procedures Refresher": "标准作业程序复训",
+  "Onboarding & Mentorship Programme": "新人入职与带教计划",
+
+  "Panel Alignment 101": "钣金校正入门 101",
+  "Dent Pulling Basics": "钣金拉拔基础",
+  "Spray Gun Setup": "喷枪设置教学",
+  "Colour Mixing Masterclass": "调色大师课",
+  "QC Checklist Walkthrough": "质检清单演示",
+  "Workshop SOP Overview": "车间 SOP 概览",
+  "Mentorship Best Practices": "带教最佳实践",
+
+  "SOP-PNL-02 Panel Replacement": "SOP-PNL-02 钣金更换",
+  "SOP-PNT-01 Booth Prep": "SOP-PNT-01 喷漆房准备",
+  "SOP-PNT-04 Blending": "SOP-PNT-04 颜色过渡",
+  "SOP-QC-01 Final Inspection": "SOP-QC-01 终检",
+  "SOP-GEN-00 Workshop Standards": "SOP-GEN-00 车间标准",
+  "SOP-TRN-01 Onboarding": "SOP-TRN-01 新人入职",
+
+  "Shadow Suresh on next panel job": "下一单钣金工单跟随 Suresh 学习",
+  "Assist on Myvi rear quarter": "协助处理 Myvi 后侧围",
+  "Solo respray on Vios bumper": "独立完成 Vios 保险杠重喷",
+  "Shadow Hafiz on BMW bonnet": "跟随 Hafiz 学习 BMW 引擎盖喷漆",
+  "Run QC on next 3 completed jobs": "对下 3 单完成工单执行质检",
+  "Document next job using SOP template": "用 SOP 模板记录下一单工单",
+  "Mentor helper on 1 job this week": "本周指导助理完成 1 单工单",
 };
 
 const MS: Dict = {
@@ -519,6 +558,44 @@ const MS: Dict = {
   "Choose your language": "Pilih bahasa anda",
   "Select your preferred language to continue.": "Pilih bahasa pilihan untuk teruskan.",
   "Continue": "Teruskan",
+
+  "Completed 12 full respray jobs solo this quarter.": "Selesaikan 12 kerja cat semula penuh sendiri suku ini.",
+  "Led QC sign-off on 8 vehicles, zero rework.": "Mengetuai pengesahan QC untuk 8 kenderaan, tiada kerja semula.",
+  "Assisted Suresh on 6 panel replacements.": "Membantu Suresh dalam 6 penggantian panel.",
+  "Requested without log evidence.": "Permohonan tanpa bukti rekod.",
+  "Completed 10 paint jobs independently.": "Selesaikan 10 kerja cat secara sendiri.",
+  "Passed internal QC audit.": "Lulus audit QC dalaman.",
+  "Completed onboarding panel module.": "Selesaikan modul panel untuk pekerja baharu.",
+  "Mentor sign-off on advanced colour matching.": "Pengesahan mentor untuk padanan warna lanjutan.",
+
+  "Panel Repair & Alignment Workshop": "Bengkel Baik Pulih & Penjajaran Panel",
+  "Spray Technique & Colour Mixing": "Teknik Sembur & Campuran Warna",
+  "Quality Control Inspection Cert": "Sijil Pemeriksaan Kawalan Kualiti",
+  "Standard Operating Procedures Refresher": "Ulang Kaji SOP",
+  "Onboarding & Mentorship Programme": "Program Penerimaan & Mentor",
+
+  "Panel Alignment 101": "Asas Penjajaran Panel 101",
+  "Dent Pulling Basics": "Asas Tarik Lekuk",
+  "Spray Gun Setup": "Pemasangan Spray Gun",
+  "Colour Mixing Masterclass": "Kelas Mahir Campuran Warna",
+  "QC Checklist Walkthrough": "Panduan Senarai Semak QC",
+  "Workshop SOP Overview": "Tinjauan SOP Bengkel",
+  "Mentorship Best Practices": "Amalan Terbaik Mentor",
+
+  "SOP-PNL-02 Panel Replacement": "SOP-PNL-02 Penggantian Panel",
+  "SOP-PNT-01 Booth Prep": "SOP-PNT-01 Penyediaan Bilik Cat",
+  "SOP-PNT-04 Blending": "SOP-PNT-04 Padanan Warna",
+  "SOP-QC-01 Final Inspection": "SOP-QC-01 Pemeriksaan Akhir",
+  "SOP-GEN-00 Workshop Standards": "SOP-GEN-00 Standard Bengkel",
+  "SOP-TRN-01 Onboarding": "SOP-TRN-01 Penerimaan",
+
+  "Shadow Suresh on next panel job": "Ikut Suresh pada kerja panel seterusnya",
+  "Assist on Myvi rear quarter": "Bantu pada suku belakang Myvi",
+  "Solo respray on Vios bumper": "Cat semula bumper Vios secara sendiri",
+  "Shadow Hafiz on BMW bonnet": "Ikut Hafiz pada bonet BMW",
+  "Run QC on next 3 completed jobs": "Jalankan QC pada 3 kerja siap berikutnya",
+  "Document next job using SOP template": "Dokumenkan kerja seterusnya guna templat SOP",
+  "Mentor helper on 1 job this week": "Bimbing pembantu pada 1 kerja minggu ini",
 };
 
 const ID: Dict = {
@@ -765,6 +842,44 @@ const ID: Dict = {
   "Choose your language": "Pilih bahasa Anda",
   "Select your preferred language to continue.": "Pilih bahasa pilihan Anda untuk melanjutkan.",
   "Continue": "Lanjutkan",
+
+  "Completed 12 full respray jobs solo this quarter.": "Menyelesaikan 12 pekerjaan cat ulang penuh sendiri kuartal ini.",
+  "Led QC sign-off on 8 vehicles, zero rework.": "Memimpin persetujuan QC pada 8 kendaraan, tanpa pengerjaan ulang.",
+  "Assisted Suresh on 6 panel replacements.": "Membantu Suresh pada 6 penggantian panel.",
+  "Requested without log evidence.": "Pengajuan tanpa bukti catatan.",
+  "Completed 10 paint jobs independently.": "Menyelesaikan 10 pekerjaan cat secara mandiri.",
+  "Passed internal QC audit.": "Lulus audit QC internal.",
+  "Completed onboarding panel module.": "Menyelesaikan modul panel orientasi.",
+  "Mentor sign-off on advanced colour matching.": "Persetujuan mentor untuk pencocokan warna lanjutan.",
+
+  "Panel Repair & Alignment Workshop": "Workshop Perbaikan & Penyetelan Panel",
+  "Spray Technique & Colour Mixing": "Teknik Semprot & Pencampuran Warna",
+  "Quality Control Inspection Cert": "Sertifikasi Pemeriksaan QC",
+  "Standard Operating Procedures Refresher": "Penyegaran SOP",
+  "Onboarding & Mentorship Programme": "Program Orientasi & Mentor",
+
+  "Panel Alignment 101": "Dasar Penyetelan Panel 101",
+  "Dent Pulling Basics": "Dasar Tarik Penyok",
+  "Spray Gun Setup": "Setting Spray Gun",
+  "Colour Mixing Masterclass": "Masterclass Pencampuran Warna",
+  "QC Checklist Walkthrough": "Panduan Daftar QC",
+  "Workshop SOP Overview": "Ringkasan SOP Bengkel",
+  "Mentorship Best Practices": "Praktik Terbaik Mentor",
+
+  "SOP-PNL-02 Panel Replacement": "SOP-PNL-02 Penggantian Panel",
+  "SOP-PNT-01 Booth Prep": "SOP-PNT-01 Persiapan Ruang Cat",
+  "SOP-PNT-04 Blending": "SOP-PNT-04 Penyatuan Warna",
+  "SOP-QC-01 Final Inspection": "SOP-QC-01 Pemeriksaan Akhir",
+  "SOP-GEN-00 Workshop Standards": "SOP-GEN-00 Standar Bengkel",
+  "SOP-TRN-01 Onboarding": "SOP-TRN-01 Orientasi",
+
+  "Shadow Suresh on next panel job": "Dampingi Suresh pada pekerjaan panel berikutnya",
+  "Assist on Myvi rear quarter": "Bantu pada bagian belakang Myvi",
+  "Solo respray on Vios bumper": "Cat ulang bumper Vios secara mandiri",
+  "Shadow Hafiz on BMW bonnet": "Dampingi Hafiz pada kap BMW",
+  "Run QC on next 3 completed jobs": "Jalankan QC pada 3 pekerjaan selesai berikutnya",
+  "Document next job using SOP template": "Dokumentasikan pekerjaan berikutnya pakai templat SOP",
+  "Mentor helper on 1 job this week": "Bimbing asisten pada 1 pekerjaan minggu ini",
 };
 
 const dicts: Record<Lang, Dict> = { en: {}, zh: ZH, ms: MS, id: ID };

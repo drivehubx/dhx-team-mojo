@@ -513,7 +513,7 @@ function SkillsPage() {
                             <span className="text-[10px] text-muted-foreground">{h.date}</span>
                           </div>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            {tr(h.reason)} · {tr("by {a}", { a: h.approvedBy })}
+                            {tr(h.reason)} · {tr("by {a}", { a: tr(h.approvedBy) })}
                           </p>
                         </div>
                       ))}
