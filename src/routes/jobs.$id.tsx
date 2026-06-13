@@ -102,7 +102,7 @@ function JobDetailPage() {
   if (!job) throw notFound();
 
   const [workState, setWorkState] = useState<WorkState>(initialWorkState(job));
-  const [role, setRole] = useState<RoleView>("Owner");
+  const [role, setRole] = useState<RoleView>("Worker");
   const [showTimeline, setShowTimeline] = useState(false);
   const [showLearning, setShowLearning] = useState(false);
   const [showPhotos, setShowPhotos] = useState(false);
@@ -688,12 +688,11 @@ function StickyActions({
     const isWorking = state === "Working";
     const isCompleted = state === "Completed";
     const canStart = state === "Received" || state === "Paused";
-    const playLabel = state === "Paused" ? tr("Resume") : tr("Start");
     return (
       <div className="grid grid-cols-4 gap-1.5">
         <StickyBtn
           icon={<Play className="h-4 w-4" />}
-          label={playLabel}
+          label={tr("Play")}
           primary={canStart}
           disabled={!canStart}
           onClick={() => onStateChange("Working")}
