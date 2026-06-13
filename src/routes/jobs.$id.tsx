@@ -685,31 +685,38 @@ function StickyActions({
   const { tr } = useT();
 
   if (role === "Worker") {
-    if (state === "Received") {
-      return (
-        <div className="grid grid-cols-1 gap-1.5">
-          <StickyBtn icon={<Play className="h-4 w-4" />} label={tr("Start")} primary onClick={() => onStateChange("Working")} />
-        </div>
-      );
-    }
-    if (state === "Working") {
-      return (
-        <div className="grid grid-cols-3 gap-1.5">
-          <StickyBtn icon={<Pause className="h-4 w-4" />} label={tr("Pause")} onClick={() => onStateChange("Paused")} />
-          <StickyBtn icon={<Camera className="h-4 w-4" />} label={tr("Upload Photo")} />
-          <StickyBtn icon={<CheckCheck className="h-4 w-4" />} label={tr("Complete Stage")} primary onClick={() => onStateChange("Completed")} />
-        </div>
-      );
-    }
-    if (state === "Paused") {
-      return (
-        <div className="grid grid-cols-1 gap-1.5">
-          <StickyBtn icon={<Play className="h-4 w-4" />} label={tr("Resume")} primary onClick={() => onStateChange("Working")} />
-        </div>
-      );
-    }
+    const isWorking = state === "Working";
+    const isCompleted = state === "Completed";
+    const canStart = state === "Received" || state === "Paused";
+    const playLabel = state === "Paused" ? tr("Resume") : tr("Start");
     return (
-      <p className="text-center text-[11px] text-muted-foreground py-2">{tr("View only — job completed")}</p>
+      <div className="grid grid-cols-4 gap-1.5">
+        <StickyBtn
+          icon={<Play className="h-4 w-4" />}
+          label={playLabel}
+          primary={canStart}
+          disabled={!canStart}
+          onClick={() => onStateChange("Working")}
+        />
+        <StickyBtn
+          icon={<Pause className="h-4 w-4" />}
+          label={tr("Pause")}
+          disabled={!isWorking}
+          onClick={() => onStateChange("Paused")}
+        />
+        <StickyBtn
+          icon={<Camera className="h-4 w-4" />}
+          label={tr("Photo")}
+          disabled={isCompleted}
+        />
+        <StickyBtn
+          icon={<CheckCheck className="h-4 w-4" />}
+          label={tr("Complete")}
+          primary={isWorking}
+          disabled={!isWorking}
+          onClick={() => onStateChange("Completed")}
+        />
+      </div>
     );
   }
 
@@ -789,16 +796,19 @@ function StickyBtn({
   label,
   primary,
   onClick,
+  disabled,
 }: {
   icon: ReactNode;
   label: string;
   primary?: boolean;
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[11px] active:scale-95 transition-transform ${
+      disabled={disabled}
+      className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[11px] active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100 ${
         primary ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-foreground"
       }`}
     >
