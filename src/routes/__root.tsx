@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BottomNav } from "../components/BottomNav";
+import { LanguageProvider } from "../lib/i18n";
 
 function NotFoundComponent() {
   return (
@@ -119,10 +120,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-24">
-        <Outlet />
-      </div>
-      <BottomNav />
+      <LanguageProvider>
+        <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-24">
+          <Outlet />
+        </div>
+        <BottomNav />
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

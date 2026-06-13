@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,7 @@ const sops: Item[] = [
 ];
 
 function LearningPage() {
+  const { t } = useT();
   const [viewed, setViewed] = useState<Record<string, boolean>>({ v2: true });
   const [learned, setLearned] = useState<Record<string, boolean>>({ s1: true });
 
@@ -117,7 +119,7 @@ function LearningPage() {
 
   return (
     <div>
-      <AppHeader title="Learning" subtitle="Train, learn, level up" />
+      <AppHeader title={t("page.learning.title")} subtitle="Train, learn, level up" />
 
       <div className="px-5 -mt-4 space-y-4">
         <Card className="p-4">

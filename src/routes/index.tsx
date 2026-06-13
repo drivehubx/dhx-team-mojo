@@ -3,6 +3,7 @@ import { Users, Wrench, Wallet, HandCoins, ArrowRight, CheckCircle2, Clock, Aler
 import { AppHeader } from "@/components/AppHeader";
 import { AvatarStack } from "@/components/Avatar";
 import { currentUser, jobs, totals, fmtMYR, getEmployee } from "@/lib/mock-data";
+import { useT, tStatus } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,6 +38,7 @@ function KpiCard({
 }
 
 function Dashboard() {
+  const { t } = useT();
   const todayJobs = jobs.filter((j) => j.status !== "Completed").slice(0, 3);
 
   const activity = [
@@ -48,22 +50,22 @@ function Dashboard() {
 
   return (
     <div>
-      <AppHeader title={`Hi, ${currentUser.name.split(" ")[0]}`} subtitle={currentUser.role} />
+      <AppHeader title={`${t("page.dashboard.greet")}, ${currentUser.name.split(" ")[0]}`} subtitle={currentUser.role} />
 
       <div className="px-5 -mt-4">
         <div className="grid grid-cols-2 gap-3">
-          <KpiCard label="Active Workers" value={String(totals.activeWorkers)} icon={Users} accent="bg-primary/10 text-primary" />
-          <KpiCard label="Today's Jobs" value={String(totals.todayJobs)} icon={Wrench} accent="bg-[--color-warning]/15 text-[--color-warning]" />
-          <KpiCard label="Outstanding Salary" value={fmtMYR(totals.outstandingSalary)} icon={Wallet} accent="bg-[--color-success]/15 text-[--color-success]" />
-          <KpiCard label="Employee Advances" value={fmtMYR(totals.totalAdvances)} icon={HandCoins} accent="bg-destructive/10 text-destructive" />
+          <KpiCard label={t("page.dashboard.activeWorkers")} value={String(totals.activeWorkers)} icon={Users} accent="bg-primary/10 text-primary" />
+          <KpiCard label={t("page.dashboard.todayJobsKpi")} value={String(totals.todayJobs)} icon={Wrench} accent="bg-[--color-warning]/15 text-[--color-warning]" />
+          <KpiCard label={t("page.dashboard.outstandingSalary")} value={fmtMYR(totals.outstandingSalary)} icon={Wallet} accent="bg-[--color-success]/15 text-[--color-success]" />
+          <KpiCard label={t("page.dashboard.employeeAdvances")} value={fmtMYR(totals.totalAdvances)} icon={HandCoins} accent="bg-destructive/10 text-destructive" />
         </div>
       </div>
 
       <section className="mt-6 px-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold tracking-tight">Today's jobs</h2>
+          <h2 className="text-base font-semibold tracking-tight">{t("page.dashboard.todayJobs")}</h2>
           <Link to="/jobs" className="flex items-center gap-1 text-xs font-medium text-primary">
-            View all <ArrowRight className="h-3.5 w-3.5" />
+            {t("common.viewAll")} <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
@@ -94,7 +96,7 @@ function Dashboard() {
       </section>
 
       <section className="mt-6 px-5">
-        <h2 className="text-base font-semibold tracking-tight">Recent activity</h2>
+        <h2 className="text-base font-semibold tracking-tight">{t("page.dashboard.recent")}</h2>
         <ul className="mt-3 space-y-1 rounded-2xl border border-border bg-card divide-y divide-border">
           {activity.map((a, i) => (
             <li key={i} className="flex items-center gap-3 p-3.5">
@@ -116,6 +118,7 @@ function Dashboard() {
 }
 
 export function StatusBadge({ status }: { status: string }) {
+  const { t } = useT();
   const map: Record<string, string> = {
     "In Progress": "bg-primary/10 text-primary",
     "Pending QC": "bg-[--color-warning]/15 text-[--color-warning]",
@@ -124,7 +127,7 @@ export function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${map[status] ?? "bg-secondary text-secondary-foreground"}`}>
-      {status}
+      {tStatus(t, status)}
     </span>
   );
 }
