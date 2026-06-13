@@ -416,26 +416,26 @@ function JobDetailPage() {
       {/* Job Timeline */}
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
-          <History className="h-4 w-4 text-primary" /> Job Timeline
+          <History className="h-4 w-4 text-primary" /> {tr("Job Timeline")}
         </h2>
         <ol className="rounded-2xl border border-border bg-card p-4">
-          {timeline.map((t, i) => (
-            <li key={t.label} className="flex gap-3 last:pb-0 pb-3.5">
+          {timeline.map((tl, i) => (
+            <li key={tl.key} className="flex gap-3 last:pb-0 pb-3.5">
               <div className="flex flex-col items-center">
                 <div
                   className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-semibold ${
-                    t.done ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                    tl.done ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
                   }`}
                 >
-                  {t.done ? "✓" : i + 1}
+                  {tl.done ? "✓" : i + 1}
                 </div>
                 {i < timeline.length - 1 && (
-                  <div className={`w-px flex-1 mt-1 ${t.done ? "bg-primary/40" : "bg-border"}`} style={{ minHeight: 14 }} />
+                  <div className={`w-px flex-1 mt-1 ${tl.done ? "bg-primary/40" : "bg-border"}`} style={{ minHeight: 14 }} />
                 )}
               </div>
               <div>
-                <p className={`text-sm ${t.done ? "font-medium" : "text-muted-foreground"}`}>{t.label}</p>
-                <p className="text-[11px] text-muted-foreground">{t.date}</p>
+                <p className={`text-sm ${tl.done ? "font-medium" : "text-muted-foreground"}`}>{tr(tl.key)}</p>
+                <p className="text-[11px] text-muted-foreground">{tl.date}</p>
               </div>
             </li>
           ))}
