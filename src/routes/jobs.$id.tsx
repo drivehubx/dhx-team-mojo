@@ -443,22 +443,22 @@ function JobDetailPage() {
       {/* Cost tracking (optional) */}
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
-          <Wallet className="h-4 w-4 text-primary" /> Cost tracking
+          <Wallet className="h-4 w-4 text-primary" /> {tr("Cost tracking")}
         </h2>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2.5">
-          <CostRow label="Parts" value={costs.parts} />
-          <CostRow label="Labour" value={costs.labour} />
-          <CostRow label="Paint & Materials" value={costs.paint} />
+          <CostRow label={tr("Parts")} value={costs.parts} />
+          <CostRow label={tr("Labour")} value={costs.labour} />
+          <CostRow label={tr("Paint & Materials")} value={costs.paint} />
           <div className="pt-2.5 mt-1 border-t border-border flex items-center justify-between">
-            <span className="text-sm font-semibold">Total</span>
+            <span className="text-sm font-semibold">{tr("Total")}</span>
             <span className="text-base font-semibold tabular-nums">{fmtMYR(totalCost)}</span>
           </div>
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">Estimated — not yet invoiced.</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">{tr("Estimated — not yet invoiced.")}</p>
       </section>
 
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2">Notes</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2">{tr("Notes")}</h2>
         <p className="rounded-2xl border border-border bg-card p-3.5 text-sm leading-relaxed">{job.notes}</p>
       </section>
     </div>
