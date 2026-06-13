@@ -14,9 +14,9 @@ import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as SalaryRouteImport } from './routes/salary'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LearningRouteImport } from './routes/learning'
-import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as AdvanceRouteImport } from './routes/advance'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 
 const TeamRoute = TeamRouteImport.update({
@@ -44,11 +44,6 @@ const LearningRoute = LearningRouteImport.update({
   path: '/learning',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JobsRoute = JobsRouteImport.update({
-  id: '/jobs',
-  path: '/jobs',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdvanceRoute = AdvanceRouteImport.update({
   id: '/advance',
   path: '/advance',
@@ -59,91 +54,97 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JobsIndexRoute = JobsIndexRouteImport.update({
+  id: '/jobs/',
+  path: '/jobs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobsIdRoute = JobsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => JobsRoute,
+  id: '/jobs/$id',
+  path: '/jobs/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
-  '/jobs': typeof JobsRouteWithChildren
   '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
+  '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
-  '/jobs': typeof JobsRouteWithChildren
   '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
+  '/jobs': typeof JobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
-  '/jobs': typeof JobsRouteWithChildren
   '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
+  '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/advance'
-    | '/jobs'
     | '/learning'
     | '/profile'
     | '/salary'
     | '/skills'
     | '/team'
     | '/jobs/$id'
+    | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/advance'
-    | '/jobs'
     | '/learning'
     | '/profile'
     | '/salary'
     | '/skills'
     | '/team'
     | '/jobs/$id'
+    | '/jobs'
   id:
     | '__root__'
     | '/'
     | '/advance'
-    | '/jobs'
     | '/learning'
     | '/profile'
     | '/salary'
     | '/skills'
     | '/team'
     | '/jobs/$id'
+    | '/jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdvanceRoute: typeof AdvanceRoute
-  JobsRoute: typeof JobsRouteWithChildren
   LearningRoute: typeof LearningRoute
   ProfileRoute: typeof ProfileRoute
   SalaryRoute: typeof SalaryRoute
   SkillsRoute: typeof SkillsRoute
   TeamRoute: typeof TeamRoute
+  JobsIdRoute: typeof JobsIdRoute
+  JobsIndexRoute: typeof JobsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -183,13 +184,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearningRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/jobs': {
-      id: '/jobs'
-      path: '/jobs'
-      fullPath: '/jobs'
-      preLoaderRoute: typeof JobsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/advance': {
       id: '/advance'
       path: '/advance'
@@ -204,35 +198,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/jobs/': {
+      id: '/jobs/'
+      path: '/jobs'
+      fullPath: '/jobs/'
+      preLoaderRoute: typeof JobsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs/$id': {
       id: '/jobs/$id'
-      path: '/$id'
+      path: '/jobs/$id'
       fullPath: '/jobs/$id'
       preLoaderRoute: typeof JobsIdRouteImport
-      parentRoute: typeof JobsRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
 
-interface JobsRouteChildren {
-  JobsIdRoute: typeof JobsIdRoute
-}
-
-const JobsRouteChildren: JobsRouteChildren = {
-  JobsIdRoute: JobsIdRoute,
-}
-
-const JobsRouteWithChildren = JobsRoute._addFileChildren(JobsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdvanceRoute: AdvanceRoute,
-  JobsRoute: JobsRouteWithChildren,
   LearningRoute: LearningRoute,
   ProfileRoute: ProfileRoute,
   SalaryRoute: SalaryRoute,
   SkillsRoute: SkillsRoute,
   TeamRoute: TeamRoute,
+  JobsIdRoute: JobsIdRoute,
+  JobsIndexRoute: JobsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
