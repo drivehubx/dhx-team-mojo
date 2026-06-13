@@ -283,16 +283,16 @@ function JobDetailPage() {
       {/* Labour Tracking */}
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
-          <Clock className="h-4 w-4 text-primary" /> Labour Tracking
+          <Clock className="h-4 w-4 text-primary" /> {tr("Labour Tracking")}
         </h2>
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <p className="text-muted-foreground">Estimated Hours</p>
+              <p className="text-muted-foreground">{tr("Estimated Hours")}</p>
               <p className="mt-0.5 font-semibold text-sm tabular-nums">{estHours}h</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Actual Hours</p>
+              <p className="text-muted-foreground">{tr("Actual Hours")}</p>
               <p className="mt-0.5 font-semibold text-sm tabular-nums">{actualHours}h</p>
             </div>
           </div>
@@ -303,21 +303,21 @@ function JobDetailPage() {
             />
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            {actualHours > estHours ? "Over budget" : `${Math.max(0, estHours - actualHours)}h remaining`}
+            {actualHours > estHours ? tr("Over budget") : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}
           </p>
         </div>
       </section>
 
       {/* Completion */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Completion</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Completion")}</h2>
         <div className="grid grid-cols-2 gap-2.5">
           <div className="rounded-2xl border border-border bg-card p-3.5">
-            <p className="text-[11px] text-muted-foreground">Estimated</p>
+            <p className="text-[11px] text-muted-foreground">{tr("Estimated")}</p>
             <p className="mt-1 text-sm font-semibold">{job.due}</p>
           </div>
           <div className="rounded-2xl border border-border bg-card p-3.5">
-            <p className="text-[11px] text-muted-foreground">Actual</p>
+            <p className="text-[11px] text-muted-foreground">{tr("Actual")}</p>
             <p className="mt-1 text-sm font-semibold">{actualCompletion}</p>
           </div>
         </div>
@@ -326,31 +326,31 @@ function JobDetailPage() {
       {/* Learning Integration */}
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
-          <GraduationCap className="h-4 w-4 text-primary" /> Learning Integration
+          <GraduationCap className="h-4 w-4 text-primary" /> {tr("Learning Integration")}
         </h2>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <p className="text-[11px] text-muted-foreground">
-            Focus area for this job: <span className="font-medium text-foreground">{focus}</span>
+            {tr("Focus area for this job: ")}<span className="font-medium text-foreground">{tr(focus)}</span>
           </p>
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <PlayCircle className="h-3.5 w-3.5 text-primary" />
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Related Videos</p>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Related Videos")}</p>
             </div>
             <ul className="space-y-1">
               {suggestion.videos.map((v) => (
-                <li key={v} className="text-sm">• {v}</li>
+                <li key={v} className="text-sm">• {tr(v)}</li>
               ))}
             </ul>
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <FileText className="h-3.5 w-3.5 text-primary" />
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Related SOP</p>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Related SOP")}</p>
             </div>
             <ul className="space-y-1">
               {suggestion.sops.map((s) => (
-                <li key={s} className="text-sm">• {s}</li>
+                <li key={s} className="text-sm">• {tr(s)}</li>
               ))}
             </ul>
           </div>
@@ -359,7 +359,7 @@ function JobDetailPage() {
 
       {/* Skills Integration */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Skills Integration</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Skills Integration")}</h2>
         <ul className="space-y-2">
           {job.assignedIds.map((eid) => {
             const e = getEmployee(eid);
@@ -374,7 +374,7 @@ function JobDetailPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{e.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{e.role}</p>
+                    <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
                   </div>
                   <span
                     className={`text-[11px] rounded-full px-2 py-1 ${
@@ -383,26 +383,26 @@ function JobDetailPage() {
                         : "bg-[--color-warning]/15 text-[--color-warning]"
                     }`}
                   >
-                    {gap === 0 ? "On par" : `Gap ${gap}`}
+                    {gap === 0 ? tr("On par") : tr("Gap {n}", { n: gap })}
                   </span>
                 </div>
                 <div className="mt-2.5 grid grid-cols-3 gap-2 text-[11px]">
                   <div>
-                    <p className="text-muted-foreground">Current</p>
+                    <p className="text-muted-foreground">{tr("Current")}</p>
                     <p className="font-semibold tabular-nums text-sm">{sk.current}/5</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Required</p>
+                    <p className="text-muted-foreground">{tr("Required")}</p>
                     <p className="font-semibold tabular-nums text-sm">{sk.required}/5</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Gap</p>
+                    <p className="text-muted-foreground">{tr("Gap")}</p>
                     <p className="font-semibold tabular-nums text-sm">{gap}</p>
                   </div>
                 </div>
                 {gap > 0 && (
                   <p className="mt-2 text-[11px] text-muted-foreground">
-                    Suggested: <span className="text-foreground">{suggestion.videos[0]}</span>
+                    {tr("Suggested: ")}<span className="text-foreground">{tr(suggestion.videos[0])}</span>
                   </p>
                 )}
               </li>
