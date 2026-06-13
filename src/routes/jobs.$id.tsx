@@ -100,13 +100,13 @@ function JobDetailPage() {
   // Completion dates
   const actualCompletion = job.status === "Completed" ? job.due : "—";
 
-  // Manager notes (mock)
+  // Manager notes (mock) — written by different team members in their own language
   const managerNote =
     job.status === "Waiting Parts"
-      ? "Parts ordered — follow up with supplier daily."
+      ? "Waiting for parts. Tomorrow paint."
       : job.status === "Pending QC"
-      ? "Run final QC checklist, photograph before release."
-      : "Keep customer updated every 24h. Photograph each stage.";
+      ? "Panel completed. QC passed."
+      : "板金完成。明天喷漆。";
 
   // Job timeline
   const timeline = [
