@@ -1,8 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { currentUser, salaries, fmtMYR, netSalary, advanceBalance } from "@/lib/mock-data";
-import { Phone, IdCard, FileText, Settings, LogOut, ChevronRight, Wallet, Clock4, HandCoins, Languages } from "lucide-react";
+import {
+  Phone,
+  IdCard,
+  FileText,
+  Settings,
+  ChevronRight,
+  Wallet,
+  Clock4,
+  HandCoins,
+  Languages,
+  X,
+  Download,
+} from "lucide-react";
+import { toast } from "sonner";
 import { useT, LANGS, LanguagePicker } from "@/lib/i18n";
 
 export const Route = createFileRoute("/profile")({
@@ -15,9 +28,27 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
+const PHONE_KEY = "dhx:profile:phone";
+
 function ProfilePage() {
   const { t, tr, lang } = useT();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [phone, setPhone] = useState(currentUser.phone);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(PHONE_KEY);
+    if (stored) setPhone(stored);
+  }, []);
+
+  const savePhone = (next: string) => {
+    setPhone(next);
+    localStorage.setItem(PHONE_KEY, next);
+    setPhoneOpen(false);
+    toast.success(tr("Phone updated"));
+  };
+
   const mySalary = salaries.find((s) => s.employeeId === currentUser.id);
   const myAdvance = advanceBalance(currentUser.id);
   const activeLang = LANGS.find((l) => l.code === lang)!;
@@ -53,8 +84,12 @@ function ProfilePage() {
       <section className="mt-5 px-5">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{t("page.profile.account")}</h2>
         <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
-          <Row icon={Phone} label={t("page.profile.phone")} value={currentUser.phone} />
-          <Row icon={FileText} label={t("page.profile.documents")} value={tr("{n} files", { n: 2 })} />
+          <button onClick={() => setPhoneOpen(true)} className="w-full text-left">
+            <Row icon={Phone} label={t("page.profile.phone")} value={phone} />
+          </button>
+          <button onClick={() => setDocsOpen(true)} className="w-full text-left">
+            <Row icon={FileText} label={t("page.profile.documents")} value={tr("{n} files", { n: 2 })} />
+          </button>
           <button onClick={() => setPickerOpen(true)} className="w-full text-left">
             <Row
               icon={Languages}
@@ -62,18 +97,122 @@ function ProfilePage() {
               value={`${activeLang.flag} ${activeLang.native}`}
             />
           </button>
-          <Row icon={Settings} label={t("page.profile.settings")} value="" />
+          <Link to="/settings">
+            <Row icon={Settings} label={t("page.profile.settings")} value="" />
+          </Link>
         </ul>
       </section>
 
-      <div className="mt-6 px-5">
-        <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3.5 text-sm font-semibold text-destructive">
-          <LogOut className="h-4 w-4" /> {t("common.signOut")}
-        </button>
-        <p className="mt-4 text-center text-[11px] text-muted-foreground">{t("common.brand")} · v1.0</p>
-      </div>
+      <p className="mt-6 mb-4 text-center text-[11px] text-muted-foreground">{t("common.brand")} · v1.0</p>
 
       {pickerOpen && <LanguagePicker onClose={() => setPickerOpen(false)} />}
+      {phoneOpen && <PhoneEditor current={phone} onClose={() => setPhoneOpen(false)} onSave={savePhone} />}
+      {docsOpen && <DocsModal onClose={() => setDocsOpen(false)} />}
+    </div>
+  );
+}
+
+function PhoneEditor({
+  current,
+  onClose,
+  onSave,
+}: {
+  current: string;
+  onClose: () => void;
+  onSave: (v: string) => void;
+}) {
+  const { tr } = useT();
+  const [value, setValue] = useState(current);
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-tight">{tr("Edit Phone")}</h2>
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-secondary">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <label className="mt-4 block">
+          <span className="text-xs font-medium text-muted-foreground">{tr("Phone")}</span>
+          <input
+            type="tel"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none focus:border-primary"
+          />
+        </label>
+        <div className="mt-5 flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-semibold"
+          >
+            {tr("Cancel")}
+          </button>
+          <button
+            onClick={() => onSave(value.trim())}
+            disabled={!value.trim()}
+            className="flex-1 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
+          >
+            {tr("Save")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DocsModal({ onClose }: { onClose: () => void }) {
+  const { tr } = useT();
+  // Names of files intentionally untranslated.
+  const files = [
+    { name: "IC-Copy.pdf", size: "342 KB" },
+    { name: "Driving-License.pdf", size: "210 KB" },
+  ];
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-tight">{tr("Documents")}</h2>
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-secondary">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <ul className="mt-4 space-y-2">
+          {files.map((f) => (
+            <li
+              key={f.name}
+              className="flex items-center gap-3 rounded-2xl border border-border p-3"
+            >
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-secondary text-primary">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{f.name}</p>
+                <p className="text-[11px] text-muted-foreground">{f.size}</p>
+              </div>
+              <button
+                onClick={() => toast.info(tr("Download starting"))}
+                className="grid h-8 w-8 place-items-center rounded-full bg-secondary text-primary"
+                aria-label={tr("Download")}
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

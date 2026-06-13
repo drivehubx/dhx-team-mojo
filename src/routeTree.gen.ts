@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as SkillsRouteImport } from './routes/skills'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SalaryRouteImport } from './routes/salary'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as LearningRouteImport } from './routes/learning'
 import { Route as AdvanceRouteImport } from './routes/advance'
 import { Route as IndexRouteImport } from './routes/index'
@@ -29,6 +31,11 @@ const SkillsRoute = SkillsRouteImport.update({
   path: '/skills',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SalaryRoute = SalaryRouteImport.update({
   id: '/salary',
   path: '/salary',
@@ -37,6 +44,11 @@ const SalaryRoute = SalaryRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LearningRoute = LearningRouteImport.update({
@@ -69,8 +81,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
   '/learning': typeof LearningRoute
+  '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
@@ -80,8 +94,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
   '/learning': typeof LearningRoute
+  '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
@@ -92,8 +108,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
   '/learning': typeof LearningRoute
+  '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
@@ -105,8 +123,10 @@ export interface FileRouteTypes {
     | '/'
     | '/advance'
     | '/learning'
+    | '/login'
     | '/profile'
     | '/salary'
+    | '/settings'
     | '/skills'
     | '/team'
     | '/jobs/$id'
@@ -116,8 +136,10 @@ export interface FileRouteTypes {
     | '/'
     | '/advance'
     | '/learning'
+    | '/login'
     | '/profile'
     | '/salary'
+    | '/settings'
     | '/skills'
     | '/team'
     | '/jobs/$id'
@@ -127,8 +149,10 @@ export interface FileRouteTypes {
     | '/'
     | '/advance'
     | '/learning'
+    | '/login'
     | '/profile'
     | '/salary'
+    | '/settings'
     | '/skills'
     | '/team'
     | '/jobs/$id'
@@ -139,8 +163,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdvanceRoute: typeof AdvanceRoute
   LearningRoute: typeof LearningRoute
+  LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   SalaryRoute: typeof SalaryRoute
+  SettingsRoute: typeof SettingsRoute
   SkillsRoute: typeof SkillsRoute
   TeamRoute: typeof TeamRoute
   JobsIdRoute: typeof JobsIdRoute
@@ -163,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SkillsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/salary': {
       id: '/salary'
       path: '/salary'
@@ -175,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/learning': {
@@ -219,8 +259,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdvanceRoute: AdvanceRoute,
   LearningRoute: LearningRoute,
+  LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   SalaryRoute: SalaryRoute,
+  SettingsRoute: SettingsRoute,
   SkillsRoute: SkillsRoute,
   TeamRoute: TeamRoute,
   JobsIdRoute: JobsIdRoute,
