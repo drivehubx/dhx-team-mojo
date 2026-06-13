@@ -52,8 +52,8 @@ function NotFound() {
   return <div className="p-8 text-center text-sm text-muted-foreground">{tr("Job not found.")}</div>;
 }
 
-type Stage = "Received" | "Panel" | "Paint" | "QC" | "Ready";
-const WORKFLOW: Stage[] = ["Received", "Panel", "Paint", "QC", "Ready"];
+type Stage = "Received" | "Panel" | "Paint" | "QC" | "Ready" | "Delivered";
+const WORKFLOW: Stage[] = ["Received", "Panel", "Paint", "QC", "Ready", "Delivered"];
 
 function currentStep(job: Job): number {
   if (job.status === "Completed") return 4;
