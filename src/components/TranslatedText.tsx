@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ElementType, type MouseEvent } from "react";
 import { translate, langMeta } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n-context";
 import { Languages } from "lucide-react";
@@ -7,7 +7,7 @@ import { Languages } from "lucide-react";
  * Renders user-generated content translated to the viewer's display language.
  * - Global "Show original" toggle (in header) flips every instance to source text.
  * - Tap any item to reveal its original inline (per-item override).
- * - Do NOT wrap: plates, names, models, SOP codes, skill levels — pass those as plain strings.
+ * - Do NOT wrap: plates, names, models, SOP codes, skill levels.
  */
 export function TranslatedText({
   text,
@@ -17,7 +17,7 @@ export function TranslatedText({
 }: {
   text: string;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: ElementType;
   showBadge?: boolean;
 }) {
   const { lang, showOriginal } = useI18n();
@@ -29,10 +29,14 @@ export function TranslatedText({
   return (
     <As
       className={className}
-      onClick={didTranslate ? (e) => {
-        e.stopPropagation();
-        setReveal((r) => !r);
-      } : undefined}
+      onClick={
+        didTranslate
+          ? (e: MouseEvent) => {
+              e.stopPropagation();
+              setReveal((r) => !r);
+            }
+          : undefined
+      }
       title={didTranslate ? `${langMeta(source).flag} ${langMeta(source).label}` : undefined}
       style={didTranslate ? { cursor: "pointer" } : undefined}
     >
