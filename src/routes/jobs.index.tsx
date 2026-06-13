@@ -185,7 +185,7 @@ function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" |
           </div>
           <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${stage.chip}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${stage.dot}`} />
-            {tStatus(((k: string) => tr(k)) as any, stage.label) || tr(stage.label)}
+            {tr(stage.label)}
           </span>
         </div>
 
