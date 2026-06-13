@@ -68,6 +68,7 @@ function LevelDots({ level, max = 5 }: { level: number; max?: number }) {
 }
 
 function StatusPill({ status }: { status: AssessmentRequest["status"] }) {
+  const { tr } = useT();
   const map = {
     "Pending Manager": { cls: "bg-amber-500/15 text-amber-300", icon: Clock, label: "Manager Review" },
     "Pending Owner": { cls: "bg-blue-500/15 text-blue-300", icon: Clock, label: "Owner Approval" },
@@ -78,13 +79,13 @@ function StatusPill({ status }: { status: AssessmentRequest["status"] }) {
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
       <Icon className="h-3 w-3" />
-      {label}
+      {tr(label)}
     </span>
   );
 }
 
 function SkillsPage() {
-  const { t } = useT();
+  const { tr } = useT();
   const [role, setRole] = useState<Role>(baseRole);
   const [editMode, setEditMode] = useState(false);
   const [skills, setSkills] = useState(employeeSkills);
@@ -160,12 +161,12 @@ function SkillsPage() {
 
   return (
     <div>
-      <AppHeader title={t("page.skills.title")} subtitle="Capability, assessments & training" />
+      <AppHeader title={tr("Skills")} subtitle={tr("Capability, assessments & training")} />
 
       <div className="px-5 -mt-4 space-y-4 pb-8">
         {/* Role switcher (demo) */}
         <div className="flex items-center justify-between rounded-lg border border-border bg-card/40 p-2">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Viewing as</p>
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{tr("Viewing as")}</p>
           <div className="flex gap-1">
             {(["Owner", "Manager", "Worker"] as Role[]).map((r) => (
               <button
@@ -175,7 +176,7 @@ function SkillsPage() {
                   role === r ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                 }`}
               >
-                {r}
+                {tr(r)}
               </button>
             ))}
           </div>
@@ -184,11 +185,11 @@ function SkillsPage() {
         {/* Summary */}
         <div className="grid grid-cols-2 gap-3">
           <Card className="p-3">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Total Gaps</p>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{tr("Total Gaps")}</p>
             <p className="mt-1 text-2xl font-semibold text-rose-400">{totalGaps}</p>
           </Card>
           <Card className="p-3">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Avg Skill</p>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{tr("Avg Skill")}</p>
             <p className="mt-1 text-2xl font-semibold text-primary">
               {avgSkill}
               <span className="text-sm text-muted-foreground">/5</span>
@@ -200,7 +201,7 @@ function SkillsPage() {
         {canEdit && (
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              {editMode ? "Tap +/- for quick adjust" : "Quick adjust available (Owner)"}
+              {editMode ? tr("Tap +/- for quick adjust") : tr("Quick adjust available (Owner)")}
             </p>
             <Button
               variant={editMode ? "default" : "outline"}
@@ -208,7 +209,7 @@ function SkillsPage() {
               onClick={() => setEditMode((v) => !v)}
               className="h-7 text-xs"
             >
-              {editMode ? "Done" : "Edit"}
+              {editMode ? tr("Done") : tr("Edit")}
             </Button>
           </div>
         )}
@@ -218,14 +219,14 @@ function SkillsPage() {
           <Card className="p-3">
             {!openRequest ? (
               <Button onClick={() => setOpenRequest(true)} className="w-full h-9 text-xs">
-                <Send className="h-3.5 w-3.5" /> Request Skill Assessment
+                <Send className="h-3.5 w-3.5" /> {tr("Request Skill Assessment")}
               </Button>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs font-semibold">Request Assessment</p>
+                <p className="text-xs font-semibold">{tr("Request Assessment")}</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <p className="text-[10px] text-muted-foreground mb-1">Category</p>
+                    <p className="text-[10px] text-muted-foreground mb-1">{tr("Category")}</p>
                     <select
                       value={reqCat}
                       onChange={(e) => setReqCat(e.target.value as SkillCategory)}
@@ -238,7 +239,7 @@ function SkillsPage() {
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">
-                      Current {skills[meId][reqCat].current} → Requested
+                      {tr("Current {a} → Requested", { a: skills[meId][reqCat].current })}
                     </p>
                     <select
                       value={reqLevel || skills[meId][reqCat].current + 1}
@@ -249,21 +250,21 @@ function SkillsPage() {
                         .filter((n) => n > skills[meId][reqCat].current)
                         .map((n) => (
                           <option key={n} value={n}>
-                            Level {n}
+                            {tr("Level {n}", { n })}
                           </option>
                         ))}
                     </select>
                   </div>
                 </div>
                 <Textarea
-                  placeholder="Reason / evidence (e.g. completed 10 jobs solo)"
+                  placeholder={tr("Reason / evidence (e.g. completed 10 jobs solo)")}
                   value={reqReason}
                   onChange={(e) => setReqReason(e.target.value)}
                   className="min-h-[60px] text-xs"
                 />
                 <div className="flex gap-2">
                   <Button size="sm" className="flex-1 h-8 text-xs" onClick={submitRequest}>
-                    Submit
+                    {tr("Submit")}
                   </Button>
                   <Button
                     size="sm"
@@ -271,7 +272,7 @@ function SkillsPage() {
                     className="h-8 text-xs"
                     onClick={() => setOpenRequest(false)}
                   >
-                    Cancel
+                    {tr("Cancel")}
                   </Button>
                 </div>
               </div>
@@ -283,14 +284,14 @@ function SkillsPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Assessment Requests
+              {tr("Assessment Requests")}
             </p>
             <span className="text-[10px] text-muted-foreground">
-              Flow: Worker → Manager → Owner
+              {tr("Flow: Worker → Manager → Owner")}
             </span>
           </div>
           {requests.length === 0 && (
-            <Card className="p-4 text-center text-xs text-muted-foreground">No requests</Card>
+            <Card className="p-4 text-center text-xs text-muted-foreground">{tr("No requests")}</Card>
           )}
           {requests.map((r) => {
             const emp = getEmployee(r.employeeId);
@@ -319,7 +320,7 @@ function SkillsPage() {
                       onClick={() => advanceRequest(r.id, "approve")}
                     >
                       <CheckCircle2 className="h-3 w-3" />
-                      {canManagerAct ? "Approve → Owner" : "Final Approve"}
+                      {canManagerAct ? tr("Approve → Owner") : tr("Final Approve")}
                     </Button>
                     <Button
                       size="sm"
@@ -328,13 +329,13 @@ function SkillsPage() {
                       onClick={() => advanceRequest(r.id, "reject")}
                     >
                       <XCircle className="h-3 w-3" />
-                      Reject
+                      {tr("Reject")}
                     </Button>
                   </div>
                 )}
                 {role === "Manager" && r.status === "Pending Manager" && (
                   <Textarea
-                    placeholder="Comment (optional)"
+                    placeholder={tr("Comment (optional)")}
                     className="mt-2 min-h-[40px] text-xs"
                   />
                 )}
@@ -346,7 +347,7 @@ function SkillsPage() {
         {/* Employee skill cards */}
         <div className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Team Skills
+            {tr("Team Skills")}
           </p>
           {employees.map((emp) => {
             const s = skills[emp.id];
@@ -369,15 +370,17 @@ function SkillsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold">{emp.name}</p>
-                    <p className="text-xs text-muted-foreground">{emp.role}</p>
+                    <p className="text-xs text-muted-foreground">{tr(emp.role)}</p>
                     <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
                       <CalendarDays className="h-3 w-3" />
-                      Last assessed: {lastAssessmentDate[emp.id] ?? "—"}
+                      {lastAssessmentDate[emp.id]
+                        ? tr("Last assessed: {d}", { d: lastAssessmentDate[emp.id] })
+                        : tr("Last assessed: —")}
                     </p>
                   </div>
                   {hasGap && (
                     <span className="shrink-0 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
-                      Gap
+                      {tr("Gap")}
                     </span>
                   )}
                 </div>
@@ -391,7 +394,7 @@ function SkillsPage() {
                     return (
                       <div key={cat} className="flex items-center justify-between gap-2">
                         <div className="min-w-[60px]">
-                          <p className="text-xs font-medium">{cat}</p>
+                          <p className="text-xs font-medium">{tr(cat)}</p>
                           <span
                             className={`mt-0.5 inline-block rounded px-1 text-[9px] font-semibold ${
                               canTeach
@@ -399,17 +402,17 @@ function SkillsPage() {
                                 : "bg-amber-500/15 text-amber-300"
                             }`}
                           >
-                            {canTeach ? "Can Teach" : "Learning"}
+                            {canTeach ? tr("Can Teach") : tr("Learning")}
                           </span>
                         </div>
 
                         <div className="flex flex-1 items-center gap-3">
                           <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-[10px] text-muted-foreground">Req</span>
+                            <span className="text-[10px] text-muted-foreground">{tr("Req")}</span>
                             <span className="text-xs font-semibold">{required}</span>
                           </div>
                           <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-[10px] text-muted-foreground">Cur</span>
+                            <span className="text-[10px] text-muted-foreground">{tr("Cur")}</span>
                             <span className="text-xs font-semibold">{current}</span>
                           </div>
                           <LevelDots level={current} />
@@ -431,7 +434,7 @@ function SkillsPage() {
                           )}
                           <div className="min-w-[28px] text-right">
                             <span className={`text-xs font-semibold ${gapColor(gap)}`}>
-                              {gap === 0 ? "OK" : `-${gap}`}
+                              {gap === 0 ? tr("OK") : `-${gap}`}
                             </span>
                           </div>
                         </div>
@@ -447,7 +450,7 @@ function SkillsPage() {
                       key={`t-${c}`}
                       className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300"
                     >
-                      <GraduationCap className="h-3 w-3" /> {c}
+                      <GraduationCap className="h-3 w-3" /> {tr(c)}
                     </span>
                   ))}
                   {learning.map((c) => (
@@ -455,7 +458,7 @@ function SkillsPage() {
                       key={`l-${c}`}
                       className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300"
                     >
-                      <BookOpen className="h-3 w-3" /> {c}
+                      <BookOpen className="h-3 w-3" /> {tr(c)}
                     </span>
                   ))}
                 </div>
@@ -467,27 +470,27 @@ function SkillsPage() {
                       <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
-                          Recommended · gap in {topGap.cat}
+                          {tr("Recommended · gap in {c}", { c: tr(topGap.cat) })}
                         </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {trainingRecommendations[topGap.cat]}
+                          {tr(trainingRecommendations[topGap.cat])}
                         </p>
                       </div>
                     </div>
                     <div className="grid gap-1.5 pl-5">
                       {trainingSuggestions[topGap.cat].videos.map((v) => (
                         <p key={v} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <Video className="h-3 w-3 text-primary/70" /> {v}
+                          <Video className="h-3 w-3 text-primary/70" /> {tr(v)}
                         </p>
                       ))}
                       {trainingSuggestions[topGap.cat].sops.map((v) => (
                         <p key={v} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <FileText className="h-3 w-3 text-primary/70" /> {v}
+                          <FileText className="h-3 w-3 text-primary/70" /> {tr(v)}
                         </p>
                       ))}
                       {trainingSuggestions[topGap.cat].jobs.map((v) => (
                         <p key={v} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <Wrench className="h-3 w-3 text-primary/70" /> {v}
+                          <Wrench className="h-3 w-3 text-primary/70" /> {tr(v)}
                         </p>
                       ))}
                     </div>
@@ -498,19 +501,19 @@ function SkillsPage() {
                 {empHistory.length > 0 && (
                   <div className="mt-3 border-t border-border pt-3">
                     <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      <History className="h-3 w-3" /> Assessment History
+                      <History className="h-3 w-3" /> {tr("Assessment History")}
                     </p>
                     <div className="mt-2 space-y-1.5">
                       {empHistory.map((h) => (
                         <div key={h.id} className="rounded-md bg-muted/30 p-2">
                           <div className="flex items-center justify-between">
                             <p className="text-[11px] font-semibold">
-                              {h.category}: {h.from} → {h.to}
+                              {tr(h.category)}: {h.from} → {h.to}
                             </p>
                             <span className="text-[10px] text-muted-foreground">{h.date}</span>
                           </div>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            {h.reason} · by {h.approvedBy}
+                            {tr(h.reason)} · {tr("by {a}", { a: h.approvedBy })}
                           </p>
                         </div>
                       ))}
@@ -525,12 +528,12 @@ function SkillsPage() {
         {/* Permissions note */}
         <Card className="p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Permissions
+            {tr("Permissions")}
           </p>
           <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
-            <p><span className="font-semibold text-foreground">Owner:</span> Full edit · quick adjust · final approval</p>
-            <p><span className="font-semibold text-foreground">Manager:</span> Review requests · comment · forward to Owner</p>
-            <p><span className="font-semibold text-foreground">Worker:</span> View · request assessment</p>
+            <p><span className="font-semibold text-foreground">{tr("Owner")}:</span> {tr("Full edit · quick adjust · final approval")}</p>
+            <p><span className="font-semibold text-foreground">{tr("Manager")}:</span> {tr("Review requests · comment · forward to Owner")}</p>
+            <p><span className="font-semibold text-foreground">{tr("Worker")}:</span> {tr("View · request assessment")}</p>
           </div>
         </Card>
       </div>

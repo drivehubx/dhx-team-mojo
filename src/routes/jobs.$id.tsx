@@ -24,6 +24,7 @@ import {
   type SkillCategory,
 } from "@/lib/mock-data";
 import { StatusBadge } from "./index";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/jobs/$id")({
   head: ({ params }) => ({
@@ -33,10 +34,13 @@ export const Route = createFileRoute("/jobs/$id")({
     ],
   }),
   component: JobDetailPage,
-  notFoundComponent: () => (
-    <div className="p-8 text-center text-sm text-muted-foreground">Job not found.</div>
-  ),
+  notFoundComponent: () => <NotFound />,
 });
+
+function NotFound() {
+  const { tr } = useT();
+  return <div className="p-8 text-center text-sm text-muted-foreground">{tr("Job not found.")}</div>;
+}
 
 type Stage = "Received" | "Panel" | "Paint" | "QC" | "Ready";
 const WORKFLOW: Stage[] = ["Received", "Panel", "Paint", "QC", "Ready"];
@@ -54,10 +58,10 @@ function currentStep(job: Job): number {
 function checklistFor(job: Job) {
   const step = currentStep(job);
   return [
-    { label: "Panel", done: step >= 1 },
-    { label: "Paint", done: step >= 2 },
-    { label: "Parts", done: job.status !== "Waiting Parts" && step >= 2 },
-    { label: "QC", done: step >= 4 },
+    { key: "Panel", done: step >= 1 },
+    { key: "Paint", done: step >= 2 },
+    { key: "Parts", done: job.status !== "Waiting Parts" && step >= 2 },
+    { key: "QC", done: step >= 4 },
   ];
 }
 
@@ -70,11 +74,15 @@ function jobSkillFocus(job: Job): SkillCategory {
 }
 
 function JobDetailPage() {
+  const { tr } = useT();
   const { id } = Route.useParams();
   const job = jobs.find((j) => j.id === id);
   if (!job) throw notFound();
 
-  const owner = `Customer ${job.plate.split(" ")[1] ?? ""}`.trim() || "Walk-in";
+  const owner = (() => {
+    const part = job.plate.split(" ")[1];
+    return part ? `Customer ${part}` : "Walk-in";
+  })();
   const ownerPhone = "+60 1" + (job.id.charCodeAt(1) % 9) + " " + "234 5678";
 
   const all = job.photos;
@@ -92,28 +100,24 @@ function JobDetailPage() {
   };
   const totalCost = costs.parts + costs.labour + costs.paint;
 
-  // Labour tracking — deterministic from job
-  const estHours = 8 + (job.id.charCodeAt(1) % 5) * 4; // 8..24
+  const estHours = 8 + (job.id.charCodeAt(1) % 5) * 4;
   const actualHours = Math.round((estHours * job.progress) / 100);
   const hourPct = Math.min(100, Math.round((actualHours / estHours) * 100));
 
-  // Completion dates
   const actualCompletion = job.status === "Completed" ? job.due : "—";
 
-  // Manager notes (mock)
   const managerNote =
     job.status === "Waiting Parts"
-      ? "Parts ordered — follow up with supplier daily."
+      ? tr("Parts ordered — follow up with supplier daily.")
       : job.status === "Pending QC"
-      ? "Run final QC checklist, photograph before release."
-      : "Keep customer updated every 24h. Photograph each stage.";
+      ? tr("Run final QC checklist, photograph before release.")
+      : tr("Keep customer updated every 24h. Photograph each stage.");
 
-  // Job timeline
   const timeline = [
-    { label: "Created", date: job.startedAt, done: true },
-    { label: "Started", date: job.startedAt, done: true },
-    { label: "Updated", date: "Today", done: true },
-    { label: "Completed", date: job.status === "Completed" ? job.due : "Pending", done: job.status === "Completed" },
+    { key: "Created", date: job.startedAt, done: true },
+    { key: "Started", date: job.startedAt, done: true },
+    { key: "Updated", date: tr("Today"), done: true },
+    { key: "Completed", date: job.status === "Completed" ? job.due : tr("Pending"), done: job.status === "Completed" },
   ];
 
   // Learning + Skills integration
@@ -137,15 +141,15 @@ function JobDetailPage() {
 
       {/* Vehicle Info */}
       <section className="px-5 mt-4">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Vehicle Info</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Vehicle Info")}</h2>
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <p className="text-muted-foreground">Model</p>
+              <p className="text-muted-foreground">{tr("Model")}</p>
               <p className="mt-0.5 font-medium text-sm">{job.vehicle}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Plate Number</p>
+              <p className="text-muted-foreground">{tr("Plate Number")}</p>
               <p className="mt-0.5 font-medium text-sm">{job.plate}</p>
             </div>
             <div className="col-span-2 flex items-center gap-2.5 pt-2 border-t border-border">
@@ -153,8 +157,8 @@ function JobDetailPage() {
                 <User className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground">Customer (optional)</p>
-                <p className="text-sm font-medium truncate">{owner}</p>
+                <p className="text-[11px] text-muted-foreground">{tr("Customer (optional)")}</p>
+                <p className="text-sm font-medium truncate">{owner === "Walk-in" ? tr("Walk-in") : owner}</p>
                 <p className="text-[11px] text-muted-foreground">{ownerPhone}</p>
               </div>
             </div>
@@ -162,10 +166,10 @@ function JobDetailPage() {
 
           <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
-            Started {job.startedAt}
+            {tr("Started")} {job.startedAt}
             <span className="mx-1">·</span>
             <CalendarClock className="h-3.5 w-3.5" />
-            ETA {job.due}
+            {tr("ETA")} {job.due}
           </div>
 
           <div className="mt-3 flex items-center gap-2">
@@ -179,9 +183,8 @@ function JobDetailPage() {
 
       {/* Repair Workflow */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Repair Workflow</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Repair Workflow")}</h2>
         <div className="rounded-2xl border border-border bg-card p-4">
-          {/* Progress bar */}
           <div className="flex items-center gap-2 mb-4">
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
               <div
@@ -190,11 +193,10 @@ function JobDetailPage() {
               />
             </div>
             <span className="text-[11px] font-medium text-muted-foreground">
-              {WORKFLOW[step]}
+              {tr(WORKFLOW[step])}
             </span>
           </div>
 
-          {/* Stage pills */}
           <ol className="flex items-center justify-between gap-1">
             {WORKFLOW.map((label, i) => {
               const done = i < step;
@@ -217,7 +219,7 @@ function JobDetailPage() {
                       active ? "font-semibold text-foreground" : done ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
-                    {label}
+                    {tr(label)}
                   </span>
                 </li>
               );
@@ -228,7 +230,7 @@ function JobDetailPage() {
 
       {/* Team Assignment */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Team Assignment</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Team Assignment")}</h2>
         <ul className="space-y-2">
           {job.assignedIds.map((eid) => {
             const e = getEmployee(eid);
@@ -239,7 +241,7 @@ function JobDetailPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{e.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{e.role}</p>
+                  <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
                 </div>
                 <span className="text-[11px] rounded-full bg-secondary px-2 py-1 text-muted-foreground">{e.phone.slice(-4)}</span>
               </li>
@@ -249,30 +251,30 @@ function JobDetailPage() {
         <div className="mt-2.5 rounded-2xl border border-border bg-card p-3.5">
           <div className="flex items-center gap-2 mb-1.5">
             <MessageSquare className="h-3.5 w-3.5 text-primary" />
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Manager Notes</p>
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Manager Notes")}</p>
           </div>
           <p className="text-sm leading-relaxed">{managerNote}</p>
         </div>
       </section>
 
       {/* Photo Timeline */}
-      <PhotoGroup title="Before Photos" photos={beforePhotos} />
-      <PhotoGroup title="During Photos" photos={duringPhotos} />
-      <PhotoGroup title="After Photos" photos={afterPhotos} empty="Pending — job not complete" />
+      <PhotoGroup tKey="Before Photos" photos={beforePhotos} />
+      <PhotoGroup tKey="During Photos" photos={duringPhotos} />
+      <PhotoGroup tKey="After Photos" photos={afterPhotos} emptyKey="Pending — job not complete" />
 
       {/* Workshop Checklist */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Workshop Checklist</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Workshop Checklist")}</h2>
         <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
           {checklist.map((c) => (
-            <li key={c.label} className="flex items-center gap-3 p-3.5">
+            <li key={c.key} className="flex items-center gap-3 p-3.5">
               {c.done ? (
                 <CheckCircle2 className="h-5 w-5 text-[--color-success]" />
               ) : (
                 <Circle className="h-5 w-5 text-muted-foreground/50" />
               )}
-              <span className={`text-sm ${c.done ? "font-medium" : "text-muted-foreground"}`}>{c.label}</span>
-              <span className="ml-auto text-[11px] text-muted-foreground">{c.done ? "Done" : "Pending"}</span>
+              <span className={`text-sm ${c.done ? "font-medium" : "text-muted-foreground"}`}>{tr(c.key === "Parts" ? "Parts" : c.key)}</span>
+              <span className="ml-auto text-[11px] text-muted-foreground">{c.done ? tr("Done") : tr("Pending")}</span>
             </li>
           ))}
         </ul>
@@ -281,16 +283,16 @@ function JobDetailPage() {
       {/* Labour Tracking */}
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
-          <Clock className="h-4 w-4 text-primary" /> Labour Tracking
+          <Clock className="h-4 w-4 text-primary" /> {tr("Labour Tracking")}
         </h2>
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <p className="text-muted-foreground">Estimated Hours</p>
+              <p className="text-muted-foreground">{tr("Estimated Hours")}</p>
               <p className="mt-0.5 font-semibold text-sm tabular-nums">{estHours}h</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Actual Hours</p>
+              <p className="text-muted-foreground">{tr("Actual Hours")}</p>
               <p className="mt-0.5 font-semibold text-sm tabular-nums">{actualHours}h</p>
             </div>
           </div>
@@ -301,21 +303,21 @@ function JobDetailPage() {
             />
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            {actualHours > estHours ? "Over budget" : `${Math.max(0, estHours - actualHours)}h remaining`}
+            {actualHours > estHours ? tr("Over budget") : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}
           </p>
         </div>
       </section>
 
       {/* Completion */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Completion</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Completion")}</h2>
         <div className="grid grid-cols-2 gap-2.5">
           <div className="rounded-2xl border border-border bg-card p-3.5">
-            <p className="text-[11px] text-muted-foreground">Estimated</p>
+            <p className="text-[11px] text-muted-foreground">{tr("Estimated")}</p>
             <p className="mt-1 text-sm font-semibold">{job.due}</p>
           </div>
           <div className="rounded-2xl border border-border bg-card p-3.5">
-            <p className="text-[11px] text-muted-foreground">Actual</p>
+            <p className="text-[11px] text-muted-foreground">{tr("Actual")}</p>
             <p className="mt-1 text-sm font-semibold">{actualCompletion}</p>
           </div>
         </div>
@@ -324,31 +326,31 @@ function JobDetailPage() {
       {/* Learning Integration */}
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
-          <GraduationCap className="h-4 w-4 text-primary" /> Learning Integration
+          <GraduationCap className="h-4 w-4 text-primary" /> {tr("Learning Integration")}
         </h2>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <p className="text-[11px] text-muted-foreground">
-            Focus area for this job: <span className="font-medium text-foreground">{focus}</span>
+            {tr("Focus area for this job: ")}<span className="font-medium text-foreground">{tr(focus)}</span>
           </p>
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <PlayCircle className="h-3.5 w-3.5 text-primary" />
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Related Videos</p>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Related Videos")}</p>
             </div>
             <ul className="space-y-1">
               {suggestion.videos.map((v) => (
-                <li key={v} className="text-sm">• {v}</li>
+                <li key={v} className="text-sm">• {tr(v)}</li>
               ))}
             </ul>
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <FileText className="h-3.5 w-3.5 text-primary" />
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Related SOP</p>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Related SOP")}</p>
             </div>
             <ul className="space-y-1">
               {suggestion.sops.map((s) => (
-                <li key={s} className="text-sm">• {s}</li>
+                <li key={s} className="text-sm">• {tr(s)}</li>
               ))}
             </ul>
           </div>
@@ -357,7 +359,7 @@ function JobDetailPage() {
 
       {/* Skills Integration */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Skills Integration</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Skills Integration")}</h2>
         <ul className="space-y-2">
           {job.assignedIds.map((eid) => {
             const e = getEmployee(eid);
@@ -372,7 +374,7 @@ function JobDetailPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{e.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{e.role}</p>
+                    <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
                   </div>
                   <span
                     className={`text-[11px] rounded-full px-2 py-1 ${
@@ -381,26 +383,26 @@ function JobDetailPage() {
                         : "bg-[--color-warning]/15 text-[--color-warning]"
                     }`}
                   >
-                    {gap === 0 ? "On par" : `Gap ${gap}`}
+                    {gap === 0 ? tr("On par") : tr("Gap {n}", { n: gap })}
                   </span>
                 </div>
                 <div className="mt-2.5 grid grid-cols-3 gap-2 text-[11px]">
                   <div>
-                    <p className="text-muted-foreground">Current</p>
+                    <p className="text-muted-foreground">{tr("Current")}</p>
                     <p className="font-semibold tabular-nums text-sm">{sk.current}/5</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Required</p>
+                    <p className="text-muted-foreground">{tr("Required")}</p>
                     <p className="font-semibold tabular-nums text-sm">{sk.required}/5</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Gap</p>
+                    <p className="text-muted-foreground">{tr("Gap")}</p>
                     <p className="font-semibold tabular-nums text-sm">{gap}</p>
                   </div>
                 </div>
                 {gap > 0 && (
                   <p className="mt-2 text-[11px] text-muted-foreground">
-                    Suggested: <span className="text-foreground">{suggestion.videos[0]}</span>
+                    {tr("Suggested: ")}<span className="text-foreground">{tr(suggestion.videos[0])}</span>
                   </p>
                 )}
               </li>
@@ -412,26 +414,26 @@ function JobDetailPage() {
       {/* Job Timeline */}
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
-          <History className="h-4 w-4 text-primary" /> Job Timeline
+          <History className="h-4 w-4 text-primary" /> {tr("Job Timeline")}
         </h2>
         <ol className="rounded-2xl border border-border bg-card p-4">
-          {timeline.map((t, i) => (
-            <li key={t.label} className="flex gap-3 last:pb-0 pb-3.5">
+          {timeline.map((tl, i) => (
+            <li key={tl.key} className="flex gap-3 last:pb-0 pb-3.5">
               <div className="flex flex-col items-center">
                 <div
                   className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-semibold ${
-                    t.done ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                    tl.done ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
                   }`}
                 >
-                  {t.done ? "✓" : i + 1}
+                  {tl.done ? "✓" : i + 1}
                 </div>
                 {i < timeline.length - 1 && (
-                  <div className={`w-px flex-1 mt-1 ${t.done ? "bg-primary/40" : "bg-border"}`} style={{ minHeight: 14 }} />
+                  <div className={`w-px flex-1 mt-1 ${tl.done ? "bg-primary/40" : "bg-border"}`} style={{ minHeight: 14 }} />
                 )}
               </div>
               <div>
-                <p className={`text-sm ${t.done ? "font-medium" : "text-muted-foreground"}`}>{t.label}</p>
-                <p className="text-[11px] text-muted-foreground">{t.date}</p>
+                <p className={`text-sm ${tl.done ? "font-medium" : "text-muted-foreground"}`}>{tr(tl.key)}</p>
+                <p className="text-[11px] text-muted-foreground">{tl.date}</p>
               </div>
             </li>
           ))}
@@ -441,22 +443,22 @@ function JobDetailPage() {
       {/* Cost tracking (optional) */}
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
-          <Wallet className="h-4 w-4 text-primary" /> Cost tracking
+          <Wallet className="h-4 w-4 text-primary" /> {tr("Cost tracking")}
         </h2>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2.5">
-          <CostRow label="Parts" value={costs.parts} />
-          <CostRow label="Labour" value={costs.labour} />
-          <CostRow label="Paint & Materials" value={costs.paint} />
+          <CostRow label={tr("Parts")} value={costs.parts} />
+          <CostRow label={tr("Labour")} value={costs.labour} />
+          <CostRow label={tr("Paint & Materials")} value={costs.paint} />
           <div className="pt-2.5 mt-1 border-t border-border flex items-center justify-between">
-            <span className="text-sm font-semibold">Total</span>
+            <span className="text-sm font-semibold">{tr("Total")}</span>
             <span className="text-base font-semibold tabular-nums">{fmtMYR(totalCost)}</span>
           </div>
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">Estimated — not yet invoiced.</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">{tr("Estimated — not yet invoiced.")}</p>
       </section>
 
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2">Notes</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2">{tr("Notes")}</h2>
         <p className="rounded-2xl border border-border bg-card p-3.5 text-sm leading-relaxed">{job.notes}</p>
       </section>
     </div>
@@ -472,16 +474,19 @@ function CostRow({ label, value }: { label: string; value: number }) {
   );
 }
 
-function PhotoGroup({ title, photos, empty }: { title: string; photos: string[]; empty?: string }) {
+function PhotoGroup({ tKey, photos, emptyKey }: { tKey: string; photos: string[]; emptyKey?: string }) {
+  const { tr } = useT();
   return (
     <section className="px-5 mt-6">
       <div className="flex items-center justify-between mb-2.5">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        <span className="text-[11px] text-muted-foreground">{photos.length} photo{photos.length !== 1 ? "s" : ""}</span>
+        <h2 className="text-sm font-semibold tracking-tight">{tr(tKey)}</h2>
+        <span className="text-[11px] text-muted-foreground">
+          {tr(photos.length === 1 ? "{n} photo" : "{n} photos", { n: photos.length })}
+        </span>
       </div>
       {photos.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-xs text-muted-foreground">
-          {empty ?? "No photos yet"}
+          {emptyKey ? tr(emptyKey) : tr("No photos yet")}
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2">

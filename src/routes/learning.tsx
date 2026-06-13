@@ -104,7 +104,7 @@ const sops: Item[] = [
 ];
 
 function LearningPage() {
-  const { t } = useT();
+  const { tr } = useT();
   const [viewed, setViewed] = useState<Record<string, boolean>>({ v2: true });
   const [learned, setLearned] = useState<Record<string, boolean>>({ s1: true });
 
@@ -119,7 +119,7 @@ function LearningPage() {
 
   return (
     <div>
-      <AppHeader title={t("page.learning.title")} subtitle="Train, learn, level up" />
+      <AppHeader title={tr("Learn")} subtitle={tr("Train, learn, level up")} />
 
       <div className="px-5 -mt-4 space-y-4">
         <Card className="p-4">
@@ -128,9 +128,9 @@ function LearningPage() {
               <GraduationCap className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold">My Learning Progress</p>
+              <p className="text-sm font-semibold">{tr("My Learning Progress")}</p>
               <p className="text-xs text-muted-foreground">
-                {completed} of {totalItems} marked learned
+                {tr("{a} of {b} marked learned", { a: completed, b: totalItems })}
               </p>
             </div>
             <p className="text-xl font-semibold text-primary">{progress}%</p>
@@ -142,17 +142,17 @@ function LearningPage() {
 
         <Tabs defaultValue="videos">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="videos">Videos</TabsTrigger>
-            <TabsTrigger value="notes">Repair Notes</TabsTrigger>
-            <TabsTrigger value="sop">SOP</TabsTrigger>
+            <TabsTrigger value="videos">{tr("Videos")}</TabsTrigger>
+            <TabsTrigger value="notes">{tr("Repair Notes")}</TabsTrigger>
+            <TabsTrigger value="sop">{tr("SOP")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="videos" className="space-y-3">
             <UploadRow
-              hint="Paste YouTube or Facebook link"
+              hint={tr("Paste YouTube or Facebook link")}
               actions={[
-                { icon: Youtube, label: "YouTube" },
-                { icon: Facebook, label: "Facebook" },
+                { icon: Youtube, label: tr("YouTube") },
+                { icon: Facebook, label: tr("Facebook") },
               ]}
             />
             {videos.map((v) => (
@@ -169,8 +169,8 @@ function LearningPage() {
 
           <TabsContent value="notes" className="space-y-3">
             <UploadRow
-              hint="Add repair note or photo"
-              actions={[{ icon: ImagePlus, label: "Photo" }, { icon: FileText, label: "Note" }]}
+              hint={tr("Add repair note or photo")}
+              actions={[{ icon: ImagePlus, label: tr("Photo") }, { icon: FileText, label: tr("Note") }]}
             />
             {notes.map((n) => (
               <DocCard
@@ -223,6 +223,7 @@ function UploadRow({
 }
 
 function SourceBadge({ source }: { source: Source }) {
+  const { tr } = useT();
   const map = {
     youtube: { icon: Youtube, label: "YouTube", c: "text-rose-400" },
     facebook: { icon: Facebook, label: "Facebook", c: "text-sky-400" },
@@ -233,7 +234,7 @@ function SourceBadge({ source }: { source: Source }) {
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c}`}>
       <Icon className="h-3 w-3" />
-      {label}
+      {tr(label)}
     </span>
   );
 }
@@ -249,6 +250,7 @@ function MarkButtons({
   onView: () => void;
   onLearn: () => void;
 }) {
+  const { tr } = useT();
   return (
     <div className="mt-3 flex gap-2">
       <Button
@@ -258,7 +260,7 @@ function MarkButtons({
         onClick={onView}
       >
         <Eye className="h-3.5 w-3.5" />
-        {viewed ? "Viewed" : "Mark Viewed"}
+        {viewed ? tr("Viewed") : tr("Mark Viewed")}
       </Button>
       <Button
         size="sm"
@@ -267,7 +269,7 @@ function MarkButtons({
         onClick={onLearn}
       >
         <CheckCircle2 className="h-3.5 w-3.5" />
-        {learned ? "Learned" : "Mark Learned"}
+        {learned ? tr("Learned") : tr("Mark Learned")}
       </Button>
     </div>
   );
@@ -286,6 +288,7 @@ function VideoCard({
   onView: () => void;
   onLearn: () => void;
 }) {
+  const { tr } = useT();
   return (
     <Card className="overflow-hidden">
       <div className="relative aspect-video bg-muted">
@@ -304,9 +307,9 @@ function VideoCard({
         )}
       </div>
       <div className="p-3">
-        <p className="text-sm font-semibold leading-snug">{item.title}</p>
+        <p className="text-sm font-semibold leading-snug">{tr(item.title)}</p>
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>by {item.by}</span>
+          <span>{tr("by {a}", { a: item.by })}</span>
           <SourceBadge source={item.source} />
         </div>
         <MarkButtons viewed={viewed} learned={learned} onView={onView} onLearn={onLearn} />
@@ -328,6 +331,7 @@ function DocCard({
   onView: () => void;
   onLearn: () => void;
 }) {
+  const { tr } = useT();
   const isPhoto = item.source === "photo" && item.thumb;
   return (
     <Card className="p-3">
@@ -348,12 +352,12 @@ function DocCard({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-snug">{item.title}</p>
-          <p className="text-[11px] text-muted-foreground">by {item.by}</p>
+          <p className="text-sm font-semibold leading-snug">{tr(item.title)}</p>
+          <p className="text-[11px] text-muted-foreground">{tr("by {a}", { a: item.by })}</p>
           <div className="mt-1 flex items-center gap-2">
             {item.tag && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
-                {item.tag}
+                {tr(item.tag)}
               </span>
             )}
             <SourceBadge source={item.source} />
