@@ -4,7 +4,6 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
-  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -13,9 +12,6 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BottomNav } from "../components/BottomNav";
-import { I18nProvider, useI18n } from "../lib/i18n-context";
-
-const PUBLIC_PATHS = new Set(["/auth"]);
 
 function NotFoundComponent() {
   return (
@@ -82,15 +78,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DHX Team Ops" },
-      { name: "description", content: "DHX Team Ops workshop operations app" },
-      { name: "author", content: "DHX Team Ops" },
-      { property: "og:title", content: "DHX Team Ops" },
-      { property: "og:description", content: "DHX Team Ops workshop operations app" },
+      { title: "Lovable App" },
+      { name: "description", content: "Lovable Generated Project" },
+      { name: "author", content: "Lovable" },
+      { property: "og:title", content: "Lovable App" },
+      { property: "og:description", content: "Lovable Generated Project" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:site", content: "@Lovable" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      {
+        rel: "stylesheet",
+        href: appCss,
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -112,42 +114,15 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-function AppGate({ children }: { children: ReactNode }) {
-  const { ready, user } = useI18n();
-  const router = useRouter();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isPublic = PUBLIC_PATHS.has(pathname);
-
-  useEffect(() => {
-    if (!ready) return;
-    if (!user && !isPublic) {
-      router.navigate({ to: "/auth" });
-    } else if (user && (pathname === "/auth" || pathname === "/welcome")) {
-      router.navigate({ to: "/" });
-    }
-  }, [ready, user, pathname, isPublic, router]);
-
-  if (!ready) return null;
-  return (
-    <>
-      {children}
-      {!isPublic && <BottomNav />}
-    </>
-  );
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <I18nProvider>
-        <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-24">
-          <AppGate>
-            <Outlet />
-          </AppGate>
-        </div>
-      </I18nProvider>
+      <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-24">
+        <Outlet />
+      </div>
+      <BottomNav />
     </QueryClientProvider>
   );
 }

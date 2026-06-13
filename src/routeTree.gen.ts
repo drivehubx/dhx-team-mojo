@@ -9,24 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as SkillsRouteImport } from './routes/skills'
-import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SalaryRouteImport } from './routes/salary'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LearningRouteImport } from './routes/learning'
 import { Route as JobsRouteImport } from './routes/jobs'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdvanceRouteImport } from './routes/advance'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 
-const WelcomeRoute = WelcomeRouteImport.update({
-  id: '/welcome',
-  path: '/welcome',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TeamRoute = TeamRouteImport.update({
   id: '/team',
   path: '/team',
@@ -35,11 +27,6 @@ const TeamRoute = TeamRouteImport.update({
 const SkillsRoute = SkillsRouteImport.update({
   id: '/skills',
   path: '/skills',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SalaryRoute = SalaryRouteImport.update({
@@ -62,11 +49,6 @@ const JobsRoute = JobsRouteImport.update({
   path: '/jobs',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdvanceRoute = AdvanceRouteImport.update({
   id: '/advance',
   path: '/advance',
@@ -86,44 +68,35 @@ const JobsIdRoute = JobsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
-  '/auth': typeof AuthRoute
   '/jobs': typeof JobsRouteWithChildren
   '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
-  '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
-  '/welcome': typeof WelcomeRoute
   '/jobs/$id': typeof JobsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
-  '/auth': typeof AuthRoute
   '/jobs': typeof JobsRouteWithChildren
   '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
-  '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
-  '/welcome': typeof WelcomeRoute
   '/jobs/$id': typeof JobsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
-  '/auth': typeof AuthRoute
   '/jobs': typeof JobsRouteWithChildren
   '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
-  '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
-  '/welcome': typeof WelcomeRoute
   '/jobs/$id': typeof JobsIdRoute
 }
 export interface FileRouteTypes {
@@ -131,69 +104,50 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/advance'
-    | '/auth'
     | '/jobs'
     | '/learning'
     | '/profile'
     | '/salary'
-    | '/settings'
     | '/skills'
     | '/team'
-    | '/welcome'
     | '/jobs/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/advance'
-    | '/auth'
     | '/jobs'
     | '/learning'
     | '/profile'
     | '/salary'
-    | '/settings'
     | '/skills'
     | '/team'
-    | '/welcome'
     | '/jobs/$id'
   id:
     | '__root__'
     | '/'
     | '/advance'
-    | '/auth'
     | '/jobs'
     | '/learning'
     | '/profile'
     | '/salary'
-    | '/settings'
     | '/skills'
     | '/team'
-    | '/welcome'
     | '/jobs/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdvanceRoute: typeof AdvanceRoute
-  AuthRoute: typeof AuthRoute
   JobsRoute: typeof JobsRouteWithChildren
   LearningRoute: typeof LearningRoute
   ProfileRoute: typeof ProfileRoute
   SalaryRoute: typeof SalaryRoute
-  SettingsRoute: typeof SettingsRoute
   SkillsRoute: typeof SkillsRoute
   TeamRoute: typeof TeamRoute
-  WelcomeRoute: typeof WelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/welcome': {
-      id: '/welcome'
-      path: '/welcome'
-      fullPath: '/welcome'
-      preLoaderRoute: typeof WelcomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/team': {
       id: '/team'
       path: '/team'
@@ -206,13 +160,6 @@ declare module '@tanstack/react-router' {
       path: '/skills'
       fullPath: '/skills'
       preLoaderRoute: typeof SkillsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/salary': {
@@ -241,13 +188,6 @@ declare module '@tanstack/react-router' {
       path: '/jobs'
       fullPath: '/jobs'
       preLoaderRoute: typeof JobsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/advance': {
@@ -287,15 +227,12 @@ const JobsRouteWithChildren = JobsRoute._addFileChildren(JobsRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdvanceRoute: AdvanceRoute,
-  AuthRoute: AuthRoute,
   JobsRoute: JobsRouteWithChildren,
   LearningRoute: LearningRoute,
   ProfileRoute: ProfileRoute,
   SalaryRoute: SalaryRoute,
-  SettingsRoute: SettingsRoute,
   SkillsRoute: SkillsRoute,
   TeamRoute: TeamRoute,
-  WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

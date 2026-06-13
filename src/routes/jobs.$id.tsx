@@ -23,7 +23,6 @@ import {
   type Job,
   type SkillCategory,
 } from "@/lib/mock-data";
-import { TranslatedText } from "@/components/TranslatedText";
 import { StatusBadge } from "./index";
 
 export const Route = createFileRoute("/jobs/$id")({
@@ -101,13 +100,13 @@ function JobDetailPage() {
   // Completion dates
   const actualCompletion = job.status === "Completed" ? job.due : "—";
 
-  // Manager notes (mock) — written by different team members in their own language
+  // Manager notes (mock)
   const managerNote =
     job.status === "Waiting Parts"
-      ? "Waiting for parts. Tomorrow paint."
+      ? "Parts ordered — follow up with supplier daily."
       : job.status === "Pending QC"
-      ? "Panel completed. QC passed."
-      : "板金完成。明天喷漆。";
+      ? "Run final QC checklist, photograph before release."
+      : "Keep customer updated every 24h. Photograph each stage.";
 
   // Job timeline
   const timeline = [
@@ -252,7 +251,7 @@ function JobDetailPage() {
             <MessageSquare className="h-3.5 w-3.5 text-primary" />
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Manager Notes</p>
           </div>
-          <TranslatedText as="p" className="text-sm leading-relaxed" text={managerNote} showBadge />
+          <p className="text-sm leading-relaxed">{managerNote}</p>
         </div>
       </section>
 
@@ -458,13 +457,7 @@ function JobDetailPage() {
 
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2">Notes</h2>
-        <TranslatedText
-          as="p"
-          className="rounded-2xl border border-border bg-card p-3.5 text-sm leading-relaxed block"
-          text={job.notes}
-          showBadge
-        />
-
+        <p className="rounded-2xl border border-border bg-card p-3.5 text-sm leading-relaxed">{job.notes}</p>
       </section>
     </div>
   );
