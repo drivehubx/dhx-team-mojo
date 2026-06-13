@@ -613,7 +613,7 @@ function JobDetailPage() {
   );
 }
 
-function StickyBtn({ icon, label, primary, small }: { icon: React.ReactNode; label: string; primary?: boolean; small?: boolean }) {
+function StickyBtn({ icon, label, primary, small }: { icon: ReactNode; label: string; primary?: boolean; small?: boolean }) {
   return (
     <button
       className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl active:scale-95 transition-transform ${
