@@ -246,3 +246,158 @@ export const trainingRecommendations: Record<SkillCategory, string> = {
   Training: "Onboarding & Mentorship Programme",
 };
 
+
+/* ------------------------------------------------------------------ */
+/*  Assessments & Training Suggestions                                */
+/* ------------------------------------------------------------------ */
+
+export type AssessmentStatus = "Pending Manager" | "Pending Owner" | "Approved" | "Rejected";
+
+export type AssessmentRequest = {
+  id: string;
+  employeeId: string;
+  category: SkillCategory;
+  currentLevel: number;
+  requestedLevel: number;
+  reason: string;
+  date: string;
+  status: AssessmentStatus;
+  reviewer?: string;
+};
+
+export type AssessmentHistoryEntry = {
+  id: string;
+  employeeId: string;
+  category: SkillCategory;
+  from: number;
+  to: number;
+  reason: string;
+  date: string;
+  approvedBy: string;
+};
+
+export const assessmentRequests: AssessmentRequest[] = [
+  {
+    id: "ar1",
+    employeeId: "e3",
+    category: "Paint",
+    currentLevel: 4,
+    requestedLevel: 5,
+    reason: "Completed 12 full respray jobs solo this quarter.",
+    date: "10 Jun",
+    status: "Pending Manager",
+  },
+  {
+    id: "ar2",
+    employeeId: "e4",
+    category: "QC",
+    currentLevel: 4,
+    requestedLevel: 5,
+    reason: "Led QC sign-off on 8 vehicles, zero rework.",
+    date: "08 Jun",
+    status: "Pending Owner",
+    reviewer: "Manager",
+  },
+  {
+    id: "ar3",
+    employeeId: "e6",
+    category: "Panel",
+    currentLevel: 1,
+    requestedLevel: 2,
+    reason: "Assisted Suresh on 6 panel replacements.",
+    date: "06 Jun",
+    status: "Approved",
+    reviewer: "Owner",
+  },
+  {
+    id: "ar4",
+    employeeId: "e2",
+    category: "SOP",
+    currentLevel: 2,
+    requestedLevel: 3,
+    reason: "Requested without log evidence.",
+    date: "02 Jun",
+    status: "Rejected",
+    reviewer: "Manager",
+  },
+];
+
+export const assessmentHistory: AssessmentHistoryEntry[] = [
+  {
+    id: "h1",
+    employeeId: "e3",
+    category: "Paint",
+    from: 3,
+    to: 4,
+    reason: "Completed 10 paint jobs independently.",
+    date: "12 May",
+    approvedBy: "Owner",
+  },
+  {
+    id: "h2",
+    employeeId: "e4",
+    category: "QC",
+    from: 3,
+    to: 4,
+    reason: "Passed internal QC audit.",
+    date: "28 Apr",
+    approvedBy: "Owner",
+  },
+  {
+    id: "h3",
+    employeeId: "e6",
+    category: "Panel",
+    from: 0,
+    to: 1,
+    reason: "Completed onboarding panel module.",
+    date: "06 Jun",
+    approvedBy: "Owner",
+  },
+  {
+    id: "h4",
+    employeeId: "e2",
+    category: "Paint",
+    from: 4,
+    to: 5,
+    reason: "Mentor sign-off on advanced colour matching.",
+    date: "18 Mar",
+    approvedBy: "Owner",
+  },
+];
+
+export const lastAssessmentDate: Record<string, string> = {
+  e1: "01 Jan",
+  e2: "18 Mar",
+  e3: "12 May",
+  e4: "28 Apr",
+  e5: "10 Feb",
+  e6: "06 Jun",
+};
+
+export const trainingSuggestions: Record<SkillCategory, { videos: string[]; sops: string[]; jobs: string[] }> = {
+  Panel: {
+    videos: ["Panel Alignment 101", "Dent Pulling Basics"],
+    sops: ["SOP-PNL-02 Panel Replacement"],
+    jobs: ["Shadow Suresh on next panel job", "Assist on Myvi rear quarter"],
+  },
+  Paint: {
+    videos: ["Spray Gun Setup", "Colour Mixing Masterclass"],
+    sops: ["SOP-PNT-01 Booth Prep", "SOP-PNT-04 Blending"],
+    jobs: ["Solo respray on Vios bumper", "Shadow Hafiz on BMW bonnet"],
+  },
+  QC: {
+    videos: ["QC Checklist Walkthrough"],
+    sops: ["SOP-QC-01 Final Inspection"],
+    jobs: ["Run QC on next 3 completed jobs"],
+  },
+  SOP: {
+    videos: ["Workshop SOP Overview"],
+    sops: ["SOP-GEN-00 Workshop Standards"],
+    jobs: ["Document next job using SOP template"],
+  },
+  Training: {
+    videos: ["Mentorship Best Practices"],
+    sops: ["SOP-TRN-01 Onboarding"],
+    jobs: ["Mentor helper on 1 job this week"],
+  },
+};
