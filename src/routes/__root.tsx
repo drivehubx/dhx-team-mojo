@@ -120,10 +120,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-24">
-        <Outlet />
-      </div>
-      <BottomNav />
+      <LanguageProvider>
+        <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-24">
+          <Outlet />
+        </div>
+        <BottomNav />
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }
