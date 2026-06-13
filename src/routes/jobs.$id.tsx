@@ -262,6 +262,13 @@ function JobDetailPage() {
               );
             })}
           </ol>
+
+          <div className="mt-4 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{tr("Stage updated")} · {tr("Today")}</span>
+            <button className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-foreground active:scale-95">
+              <Undo2 className="h-3 w-3" /> {tr("Rollback")}
+            </button>
+          </div>
         </div>
       </section>
 
