@@ -96,7 +96,7 @@ function Dashboard() {
       </section>
 
       <section className="mt-6 px-5">
-        <h2 className="text-base font-semibold tracking-tight">Recent activity</h2>
+        <h2 className="text-base font-semibold tracking-tight">{t("page.dashboard.recent")}</h2>
         <ul className="mt-3 space-y-1 rounded-2xl border border-border bg-card divide-y divide-border">
           {activity.map((a, i) => (
             <li key={i} className="flex items-center gap-3 p-3.5">
@@ -118,6 +118,7 @@ function Dashboard() {
 }
 
 export function StatusBadge({ status }: { status: string }) {
+  const { t } = useT();
   const map: Record<string, string> = {
     "In Progress": "bg-primary/10 text-primary",
     "Pending QC": "bg-[--color-warning]/15 text-[--color-warning]",
@@ -126,7 +127,7 @@ export function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${map[status] ?? "bg-secondary text-secondary-foreground"}`}>
-      {status}
+      {tStatus(t, status)}
     </span>
   );
 }
