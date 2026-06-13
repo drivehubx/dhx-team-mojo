@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { currentUser, salaries, fmtMYR, netSalary, advanceBalance } from "@/lib/mock-data";
-import { Phone, IdCard, FileText, Settings, LogOut, ChevronRight, Wallet, Clock4, HandCoins } from "lucide-react";
+import { Phone, IdCard, FileText, Settings, LogOut, ChevronRight, Wallet, Clock4, HandCoins, Languages } from "lucide-react";
+import { useT, LANGS, LanguagePicker } from "@/lib/i18n";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -14,12 +16,15 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
+  const { t, lang } = useT();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const mySalary = salaries.find((s) => s.employeeId === currentUser.id);
   const myAdvance = advanceBalance(currentUser.id);
+  const activeLang = LANGS.find((l) => l.code === lang)!;
 
   return (
     <div>
-      <AppHeader title="Profile" />
+      <AppHeader title={t("page.profile.title")} />
 
       <div className="px-5 -mt-4">
         <div className="rounded-2xl bg-card border border-border p-5 shadow-sm flex items-center gap-4">
@@ -37,29 +42,38 @@ function ProfilePage() {
       </div>
 
       <section className="mt-5 px-5">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">This month</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{t("page.profile.thisMonth")}</h2>
         <div className="grid grid-cols-3 gap-3">
-          <StatCard icon={Wallet} label="Salary" value={mySalary ? fmtMYR(netSalary(mySalary)) : "—"} />
-          <StatCard icon={Clock4} label="OT hrs" value={mySalary ? String(Math.round(mySalary.ot / 20)) : "0"} />
-          <StatCard icon={HandCoins} label="Advance" value={fmtMYR(myAdvance.balance)} />
+          <StatCard icon={Wallet} label={t("page.profile.salary")} value={mySalary ? fmtMYR(netSalary(mySalary)) : "—"} />
+          <StatCard icon={Clock4} label={t("page.profile.ot")} value={mySalary ? String(Math.round(mySalary.ot / 20)) : "0"} />
+          <StatCard icon={HandCoins} label={t("page.profile.advance")} value={fmtMYR(myAdvance.balance)} />
         </div>
       </section>
 
       <section className="mt-5 px-5">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Account</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{t("page.profile.account")}</h2>
         <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
-          <Row icon={Phone} label="Phone" value={currentUser.phone} />
-          <Row icon={FileText} label="Documents" value="2 files" />
-          <Row icon={Settings} label="Settings" value="" />
+          <Row icon={Phone} label={t("page.profile.phone")} value={currentUser.phone} />
+          <Row icon={FileText} label={t("page.profile.documents")} value="2 files" />
+          <button onClick={() => setPickerOpen(true)} className="w-full text-left">
+            <Row
+              icon={Languages}
+              label={t("page.profile.preferredLanguage")}
+              value={`${activeLang.flag} ${activeLang.native}`}
+            />
+          </button>
+          <Row icon={Settings} label={t("page.profile.settings")} value="" />
         </ul>
       </section>
 
       <div className="mt-6 px-5">
         <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3.5 text-sm font-semibold text-destructive">
-          <LogOut className="h-4 w-4" /> Sign out
+          <LogOut className="h-4 w-4" /> {t("common.signOut")}
         </button>
-        <p className="mt-4 text-center text-[11px] text-muted-foreground">DHX Team Ops · v1.0</p>
+        <p className="mt-4 text-center text-[11px] text-muted-foreground">{t("common.brand")} · v1.0</p>
       </div>
+
+      {pickerOpen && <LanguagePicker onClose={() => setPickerOpen(false)} />}
     </div>
   );
 }
