@@ -276,28 +276,74 @@ function JobDetailPage() {
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Team Assignment")}</h2>
         <ul className="space-y-2">
-          {job.assignedIds.map((eid) => {
+          {job.assignedIds.map((eid, idx) => {
             const e = getEmployee(eid);
+            const memberProgress = Math.min(100, Math.max(10, job.progress + (idx === 0 ? 5 : -10)));
+            const currentTask =
+              idx === 0
+                ? tr(WORKFLOW[Math.min(step, 4)]) + " — " + tr("in progress")
+                : tr("Assist & prep");
             return (
-              <li key={eid} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-                  {e.initials}
+              <li key={eid} className="rounded-2xl border border-border bg-card p-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                    {e.initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{e.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
+                  </div>
+                  <span className="text-[11px] font-semibold tabular-nums">{memberProgress}%</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{e.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
+                  <div className="h-full bg-primary" style={{ width: `${memberProgress}%` }} />
                 </div>
-                <span className="text-[11px] rounded-full bg-secondary px-2 py-1 text-muted-foreground">{e.phone.slice(-4)}</span>
+                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span className="truncate">{tr("Task")}: <span className="text-foreground">{currentTask}</span></span>
+                  <span>{tr("ETA")} {job.due}</span>
+                </div>
               </li>
             );
           })}
         </ul>
-        <div className="mt-2.5 rounded-2xl border border-border bg-card p-3.5">
-          <div className="flex items-center gap-2 mb-1.5">
-            <MessageSquare className="h-3.5 w-3.5 text-primary" />
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Manager Notes")}</p>
+        <div className="mt-2.5 grid grid-cols-3 gap-2">
+          <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
+            <UserPlus className="h-3.5 w-3.5" /> {tr("Assign")}
+          </button>
+          <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
+            <Shuffle className="h-3.5 w-3.5" /> {tr("Reassign")}
+          </button>
+          <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
+            <UserPlus className="h-3.5 w-3.5" /> {tr("Add Helper")}
+          </button>
+        </div>
+
+        <div className="mt-2.5 space-y-2">
+          <div className="rounded-2xl border border-border bg-card p-3.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Internal Notes")}</p>
+            </div>
+            <p className="text-sm leading-relaxed">{managerNote}</p>
           </div>
-          <p className="text-sm leading-relaxed">{managerNote}</p>
+          <div className="rounded-2xl border border-border bg-card p-3.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <User className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Customer Notes")}</p>
+            </div>
+            <p className="text-sm leading-relaxed">{tr("Customer prefers OEM parts. Update via WhatsApp.")}</p>
+          </div>
+          {(job.status === "Waiting Parts" || job.progress < 30) && (
+            <div className="rounded-2xl border border-[--color-warning]/40 bg-[--color-warning]/10 p-3.5">
+              <div className="flex items-center gap-2 mb-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-[--color-warning]" />
+                <p className="text-[11px] uppercase tracking-wider text-[--color-warning] font-semibold">{tr("Risk Alert")}</p>
+              </div>
+              <p className="text-sm leading-relaxed">
+                {job.status === "Waiting Parts" ? tr("Parts ordered — follow up with supplier daily.") : tr("Progress below schedule. Escalate if not improving by tomorrow.")}
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
