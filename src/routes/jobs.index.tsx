@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { AppHeader } from "@/components/AppHeader";
 import { jobs, getEmployee, type JobStatus, type Job } from "@/lib/mock-data";
-import { useT, tStatus } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { Search, AlertTriangle, Clock, UserPlus, ShieldAlert, ChevronRight } from "lucide-react";
 
 const roleSchema = z.object({
