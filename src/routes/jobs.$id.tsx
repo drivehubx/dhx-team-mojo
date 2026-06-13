@@ -98,18 +98,50 @@ function JobDetailPage() {
   const job = jobs.find((j) => j.id === id);
   if (!job) throw notFound();
 
+  // Persistence: stage override + extra photos + running state
+  const storeKey = `dhx:job:${id}`;
+  const [stageOverride, setStageOverride] = useState<number | null>(null);
+  const [extraPhotos, setExtraPhotos] = useState<string[]>([]);
+  const [running, setRunning] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storeKey);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (typeof s.stageOverride === "number") setStageOverride(s.stageOverride);
+        if (Array.isArray(s.extraPhotos)) setExtraPhotos(s.extraPhotos);
+        if (typeof s.running === "boolean") setRunning(s.running);
+      }
+    } catch {}
+    setHydrated(true);
+  }, [storeKey]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(
+        storeKey,
+        JSON.stringify({ stageOverride, extraPhotos, running }),
+      );
+    } catch {}
+  }, [storeKey, stageOverride, extraPhotos, running, hydrated]);
+
   const owner = (() => {
     const part = job.plate.split(" ")[1];
     return part ? `Customer ${part}` : "Walk-in";
   })();
   const ownerPhone = "+60 1" + (job.id.charCodeAt(1) % 9) + " " + "234 5678";
 
-  const all = job.photos;
+  const all = [...job.photos, ...extraPhotos];
   const beforePhotos = all.slice(0, Math.max(1, Math.ceil(all.length / 3)));
   const duringPhotos = all.slice(beforePhotos.length, beforePhotos.length + Math.max(1, Math.floor(all.length / 3)));
   const afterPhotos = job.status === "Completed" || job.progress >= 90 ? all.slice(-1) : [];
 
-  const step = currentStep(job);
+  const computedStep = currentStep(job);
+  const step = stageOverride ?? computedStep;
   const checklist = checklistFor(job);
 
   const costs = {
