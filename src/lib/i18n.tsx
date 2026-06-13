@@ -160,7 +160,7 @@ const ZH: Dict = {
   "{a} of {b} marked learned": "已学 {a}/{b}",
   "Videos": "视频",
   "Repair Notes": "维修笔记",
-  "SOP": "SOP",
+  "SOP": "标准作业程序（SOP）",
   "Paste YouTube or Facebook link": "粘贴 YouTube 或 Facebook 链接",
   "YouTube": "YouTube",
   "Facebook": "Facebook",
