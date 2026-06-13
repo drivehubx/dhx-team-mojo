@@ -251,7 +251,7 @@ function JobDetailPage() {
             <MessageSquare className="h-3.5 w-3.5 text-primary" />
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Manager Notes</p>
           </div>
-          <p className="text-sm leading-relaxed">{managerNote}</p>
+          <TranslatedText as="p" className="text-sm leading-relaxed" text={managerNote} showBadge />
         </div>
       </section>
 
