@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -24,9 +24,6 @@ import {
   AlertTriangle,
   Package,
   Undo2,
-  ChevronDown,
-  ChevronUp,
-  Eye,
 } from "lucide-react";
 import {
   jobs,
@@ -59,9 +56,6 @@ function NotFound() {
 type Stage = "Received" | "Panel" | "Paint" | "QC" | "Ready" | "Delivered";
 const WORKFLOW: Stage[] = ["Received", "Panel", "Paint", "QC", "Ready", "Delivered"];
 
-type WorkState = "Received" | "Working" | "Paused" | "Completed";
-type RoleView = "Worker" | "Manager" | "Owner";
-
 function currentStep(job: Job): number {
   if (job.status === "Completed") return 4;
   if (job.status === "Pending QC") return 3;
@@ -70,12 +64,6 @@ function currentStep(job: Job): number {
   if (job.progress >= 50) return 2;
   if (job.progress >= 25) return 1;
   return 0;
-}
-
-function initialWorkState(job: Job): WorkState {
-  if (job.status === "Completed") return "Completed";
-  if (job.progress === 0) return "Received";
-  return "Working";
 }
 
 function checklistFor(job: Job) {
@@ -88,6 +76,7 @@ function checklistFor(job: Job) {
   ];
 }
 
+// Best-effort guess of which skill category a job primarily needs.
 function jobSkillFocus(job: Job): SkillCategory {
   const n = (job.notes || "").toLowerCase();
   if (n.includes("paint") || n.includes("respray") || n.includes("polish") || n.includes("colour")) return "Paint";
@@ -100,13 +89,6 @@ function JobDetailPage() {
   const { id } = Route.useParams();
   const job = jobs.find((j) => j.id === id);
   if (!job) throw notFound();
-
-  const [workState, setWorkState] = useState<WorkState>(initialWorkState(job));
-  const [role, setRole] = useState<RoleView>("Worker");
-  const [showTimeline, setShowTimeline] = useState(false);
-  const [showLearning, setShowLearning] = useState(false);
-  const [showPhotos, setShowPhotos] = useState(false);
-  const [showCost, setShowCost] = useState(false);
 
   const owner = (() => {
     const part = job.plate.split(" ")[1];
@@ -151,17 +133,12 @@ function JobDetailPage() {
     { key: "Completed", date: job.status === "Completed" ? job.due : tr("Pending"), done: job.status === "Completed" },
   ];
 
+  // Walk-in vs Fleet
   const isFleet = ["BMW", "PNG", "MEX"].some((p) => job.plate.startsWith(p));
   const channel = isFleet ? tr("Fleet") : tr("Walk-in");
   const assignedManager = "Ron Tan";
 
-  // Per-stage owner & timing (mock)
-  const stageOwners = ["Reception", "Suresh Kumar", "Hafiz Rahman", "Aiman Yusof", "Ron Tan", "Delivery"];
-  const currentStageOwner = stageOwners[step] || "—";
-  const stageStarted = job.startedAt;
-  const stageDuration = Math.max(1, actualHours);
-  const blockReason = job.status === "Waiting Parts" ? tr("Waiting Parts") : null;
-
+  // Parts (mock)
   const parts = [
     { name: tr("Front Bumper"), status: job.status === "Waiting Parts" ? "waiting" : "installed" },
     { name: tr("Headlamp Assembly"), status: job.progress >= 50 ? "installed" : "waiting" },
@@ -169,18 +146,15 @@ function JobDetailPage() {
     { name: tr("Clip Set"), status: "returned" },
   ] as const;
 
+  // Learning + Skills integration
   const focus = jobSkillFocus(job);
   const suggestion = trainingSuggestions[focus];
-
-  // Role-based cost visibility
-  const showCostSection = role !== "Worker";
-  const costFullDetail = role === "Owner";
 
   return (
     <div className="pb-6">
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex items-center gap-3 px-5 py-4">
-          <Link to="/jobs" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary text-foreground active:scale-95">
+          <Link to="/jobs" className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-foreground active:scale-95">
             <ArrowLeft className="h-4.5 w-4.5" />
           </Link>
           <div className="min-w-0 flex-1">
@@ -189,56 +163,55 @@ function JobDetailPage() {
           </div>
           <StatusBadge status={job.status} />
         </div>
-        {/* Role view toggle */}
-        <div className="flex items-center gap-1 px-5 pb-2.5">
-          <Eye className="h-3 w-3 text-muted-foreground" />
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">{tr("View as")}</span>
-          {(["Worker", "Manager", "Owner"] as RoleView[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRole(r)}
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                role === r ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-              }`}
-            >
-              {tr(r)}
-            </button>
-          ))}
-        </div>
       </header>
 
-      {/* Compact Vehicle Info */}
+      {/* Vehicle Info */}
       <section className="px-5 mt-4">
-        <div className="rounded-2xl border border-border bg-card p-3.5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-base font-bold tabular-nums">{job.plate}</p>
-              <p className="text-xs text-muted-foreground truncate">{job.vehicle}</p>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Vehicle Info")}</h2>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <p className="text-muted-foreground">{tr("Model")}</p>
+              <p className="mt-0.5 font-medium text-sm">{job.vehicle}</p>
             </div>
-            <div className="text-right shrink-0">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{tr("ETA")}</p>
-              <p className="text-sm font-semibold">{job.due}</p>
+            <div>
+              <p className="text-muted-foreground">{tr("Plate Number")}</p>
+              <p className="mt-0.5 font-medium text-sm">{job.plate}</p>
+            </div>
+            <div className="col-span-2 flex items-center gap-2.5 pt-2 border-t border-border">
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary">
+                <User className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground">{tr("Customer (optional)")}</p>
+                <p className="text-sm font-medium truncate">{owner === "Walk-in" ? tr("Walk-in") : owner}</p>
+                <p className="text-[11px] text-muted-foreground">{ownerPhone}</p>
+              </div>
+            </div>
+            <div className="col-span-2 grid grid-cols-2 gap-3 pt-2 border-t border-border">
+              <div>
+                <p className="text-muted-foreground">{tr("Channel")}</p>
+                <span className={`mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${isFleet ? "bg-primary/15 text-primary" : "bg-secondary text-foreground"}`}>
+                  {channel}
+                </span>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{tr("Assigned Manager")}</p>
+                <p className="mt-0.5 font-medium text-sm">{assignedManager}</p>
+              </div>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            <Chip>{tr(WORKFLOW[step])}</Chip>
-            <Chip>{channel}</Chip>
-            <Chip>
-              <User className="h-3 w-3" /> {assignedManager}
-            </Chip>
-            <Chip>
-              <Calendar className="h-3 w-3" /> {job.startedAt}
-            </Chip>
-            {role !== "Worker" && (
-              <Chip muted>
-                {owner === "Walk-in" ? tr("Walk-in") : owner} · {ownerPhone}
-              </Chip>
-            )}
+          <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5" />
+            {tr("Started")} {job.startedAt}
+            <span className="mx-1">·</span>
+            <CalendarClock className="h-3.5 w-3.5" />
+            {tr("ETA")} {job.due}
           </div>
 
           <div className="mt-3 flex items-center gap-2">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
               <div className="h-full bg-primary" style={{ width: `${job.progress}%` }} />
             </div>
             <span className="text-xs font-semibold tabular-nums w-9 text-right">{job.progress}%</span>
@@ -250,6 +223,18 @@ function JobDetailPage() {
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Repair Workflow")}</h2>
         <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${(step / (WORKFLOW.length - 1)) * 100}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {tr(WORKFLOW[step])}
+            </span>
+          </div>
+
           <ol className="flex items-center justify-between gap-1">
             {WORKFLOW.map((label, i) => {
               const done = i < step;
@@ -257,19 +242,19 @@ function JobDetailPage() {
               return (
                 <li key={label} className="flex flex-1 flex-col items-center gap-1.5 min-w-0">
                   <div
-                    className={`grid place-items-center rounded-full font-semibold ${
-                      active
-                        ? "h-9 w-9 bg-primary text-primary-foreground ring-4 ring-primary/15 text-xs"
-                        : done
-                        ? "h-7 w-7 bg-[--color-success] text-white text-[10px]"
-                        : "h-7 w-7 bg-secondary text-muted-foreground/60 text-[10px]"
+                    className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-semibold ${
+                      done
+                        ? "bg-[--color-success] text-white"
+                        : active
+                        ? "bg-primary text-primary-foreground ring-4 ring-primary/15"
+                        : "bg-secondary text-muted-foreground"
                     }`}
                   >
                     {done ? "✓" : i + 1}
                   </div>
                   <span
                     className={`text-[10px] truncate w-full text-center ${
-                      active ? "font-bold text-foreground" : done ? "text-foreground" : "text-muted-foreground/60"
+                      active ? "font-semibold text-foreground" : done ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
                     {tr(label)}
@@ -279,39 +264,12 @@ function JobDetailPage() {
             })}
           </ol>
 
-          {/* Current stage detail */}
-          <div className="mt-4 rounded-xl bg-secondary/60 p-3 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{tr("Current Stage")}</span>
-              <span className="text-sm font-bold">{tr(WORKFLOW[step])}</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-muted-foreground">{tr("Stage owner")}</span>
-              <span className="font-medium">{currentStageOwner}</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-muted-foreground">{tr("Started")}</span>
-              <span className="font-medium">{stageStarted}</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-muted-foreground">{tr("Duration")}</span>
-              <span className="font-medium tabular-nums">{stageDuration}h</span>
-            </div>
-            {blockReason && (
-              <div className="mt-1 flex items-center gap-1.5 rounded-md bg-[--color-warning]/15 px-2 py-1 text-[11px] text-[--color-warning] font-medium">
-                <AlertTriangle className="h-3 w-3" /> {tr("Blocked")}: {blockReason}
-              </div>
-            )}
+          <div className="mt-4 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{tr("Stage updated")} · {tr("Today")}</span>
+            <button className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-foreground active:scale-95">
+              <Undo2 className="h-3 w-3" /> {tr("Rollback")}
+            </button>
           </div>
-
-          {role !== "Worker" && (
-            <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>{tr("Stage updated")} · {tr("Today")}</span>
-              <button className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-foreground active:scale-95">
-                <Undo2 className="h-3 w-3" /> {tr("Rollback")}
-              </button>
-            </div>
-          )}
         </div>
       </section>
 
@@ -329,7 +287,7 @@ function JobDetailPage() {
             return (
               <li key={eid} className="rounded-2xl border border-border bg-card p-3">
                 <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                  <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
                     {e.initials}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -341,27 +299,25 @@ function JobDetailPage() {
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
                   <div className="h-full bg-primary" style={{ width: `${memberProgress}%` }} />
                 </div>
-                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground gap-2">
-                  <span className="truncate min-w-0">{tr("Task")}: <span className="text-foreground">{currentTask}</span></span>
-                  <span className="shrink-0">{tr("ETA")} {job.due}</span>
+                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span className="truncate">{tr("Task")}: <span className="text-foreground">{currentTask}</span></span>
+                  <span>{tr("ETA")} {job.due}</span>
                 </div>
               </li>
             );
           })}
         </ul>
-        {role !== "Worker" && (
-          <div className="mt-2.5 grid grid-cols-3 gap-2">
-            <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
-              <UserPlus className="h-3.5 w-3.5" /> {tr("Assign")}
-            </button>
-            <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
-              <Shuffle className="h-3.5 w-3.5" /> {tr("Reassign")}
-            </button>
-            <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
-              <UserPlus className="h-3.5 w-3.5" /> {tr("Add Helper")}
-            </button>
-          </div>
-        )}
+        <div className="mt-2.5 grid grid-cols-3 gap-2">
+          <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
+            <UserPlus className="h-3.5 w-3.5" /> {tr("Assign")}
+          </button>
+          <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
+            <Shuffle className="h-3.5 w-3.5" /> {tr("Reassign")}
+          </button>
+          <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
+            <UserPlus className="h-3.5 w-3.5" /> {tr("Add Helper")}
+          </button>
+        </div>
 
         <div className="mt-2.5 space-y-2">
           <div className="rounded-2xl border border-border bg-card p-3.5">
@@ -371,15 +327,13 @@ function JobDetailPage() {
             </div>
             <p className="text-sm leading-relaxed">{managerNote}</p>
           </div>
-          {role !== "Worker" && (
-            <div className="rounded-2xl border border-border bg-card p-3.5">
-              <div className="flex items-center gap-2 mb-1.5">
-                <User className="h-3.5 w-3.5 text-primary" />
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Customer Notes")}</p>
-              </div>
-              <p className="text-sm leading-relaxed">{tr("Customer prefers OEM parts. Update via WhatsApp.")}</p>
+          <div className="rounded-2xl border border-border bg-card p-3.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <User className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Customer Notes")}</p>
             </div>
-          )}
+            <p className="text-sm leading-relaxed">{tr("Customer prefers OEM parts. Update via WhatsApp.")}</p>
+          </div>
           {(job.status === "Waiting Parts" || job.progress < 30) && (
             <div className="rounded-2xl border border-[--color-warning]/40 bg-[--color-warning]/10 p-3.5">
               <div className="flex items-center gap-2 mb-1.5">
@@ -394,17 +348,10 @@ function JobDetailPage() {
         </div>
       </section>
 
-      {/* Photos — collapsed by default */}
-      <CollapseSection
-        title={tr("Photos")}
-        open={showPhotos}
-        onToggle={() => setShowPhotos((s) => !s)}
-        meta={tr("{n} photos", { n: all.length })}
-      >
-        <PhotoGroup tKey="Before Photos" photos={beforePhotos} />
-        <PhotoGroup tKey="During Photos" photos={duringPhotos} />
-        <PhotoGroup tKey="After Photos" photos={afterPhotos} emptyKey="Pending — job not complete" />
-      </CollapseSection>
+      {/* Photo Timeline */}
+      <PhotoGroup tKey="Before Photos" photos={beforePhotos} />
+      <PhotoGroup tKey="During Photos" photos={duringPhotos} />
+      <PhotoGroup tKey="After Photos" photos={afterPhotos} emptyKey="Pending — job not complete" />
 
       {/* Workshop Checklist */}
       <section className="px-5 mt-6">
@@ -417,7 +364,7 @@ function JobDetailPage() {
               ) : (
                 <Circle className="h-5 w-5 text-muted-foreground/50" />
               )}
-              <span className={`text-sm ${c.done ? "font-medium" : "text-muted-foreground"}`}>{tr(c.key)}</span>
+              <span className={`text-sm ${c.done ? "font-medium" : "text-muted-foreground"}`}>{tr(c.key === "Parts" ? "Parts" : c.key)}</span>
               <span className="ml-auto text-[11px] text-muted-foreground">{c.done ? tr("Done") : tr("Pending")}</span>
             </li>
           ))}
@@ -446,9 +393,9 @@ function JobDetailPage() {
               style={{ width: `${hourPct}%` }}
             />
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground gap-2">
-            <span className="truncate">{actualHours > estHours ? tr("Over budget") : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}</span>
-            <span className="shrink-0">{tr("Variance")}: <span className={`font-semibold ${actualHours > estHours ? "text-[--color-warning]" : "text-foreground"}`}>{actualHours - estHours}h</span></span>
+          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{actualHours > estHours ? tr("Over budget") : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}</span>
+            <span>{tr("Variance")}: <span className={`font-semibold ${actualHours > estHours ? "text-[--color-warning]" : "text-foreground"}`}>{actualHours - estHours}h</span></span>
           </div>
           <div className="mt-3 pt-3 border-t border-border">
             <p className="text-[11px] text-muted-foreground mb-1.5">{tr("Staff involved")}</p>
@@ -504,14 +451,11 @@ function JobDetailPage() {
         </div>
       </section>
 
-      {/* Learning — collapsed */}
-      <CollapseSection
-        title={tr("Learning Integration")}
-        icon={<GraduationCap className="h-4 w-4 text-primary" />}
-        open={showLearning}
-        onToggle={() => setShowLearning((s) => !s)}
-        meta={tr(focus)}
-      >
+      {/* Learning Integration */}
+      <section className="px-5 mt-6">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
+          <GraduationCap className="h-4 w-4 text-primary" /> {tr("Learning Integration")}
+        </h2>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <p className="text-[11px] text-muted-foreground">
             {tr("Focus area for this job: ")}<span className="font-medium text-foreground">{tr(focus)}</span>
@@ -539,7 +483,7 @@ function JobDetailPage() {
             </ul>
           </div>
         </div>
-      </CollapseSection>
+      </section>
 
       {/* Skills Integration */}
       <section className="px-5 mt-6">
@@ -553,7 +497,7 @@ function JobDetailPage() {
             return (
               <li key={eid} className="rounded-2xl border border-border bg-card p-3.5">
                 <div className="flex items-center gap-3">
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary text-foreground text-xs font-semibold">
+                  <div className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-foreground text-xs font-semibold">
                     {e.initials}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -561,7 +505,7 @@ function JobDetailPage() {
                     <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
                   </div>
                   <span
-                    className={`text-[11px] rounded-full px-2 py-1 shrink-0 ${
+                    className={`text-[11px] rounded-full px-2 py-1 ${
                       gap === 0
                         ? "bg-[--color-success]/15 text-[--color-success]"
                         : "bg-[--color-warning]/15 text-[--color-warning]"
@@ -595,14 +539,11 @@ function JobDetailPage() {
         </ul>
       </section>
 
-      {/* Job Timeline — collapsed */}
-      <CollapseSection
-        title={tr("Job Timeline")}
-        icon={<History className="h-4 w-4 text-primary" />}
-        open={showTimeline}
-        onToggle={() => setShowTimeline((s) => !s)}
-        meta={tr("{n} events", { n: timeline.length })}
-      >
+      {/* Job Timeline */}
+      <section className="px-5 mt-6">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
+          <History className="h-4 w-4 text-primary" /> {tr("Job Timeline")}
+        </h2>
         <ol className="rounded-2xl border border-border bg-card p-4">
           {timeline.map((tl, i) => (
             <li key={tl.key} className="flex gap-3 last:pb-0 pb-3.5">
@@ -625,194 +566,62 @@ function JobDetailPage() {
             </li>
           ))}
         </ol>
-      </CollapseSection>
+      </section>
 
-      {/* Cost — collapsed, role-gated */}
-      {showCostSection && (
-        <CollapseSection
-          title={tr("Cost tracking")}
-          icon={<Wallet className="h-4 w-4 text-primary" />}
-          open={showCost}
-          onToggle={() => setShowCost((s) => !s)}
-          meta={costFullDetail ? fmtMYR(totalCost) : tr("Summary")}
-        >
-          <div className="rounded-2xl border border-border bg-card p-4 space-y-2.5">
-            {costFullDetail ? (
-              <>
-                <CostRow label={tr("Parts")} value={costs.parts} />
-                <CostRow label={tr("Labour")} value={costs.labour} />
-                <CostRow label={tr("Paint & Materials")} value={costs.paint} />
-              </>
-            ) : (
-              <p className="text-[11px] text-muted-foreground">{tr("Detail hidden — manager summary only.")}</p>
-            )}
-            <div className="pt-2.5 mt-1 border-t border-border flex items-center justify-between">
-              <span className="text-sm font-semibold">{tr("Total")}</span>
-              <span className="text-base font-semibold tabular-nums">{fmtMYR(totalCost)}</span>
-            </div>
+      {/* Cost tracking (optional) */}
+      <section className="px-5 mt-6">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
+          <Wallet className="h-4 w-4 text-primary" /> {tr("Cost tracking")}
+        </h2>
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-2.5">
+          <CostRow label={tr("Parts")} value={costs.parts} />
+          <CostRow label={tr("Labour")} value={costs.labour} />
+          <CostRow label={tr("Paint & Materials")} value={costs.paint} />
+          <div className="pt-2.5 mt-1 border-t border-border flex items-center justify-between">
+            <span className="text-sm font-semibold">{tr("Total")}</span>
+            <span className="text-base font-semibold tabular-nums">{fmtMYR(totalCost)}</span>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">{tr("Estimated — not yet invoiced.")}</p>
-        </CollapseSection>
-      )}
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">{tr("Estimated — not yet invoiced.")}</p>
+      </section>
 
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2">{tr("Notes")}</h2>
         <p className="rounded-2xl border border-border bg-card p-3.5 text-sm leading-relaxed">{job.notes}</p>
       </section>
 
-      {/* Spacer to prevent sticky bar covering content */}
-      <div className="h-32" />
+      {/* Spacer for sticky actions */}
+      <div className="h-28" />
 
-      {/* Sticky Bottom Actions — state-driven */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
-        <div className="mx-auto max-w-md">
-          <StickyActions role={role} state={workState} onStateChange={setWorkState} />
+      {/* Sticky Bottom Actions */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur px-4 py-3">
+        <div className="mx-auto max-w-md space-y-2">
+          <div className="grid grid-cols-4 gap-1.5">
+            <StickyBtn icon={<Play className="h-4 w-4" />} label={tr("Start")} />
+            <StickyBtn icon={<Pause className="h-4 w-4" />} label={tr("Pause")} />
+            <StickyBtn icon={<Camera className="h-4 w-4" />} label={tr("Photo")} />
+            <StickyBtn icon={<CheckCheck className="h-4 w-4" />} label={tr("Complete")} primary />
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            <StickyBtn icon={<CheckCircle2 className="h-3.5 w-3.5" />} label={tr("Approve")} small />
+            <StickyBtn icon={<Shuffle className="h-3.5 w-3.5" />} label={tr("Reassign")} small />
+            <StickyBtn icon={<ShieldCheck className="h-3.5 w-3.5" />} label={tr("Final Approve")} small />
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function StickyActions({
-  role,
-  state,
-  onStateChange,
-}: {
-  role: RoleView;
-  state: WorkState;
-  onStateChange: (s: WorkState) => void;
-}) {
-  const { tr } = useT();
-
-  if (role === "Worker") {
-    const isWorking = state === "Working";
-    const isCompleted = state === "Completed";
-    const canStart = state === "Received" || state === "Paused";
-    return (
-      <div className="grid grid-cols-4 gap-1.5">
-        <StickyBtn
-          icon={<Play className="h-4 w-4" />}
-          label={tr("Play")}
-          primary={canStart}
-          disabled={!canStart}
-          onClick={() => onStateChange("Working")}
-        />
-        <StickyBtn
-          icon={<Pause className="h-4 w-4" />}
-          label={tr("Pause")}
-          disabled={!isWorking}
-          onClick={() => onStateChange("Paused")}
-        />
-        <StickyBtn
-          icon={<Camera className="h-4 w-4" />}
-          label={tr("Photo")}
-          disabled={isCompleted}
-        />
-        <StickyBtn
-          icon={<CheckCheck className="h-4 w-4" />}
-          label={tr("Complete")}
-          primary={isWorking}
-          disabled={!isWorking}
-          onClick={() => onStateChange("Completed")}
-        />
-      </div>
-    );
-  }
-
-  if (role === "Manager") {
-    return (
-      <div className="grid grid-cols-3 gap-1.5">
-        <StickyBtn icon={<CheckCircle2 className="h-4 w-4" />} label={tr("Approve")} primary />
-        <StickyBtn icon={<Shuffle className="h-4 w-4" />} label={tr("Reassign")} />
-        <StickyBtn icon={<CheckCheck className="h-4 w-4" />} label={tr("Move Stage")} />
-      </div>
-    );
-  }
-
-  // Owner
-  return (
-    <div className="grid grid-cols-3 gap-1.5">
-      <StickyBtn icon={<ShieldCheck className="h-4 w-4" />} label={tr("Override")} />
-      <StickyBtn icon={<Shuffle className="h-4 w-4" />} label={tr("Reassign")} />
-      <StickyBtn icon={<CheckCheck className="h-4 w-4" />} label={tr("Final Approve")} primary />
-    </div>
-  );
-}
-
-function Chip({ children, muted }: { children: ReactNode; muted?: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-        muted ? "bg-secondary/60 text-muted-foreground" : "bg-secondary text-foreground"
-      }`}
-    >
-      {children}
-    </span>
-  );
-}
-
-function CollapseSection({
-  title,
-  icon,
-  open,
-  onToggle,
-  meta,
-  children,
-}: {
-  title: string;
-  icon?: ReactNode;
-  open: boolean;
-  onToggle: () => void;
-  meta?: string;
-  children: ReactNode;
-}) {
-  const { tr } = useT();
-  return (
-    <section className="px-5 mt-6">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between gap-2 mb-2.5 active:opacity-70"
-      >
-        <h2 className="text-sm font-semibold tracking-tight flex items-center gap-2">
-          {icon}
-          {title}
-        </h2>
-        <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          {meta && <span className="truncate max-w-[120px]">{meta}</span>}
-          <span className="inline-flex items-center gap-0.5 rounded-full bg-secondary px-2 py-0.5 text-foreground">
-            {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {open ? tr("Show less") : tr("Show more")}
-          </span>
-        </span>
-      </button>
-      {open && <div>{children}</div>}
-    </section>
-  );
-}
-
-function StickyBtn({
-  icon,
-  label,
-  primary,
-  onClick,
-  disabled,
-}: {
-  icon: ReactNode;
-  label: string;
-  primary?: boolean;
-  onClick?: () => void;
-  disabled?: boolean;
-}) {
+function StickyBtn({ icon, label, primary, small }: { icon: ReactNode; label: string; primary?: boolean; small?: boolean }) {
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[11px] active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100 ${
-        primary ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-foreground"
-      }`}
+      className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl active:scale-95 transition-transform ${
+        small ? "py-1.5 text-[10px]" : "py-2 text-[11px]"
+      } ${primary ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-foreground"}`}
     >
       {icon}
-      <span className="leading-none text-center px-1">{label}</span>
+      <span className="leading-none">{label}</span>
     </button>
   );
 }
@@ -829,9 +638,9 @@ function CostRow({ label, value }: { label: string; value: number }) {
 function PhotoGroup({ tKey, photos, emptyKey }: { tKey: string; photos: string[]; emptyKey?: string }) {
   const { tr } = useT();
   return (
-    <div className="mt-3">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold tracking-tight">{tr(tKey)}</h3>
+    <section className="px-5 mt-6">
+      <div className="flex items-center justify-between mb-2.5">
+        <h2 className="text-sm font-semibold tracking-tight">{tr(tKey)}</h2>
         <span className="text-[11px] text-muted-foreground">
           {tr(photos.length === 1 ? "{n} photo" : "{n} photos", { n: photos.length })}
         </span>
@@ -847,6 +656,6 @@ function PhotoGroup({ tKey, photos, emptyKey }: { tKey: string; photos: string[]
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }
