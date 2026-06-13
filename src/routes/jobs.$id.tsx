@@ -661,21 +661,104 @@ function JobDetailPage() {
       {/* Spacer for sticky actions */}
       <div className="h-40" />
 
+      {/* Hidden file input for photo capture */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          if (files.length === 0) return;
+          const readers = files.map(
+            (f) =>
+              new Promise<string>((resolve, reject) => {
+                if (f.size > 8 * 1024 * 1024) {
+                  reject(new Error("too-large"));
+                  return;
+                }
+                const r = new FileReader();
+                r.onload = () => resolve(String(r.result));
+                r.onerror = () => reject(r.error ?? new Error("read"));
+                r.readAsDataURL(f);
+              }),
+          );
+          Promise.allSettled(readers).then((results) => {
+            const ok = results
+              .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+              .map((r) => r.value);
+            const failed = results.length - ok.length;
+            if (ok.length) setExtraPhotos((p) => [...p, ...ok]);
+            if (ok.length) toast.success(tr("{n} photo(s) added", { n: ok.length }));
+            if (failed) toast.error(tr("{n} photo(s) failed (max 8MB)", { n: failed }));
+          });
+          if (fileRef.current) fileRef.current.value = "";
+        }}
+      />
+
       {/* Sticky Bottom Actions */}
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-md space-y-2">
           <div className="grid grid-cols-4 gap-1.5">
-            <StickyBtn icon={<Play className="h-4 w-4" />} label={tr("Start")} />
-            <StickyBtn icon={<Pause className="h-4 w-4" />} label={tr("Pause")} />
-            <StickyBtn icon={<Camera className="h-4 w-4" />} label={tr("Photo")} />
-            <StickyBtn icon={<CheckCheck className="h-4 w-4" />} label={tr("Complete")} primary />
+            <StickyBtn
+              icon={<Play className="h-4 w-4" />}
+              label={running ? tr("Running") : tr("Start")}
+              onClick={() => {
+                setRunning(true);
+                toast.success(tr("Job started"));
+              }}
+            />
+            <StickyBtn
+              icon={<Pause className="h-4 w-4" />}
+              label={tr("Pause")}
+              onClick={() => {
+                setRunning(false);
+                toast(tr("Job paused"));
+              }}
+            />
+            <StickyBtn
+              icon={<Camera className="h-4 w-4" />}
+              label={tr("Photo")}
+              onClick={() => fileRef.current?.click()}
+            />
+            <StickyBtn
+              icon={<CheckCheck className="h-4 w-4" />}
+              label={step >= WORKFLOW.length - 1 ? tr("Done") : tr("Complete")}
+              primary
+              onClick={() => {
+                const next = Math.min(WORKFLOW.length - 1, step + 1);
+                if (next === step) {
+                  toast(tr("Already at final stage"));
+                  return;
+                }
+                setStageOverride(next);
+                toast.success(tr("Moved to {s}", { s: tr(WORKFLOW[next]) }));
+              }}
+            />
           </div>
           {role !== "worker" && (
             <div className="grid grid-cols-3 gap-1.5">
-              <StickyBtn icon={<CheckCircle2 className="h-3.5 w-3.5" />} label={tr("Approve")} small />
-              <StickyBtn icon={<Shuffle className="h-3.5 w-3.5" />} label={tr("Reassign")} small />
+              <StickyBtn
+                icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                label={tr("Approve")}
+                small
+                onClick={() => toast.success(tr("Stage approved"))}
+              />
+              <StickyBtn
+                icon={<Shuffle className="h-3.5 w-3.5" />}
+                label={tr("Reassign")}
+                small
+                onClick={() => toast(tr("Open reassign panel"))}
+              />
               {role === "owner" && (
-                <StickyBtn icon={<ShieldCheck className="h-3.5 w-3.5" />} label={tr("Final Approve")} small />
+                <StickyBtn
+                  icon={<ShieldCheck className="h-3.5 w-3.5" />}
+                  label={tr("Final Approve")}
+                  small
+                  onClick={() => toast.success(tr("Final approval recorded"))}
+                />
               )}
             </div>
           )}
