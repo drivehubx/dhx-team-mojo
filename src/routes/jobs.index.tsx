@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Calendar, MapPin, FileText } from "lucide-react";
 import { useT, tStatus } from "@/lib/i18n";
 
-export const Route = createFileRoute("/jobs")({
+export const Route = createFileRoute("/jobs/")({
   head: () => ({
     meta: [
       { title: "Jobs — DHX Team Ops" },
