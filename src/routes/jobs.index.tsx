@@ -1,157 +1,266 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { z } from "zod";
 import { AppHeader } from "@/components/AppHeader";
-import { AvatarStack } from "@/components/Avatar";
 import { jobs, getEmployee, type JobStatus, type Job } from "@/lib/mock-data";
-import { StatusBadge } from "./index";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Calendar, MapPin, FileText } from "lucide-react";
 import { useT, tStatus } from "@/lib/i18n";
+import { Search, AlertTriangle, Clock, UserPlus, ShieldAlert, ChevronRight } from "lucide-react";
+
+const roleSchema = z.object({
+  role: z.enum(["worker", "manager", "owner"]).catch("worker"),
+});
 
 export const Route = createFileRoute("/jobs/")({
+  validateSearch: roleSchema,
   head: () => ({
     meta: [
       { title: "Jobs — DHX Team Ops" },
-      { name: "description", content: "Track workshop job progress, staff, and vehicle status." },
+      { name: "description", content: "Workshop control board: scan jobs, stages, ETA risk." },
     ],
   }),
   component: JobsPage,
 });
 
-const filters: (JobStatus | "All")[] = ["All", "In Progress", "Pending QC", "Waiting Parts", "Completed"];
+// "Today" anchor for the mock data (jobs use "DD Mon" strings around mid-June).
+const TODAY_DAY = 14;
+const TODAY_MONTH = "Jun";
+
+function parseDay(s: string): { day: number; month: string } | null {
+  const m = s.match(/^(\d{1,2})\s+([A-Za-z]{3})$/);
+  if (!m) return null;
+  return { day: parseInt(m[1], 10), month: m[2] };
+}
+
+type Risk = "ok" | "today" | "soon" | "overdue";
+function etaRisk(due: string, status: JobStatus): Risk {
+  if (status === "Completed") return "ok";
+  const p = parseDay(due);
+  if (!p || p.month !== TODAY_MONTH) return "ok";
+  const diff = p.day - TODAY_DAY;
+  if (diff < 0) return "overdue";
+  if (diff === 0) return "today";
+  if (diff <= 2) return "soon";
+  return "ok";
+}
+
+// Map status → stage chip styling/dot
+const stageStyles: Record<JobStatus, { dot: string; chip: string; label: string }> = {
+  "In Progress": { dot: "bg-primary", chip: "bg-primary/10 text-primary", label: "In Progress" },
+  "Pending QC": { dot: "bg-[--color-warning]", chip: "bg-[--color-warning]/15 text-[--color-warning]", label: "Pending QC" },
+  "Waiting Parts": { dot: "bg-orange-500", chip: "bg-orange-500/15 text-orange-600", label: "Waiting Parts" },
+  "Completed": { dot: "bg-[--color-success]", chip: "bg-[--color-success]/15 text-[--color-success]", label: "Ready" },
+};
+
+// Mock "self" id per role (Owner default user has no assignments).
+function selfIdFor(role: "worker" | "manager" | "owner") {
+  if (role === "worker") return "e4"; // Suresh
+  return "e1"; // Ron (manager/owner)
+}
+
+type FilterKey = "All" | "Mine" | "Blocked" | "In Progress" | "QC" | "Ready";
+
+function matchesFilter(job: Job, f: FilterKey, selfId: string): boolean {
+  switch (f) {
+    case "All": return true;
+    case "Mine": return job.assignedIds.includes(selfId);
+    case "Blocked": return job.status === "Waiting Parts";
+    case "In Progress": return job.status === "In Progress";
+    case "QC": return job.status === "Pending QC";
+    case "Ready": return job.status === "Completed";
+  }
+}
 
 function JobsPage() {
   const { t, tr } = useT();
-  const [filter, setFilter] = useState<(JobStatus | "All")>("All");
-  const [openJob, setOpenJob] = useState<Job | null>(null);
+  const { role } = Route.useSearch();
+  const selfId = selfIdFor(role);
 
-  const list = filter === "All" ? jobs : jobs.filter((j) => j.status === filter);
+  const allFilters: FilterKey[] = ["All", "Mine", "Blocked", "In Progress", "QC", "Ready"];
+  const [filter, setFilter] = useState<FilterKey>(role === "worker" ? "Mine" : "All");
+  const [query, setQuery] = useState("");
+
+  const list = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return jobs.filter((j) => {
+      if (!matchesFilter(j, filter, selfId)) return false;
+      if (!q) return true;
+      return (
+        j.plate.toLowerCase().includes(q) ||
+        j.vehicle.toLowerCase().includes(q) ||
+        j.notes.toLowerCase().includes(q)
+      );
+    });
+  }, [filter, query, selfId]);
 
   return (
-    <div>
-      <AppHeader title={t("page.jobs.title")} subtitle={t("page.jobs.subtitle", { count: list.length })} />
+    <div className="pb-8">
+      <AppHeader title={t("page.jobs.title") || tr("Jobs")} subtitle={tr("{n} jobs shown").replace("{n}", String(list.length))} />
 
-      <div className="px-5 -mt-4">
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {filters.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                filter === f
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground border border-border"
-              }`}
-            >
-              {tStatus(t, f)}
-            </button>
-          ))}
+      {/* Sticky search + filters */}
+      <div className="sticky top-[88px] z-30 -mt-4 px-5 pb-2 pt-3 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`${tr("Plate")} · ${tr("Vehicle")} · ${tr("Customer")}`}
+            className="w-full h-10 rounded-xl border border-border bg-card pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {allFilters.map((f) => {
+            const count = jobs.filter((j) => matchesFilter(j, f, selfId)).length;
+            const active = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card text-muted-foreground border border-border"
+                }`}
+              >
+                {tr(f)}
+                <span className={`text-[10px] font-semibold ${active ? "text-primary-foreground/80" : "text-muted-foreground/70"}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <ul className="mt-4 space-y-3 px-5">
+      {/* Cards */}
+      <ul className="mt-2 space-y-2 px-5">
         {list.map((job) => (
-          <li key={job.id}>
-            <Link to="/jobs/$id" params={{ id: job.id }} className="block w-full text-left rounded-2xl border border-border bg-card p-4 active:bg-secondary">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{job.plate}</p>
-                  <p className="mt-0.5 text-base font-semibold truncate">{job.vehicle}</p>
-                </div>
-                <StatusBadge status={job.status} />
-              </div>
-
-              <div className="mt-3 flex gap-1.5">
-                {job.photos.slice(0, 3).map((src, i) => (
-                  <img
-                    key={i}
-                    src={src}
-                    alt=""
-                    className="h-16 w-16 rounded-lg object-cover bg-secondary"
-                    loading="lazy"
-                  />
-                ))}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <AvatarStack initialsList={job.assignedIds.map((id) => getEmployee(id).initials)} size={26} />
-                <div className="flex flex-1 items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
-                    <div className="h-full bg-primary" style={{ width: `${job.progress}%` }} />
-                  </div>
-                  <span className="text-[11px] font-semibold text-muted-foreground w-9 text-right">{job.progress}%</span>
-                </div>
-              </div>
-            </Link>
-          </li>
+          <JobCard key={job.id} job={job} role={role} selfId={selfId} />
         ))}
+        {list.length === 0 && (
+          <li className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            {tr("No requests")}
+          </li>
+        )}
       </ul>
-
-      <Sheet open={!!openJob} onOpenChange={(o) => !o && setOpenJob(null)}>
-        <SheetContent side="bottom" className="rounded-t-3xl max-h-[88vh] overflow-y-auto">
-          {openJob && (
-            <>
-              <SheetHeader>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground text-left">{openJob.plate}</p>
-                <SheetTitle className="text-left">{openJob.vehicle}</SheetTitle>
-              </SheetHeader>
-
-              <div className="mt-3 flex items-center gap-2">
-                <StatusBadge status={openJob.status} />
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" /> {tr("Started")} {openJob.startedAt} · {tr("Due")} {openJob.due}
-                </span>
-              </div>
-
-              <div className="mt-4">
-                <p className="text-xs font-medium text-muted-foreground mb-2">{tr("Progress")}</p>
-                <div className="flex items-center gap-2">
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-                    <div className="h-full bg-primary" style={{ width: `${openJob.progress}%` }} />
-                  </div>
-                  <span className="text-xs font-semibold">{openJob.progress}%</span>
-                </div>
-              </div>
-
-              <div className="mt-5">
-                <p className="text-xs font-medium text-muted-foreground mb-2">{tr("Photos")}</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {openJob.photos.map((src, i) => (
-                    <img key={i} src={src} alt="" className="aspect-square w-full rounded-xl object-cover bg-secondary" loading="lazy" />
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-5">
-                <p className="text-xs font-medium text-muted-foreground mb-2">{tr("Assigned staff")}</p>
-                <ul className="space-y-2">
-                  {openJob.assignedIds.map((id) => {
-                    const e = getEmployee(id);
-                    return (
-                      <li key={id} className="flex items-center gap-3 rounded-xl border border-border p-2.5">
-                        <div className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-                          {e.initials}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{e.name}</p>
-                          <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-
-              <div className="mt-5 mb-2">
-                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5" /> {tr("Notes")}
-                </p>
-                <p className="text-sm text-foreground rounded-xl bg-secondary p-3 leading-relaxed">{openJob.notes}</p>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
+  );
+}
+
+function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" | "owner"; selfId: string }) {
+  const { tr } = useT();
+  const stage = stageStyles[job.status];
+  const risk = etaRisk(job.due, job.status);
+  const isBlocked = job.status === "Waiting Parts";
+  const isMine = job.assignedIds.includes(selfId);
+  const owner = getEmployee(job.assignedIds[0]);
+  const others = job.assignedIds.length - 1;
+
+  const riskMeta: Record<Risk, { label: string; cls: string }> = {
+    ok: { label: tr("Due") + " " + job.due, cls: "text-muted-foreground" },
+    soon: { label: tr("ETA") + " " + job.due, cls: "text-[--color-warning]" },
+    today: { label: tr("ETA Today"), cls: "text-[--color-warning] font-semibold" },
+    overdue: { label: tr("Overdue") + " · " + job.due, cls: "text-destructive font-semibold" },
+  };
+
+  return (
+    <li>
+      <Link
+        to="/jobs/$id"
+        params={{ id: job.id }}
+        search={{ role }}
+        className="block rounded-2xl border border-border bg-card px-4 py-3 active:bg-secondary"
+      >
+        {/* Row 1: plate + vehicle + stage */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">{job.plate}</p>
+              {isMine && (
+                <span className="text-[9px] font-semibold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                  {tr("Mine")}
+                </span>
+              )}
+            </div>
+            <p className="text-[15px] font-semibold leading-tight truncate">{job.vehicle}</p>
+          </div>
+          <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${stage.chip}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${stage.dot}`} />
+            {tStatus(((k: string) => tr(k)) as any, stage.label) || tr(stage.label)}
+          </span>
+        </div>
+
+        {/* Row 2: assignment + progress */}
+        <div className="mt-2.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex -space-x-1.5">
+              {job.assignedIds.slice(0, 3).map((id) => {
+                const e = getEmployee(id);
+                return (
+                  <span
+                    key={id}
+                    className="grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-card text-[9px] font-bold"
+                    title={e.name}
+                  >
+                    {e.initials}
+                  </span>
+                );
+              })}
+            </div>
+            <span className="text-[11px] text-muted-foreground truncate">
+              {owner.initials}
+              {others > 0 && ` +${others}`}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 min-w-0 flex-1 max-w-[55%]">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+              <div className={`h-full ${stage.dot}`} style={{ width: `${job.progress}%` }} />
+            </div>
+            <span className="text-[11px] font-semibold tabular-nums w-8 text-right text-muted-foreground">
+              {job.progress}%
+            </span>
+          </div>
+        </div>
+
+        {/* Row 3: status footer (blocked / ETA + actions) */}
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {isBlocked ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
+                <AlertTriangle className="h-3 w-3" /> {tr("Blocked")}
+              </span>
+            ) : (
+              <span className={`inline-flex items-center gap-1 text-[11px] ${riskMeta[risk].cls}`}>
+                <Clock className="h-3 w-3" /> {riskMeta[risk].label}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {role === "manager" && (
+              <QuickAction icon={UserPlus} label={tr("Assign")} />
+            )}
+            {role === "owner" && (
+              <QuickAction icon={ShieldAlert} label={tr("Override")} />
+            )}
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-primary">
+              {tr("Open")} <ChevronRight className="h-3.5 w-3.5" />
+            </span>
+          </div>
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+function QuickAction({ icon: Icon, label }: { icon: typeof UserPlus; label: string }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground hover:bg-secondary"
+    >
+      <Icon className="h-3 w-3" /> {label}
+    </button>
   );
 }
