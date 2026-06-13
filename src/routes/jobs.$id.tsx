@@ -183,9 +183,8 @@ function JobDetailPage() {
 
       {/* Repair Workflow */}
       <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Repair Workflow</h2>
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Repair Workflow")}</h2>
         <div className="rounded-2xl border border-border bg-card p-4">
-          {/* Progress bar */}
           <div className="flex items-center gap-2 mb-4">
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
               <div
@@ -194,11 +193,10 @@ function JobDetailPage() {
               />
             </div>
             <span className="text-[11px] font-medium text-muted-foreground">
-              {WORKFLOW[step]}
+              {tr(WORKFLOW[step])}
             </span>
           </div>
 
-          {/* Stage pills */}
           <ol className="flex items-center justify-between gap-1">
             {WORKFLOW.map((label, i) => {
               const done = i < step;
@@ -221,7 +219,7 @@ function JobDetailPage() {
                       active ? "font-semibold text-foreground" : done ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
-                    {label}
+                    {tr(label)}
                   </span>
                 </li>
               );
