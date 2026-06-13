@@ -3,6 +3,7 @@ import { Users, Wrench, Wallet, HandCoins, ArrowRight, CheckCircle2, Clock, Aler
 import { AppHeader } from "@/components/AppHeader";
 import { AvatarStack } from "@/components/Avatar";
 import { currentUser, jobs, totals, fmtMYR, getEmployee } from "@/lib/mock-data";
+import { useT, tStatus } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
