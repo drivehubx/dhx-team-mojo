@@ -9,13 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TeamRouteImport } from './routes/team'
 import { Route as SalaryRouteImport } from './routes/salary'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as LearningRouteImport } from './routes/learning'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as AdvanceRouteImport } from './routes/advance'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SalaryRoute = SalaryRouteImport.update({
   id: '/salary',
   path: '/salary',
@@ -24,6 +31,11 @@ const SalaryRoute = SalaryRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearningRoute = LearningRouteImport.update({
+  id: '/learning',
+  path: '/learning',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsRoute = JobsRouteImport.update({
@@ -51,16 +63,20 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
   '/jobs': typeof JobsRouteWithChildren
+  '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
   '/jobs': typeof JobsRouteWithChildren
+  '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
 }
 export interface FileRoutesById {
@@ -68,22 +84,42 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/advance': typeof AdvanceRoute
   '/jobs': typeof JobsRouteWithChildren
+  '/learning': typeof LearningRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/advance' | '/jobs' | '/profile' | '/salary' | '/jobs/$id'
+  fullPaths:
+    | '/'
+    | '/advance'
+    | '/jobs'
+    | '/learning'
+    | '/profile'
+    | '/salary'
+    | '/team'
+    | '/jobs/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/advance' | '/jobs' | '/profile' | '/salary' | '/jobs/$id'
+  to:
+    | '/'
+    | '/advance'
+    | '/jobs'
+    | '/learning'
+    | '/profile'
+    | '/salary'
+    | '/team'
+    | '/jobs/$id'
   id:
     | '__root__'
     | '/'
     | '/advance'
     | '/jobs'
+    | '/learning'
     | '/profile'
     | '/salary'
+    | '/team'
     | '/jobs/$id'
   fileRoutesById: FileRoutesById
 }
@@ -91,12 +127,21 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdvanceRoute: typeof AdvanceRoute
   JobsRoute: typeof JobsRouteWithChildren
+  LearningRoute: typeof LearningRoute
   ProfileRoute: typeof ProfileRoute
   SalaryRoute: typeof SalaryRoute
+  TeamRoute: typeof TeamRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/salary': {
       id: '/salary'
       path: '/salary'
@@ -109,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learning': {
+      id: '/learning'
+      path: '/learning'
+      fullPath: '/learning'
+      preLoaderRoute: typeof LearningRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs': {
@@ -156,8 +208,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdvanceRoute: AdvanceRoute,
   JobsRoute: JobsRouteWithChildren,
+  LearningRoute: LearningRoute,
   ProfileRoute: ProfileRoute,
   SalaryRoute: SalaryRoute,
+  TeamRoute: TeamRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Dashboard — DHX Team Ops" },
-      { name: "description", content: "Workshop operations dashboard for DriveHubX team." },
+      { name: "description", content: "Workshop operations dashboard for DHX Team Ops." },
     ],
   }),
   component: Dashboard,
