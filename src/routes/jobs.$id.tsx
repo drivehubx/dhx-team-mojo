@@ -187,6 +187,18 @@ function JobDetailPage() {
                 <p className="text-[11px] text-muted-foreground">{ownerPhone}</p>
               </div>
             </div>
+            <div className="col-span-2 grid grid-cols-2 gap-3 pt-2 border-t border-border">
+              <div>
+                <p className="text-muted-foreground">{tr("Channel")}</p>
+                <span className={`mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${isFleet ? "bg-primary/15 text-primary" : "bg-secondary text-foreground"}`}>
+                  {channel}
+                </span>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{tr("Assigned Manager")}</p>
+                <p className="mt-0.5 font-medium text-sm">{assignedManager}</p>
+              </div>
+            </div>
           </div>
 
           <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
