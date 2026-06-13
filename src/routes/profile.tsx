@@ -51,13 +51,31 @@ function ProfilePage() {
       </section>
 
       <section className="mt-5 px-5">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{labels.language}</h2>
+        <Link to="/settings" className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-secondary text-primary">
+            <Languages className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">{labels.preferredLang}</p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {flagInfo ? `${flagInfo.flag} ${flagInfo.native}` : "—"}
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+      </section>
+
+      <section className="mt-5 px-5">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Account</h2>
         <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
           <Row icon={Phone} label="Phone" value={currentUser.phone} />
           <Row icon={FileText} label="Documents" value="2 files" />
-          <Row icon={Settings} label="Settings" value="" />
+          <Row icon={Settings} label={labels.settings} value="" />
         </ul>
       </section>
+
+
 
       <div className="mt-6 px-5">
         <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3.5 text-sm font-semibold text-destructive">
