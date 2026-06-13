@@ -125,10 +125,25 @@ function JobDetailPage() {
 
   const timeline = [
     { key: "Created", date: job.startedAt, done: true },
+    { key: "Assigned", date: job.startedAt, done: true },
     { key: "Started", date: job.startedAt, done: true },
     { key: "Updated", date: tr("Today"), done: true },
+    { key: "QC", date: step >= 3 ? tr("Today") : tr("Pending"), done: step >= 3 },
     { key: "Completed", date: job.status === "Completed" ? job.due : tr("Pending"), done: job.status === "Completed" },
   ];
+
+  // Walk-in vs Fleet
+  const isFleet = ["BMW", "PNG", "MEX"].some((p) => job.plate.startsWith(p));
+  const channel = isFleet ? tr("Fleet") : tr("Walk-in");
+  const assignedManager = "Ron Tan";
+
+  // Parts (mock)
+  const parts = [
+    { name: tr("Front Bumper"), status: job.status === "Waiting Parts" ? "waiting" : "installed" },
+    { name: tr("Headlamp Assembly"), status: job.progress >= 50 ? "installed" : "waiting" },
+    { name: tr("Paint — Base Coat"), status: job.progress >= 40 ? "installed" : "waiting" },
+    { name: tr("Clip Set"), status: "returned" },
+  ] as const;
 
   // Learning + Skills integration
   const focus = jobSkillFocus(job);
