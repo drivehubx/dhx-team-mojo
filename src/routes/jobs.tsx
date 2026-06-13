@@ -21,6 +21,7 @@ export const Route = createFileRoute("/jobs")({
 const filters: (JobStatus | "All")[] = ["All", "In Progress", "Pending QC", "Waiting Parts", "Completed"];
 
 function JobsPage() {
+  const { t } = useT();
   const [filter, setFilter] = useState<(JobStatus | "All")>("All");
   const [openJob, setOpenJob] = useState<Job | null>(null);
 
@@ -28,7 +29,7 @@ function JobsPage() {
 
   return (
     <div>
-      <AppHeader title="Jobs" subtitle={`${list.length} job${list.length !== 1 ? "s" : ""} shown`} />
+      <AppHeader title={t("page.jobs.title")} subtitle={t("page.jobs.subtitle", { count: list.length })} />
 
       <div className="px-5 -mt-4">
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -42,7 +43,7 @@ function JobsPage() {
                   : "bg-card text-muted-foreground border border-border"
               }`}
             >
-              {f}
+              {tStatus(t, f)}
             </button>
           ))}
         </div>
