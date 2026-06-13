@@ -50,7 +50,7 @@ function JobsPage() {
       <ul className="mt-4 space-y-3 px-5">
         {list.map((job) => (
           <li key={job.id}>
-            <button onClick={() => setOpenJob(job)} className="block w-full text-left rounded-2xl border border-border bg-card p-4 active:bg-secondary">
+            <Link to="/jobs/$id" params={{ id: job.id }} className="block w-full text-left rounded-2xl border border-border bg-card p-4 active:bg-secondary">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{job.plate}</p>
@@ -80,7 +80,7 @@ function JobsPage() {
                   <span className="text-[11px] font-semibold text-muted-foreground w-9 text-right">{job.progress}%</span>
                 </div>
               </div>
-            </button>
+            </Link>
           </li>
         ))}
       </ul>
