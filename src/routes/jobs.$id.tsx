@@ -23,6 +23,7 @@ import {
   type Job,
   type SkillCategory,
 } from "@/lib/mock-data";
+import { TranslatedText } from "@/components/TranslatedText";
 import { StatusBadge } from "./index";
 
 export const Route = createFileRoute("/jobs/$id")({
