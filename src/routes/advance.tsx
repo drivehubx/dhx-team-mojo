@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { advances, employees, getEmployee, fmtMYR, advanceBalance } from "@/lib/mock-data";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
@@ -18,6 +19,7 @@ const tabs = ["Borrow", "Repayment", "Balance"] as const;
 type Tab = (typeof tabs)[number];
 
 function AdvancePage() {
+  const { t } = useT();
   const [tab, setTab] = useState<Tab>("Borrow");
 
   const totalBorrow = advances.filter((a) => a.type === "borrow").reduce((s, a) => s + a.amount, 0);
@@ -26,7 +28,7 @@ function AdvancePage() {
 
   return (
     <div>
-      <AppHeader title="Advance" subtitle="Employee credit ledger" />
+      <AppHeader title={t("page.advance.title")} subtitle="Employee credit ledger" />
 
       <div className="px-5 -mt-4">
         <div className="rounded-2xl bg-card border border-border p-4 shadow-sm">

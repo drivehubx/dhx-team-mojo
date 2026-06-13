@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useT } from "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { salaries, getEmployee, fmtMYR, netSalary } from "@/lib/mock-data";
 import { ChevronDown, TrendingUp, TrendingDown, Plus, Minus } from "lucide-react";
@@ -14,13 +15,14 @@ export const Route = createFileRoute("/salary")({
 });
 
 function SalaryPage() {
+  const { t } = useT();
   const total = salaries.reduce((s, x) => s + netSalary(x), 0);
   const paid = salaries.filter((s) => s.paid).reduce((sum, s) => sum + netSalary(s), 0);
   const outstanding = total - paid;
 
   return (
     <div>
-      <AppHeader title="Salary" subtitle="June 2026" />
+      <AppHeader title={t("page.salary.title")} subtitle="June 2026" />
 
       <div className="px-5 -mt-4">
         <div className="rounded-2xl bg-card border border-border p-4 shadow-sm">

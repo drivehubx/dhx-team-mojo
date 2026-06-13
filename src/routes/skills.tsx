@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useT } from "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ function StatusPill({ status }: { status: AssessmentRequest["status"] }) {
 }
 
 function SkillsPage() {
+  const { t } = useT();
   const [role, setRole] = useState<Role>(baseRole);
   const [editMode, setEditMode] = useState(false);
   const [skills, setSkills] = useState(employeeSkills);
@@ -158,7 +160,7 @@ function SkillsPage() {
 
   return (
     <div>
-      <AppHeader title="Skills" subtitle="Capability, assessments & training" />
+      <AppHeader title={t("page.skills.title")} subtitle="Capability, assessments & training" />
 
       <div className="px-5 -mt-4 space-y-4 pb-8">
         {/* Role switcher (demo) */}

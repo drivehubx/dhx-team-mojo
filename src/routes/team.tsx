@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useT } from "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -47,6 +48,7 @@ function workerCurrentJob(empId: string) {
 }
 
 function TeamPage() {
+  const { t } = useT();
   const active = employees.filter((e) => workerMeta[e.id]?.attendance !== "Off");
   const present = employees.filter((e) => workerMeta[e.id]?.attendance === "Present").length;
   const late = employees.filter((e) => workerMeta[e.id]?.attendance === "Late").length;
@@ -63,7 +65,7 @@ function TeamPage() {
 
   return (
     <div>
-      <AppHeader title="Team" subtitle="Today's overview" />
+      <AppHeader title={t("page.team.title")} subtitle="Today's overview" />
 
       <div className="px-5 -mt-4 space-y-4">
         {/* Today Attendance */}
