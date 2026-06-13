@@ -183,3 +183,66 @@ export const totals = {
   outstandingSalary: salaries.filter((s) => !s.paid).reduce((sum, s) => sum + netSalary(s), 0),
   totalAdvances: employees.reduce((sum, e) => sum + advanceBalance(e.id).balance, 0),
 };
+
+/* ------------------------------------------------------------------ */
+/*  Skills                                                            */
+/* ------------------------------------------------------------------ */
+
+export const skillCategories = ["Panel", "Paint", "QC", "SOP", "Training"] as const;
+export type SkillCategory = (typeof skillCategories)[number];
+
+export type SkillLevels = Record<SkillCategory, { required: number; current: number }>;
+
+export const employeeSkills: Record<string, SkillLevels> = {
+  e1: {
+    Panel: { required: 5, current: 5 },
+    Paint: { required: 5, current: 4 },
+    QC: { required: 5, current: 5 },
+    SOP: { required: 5, current: 5 },
+    Training: { required: 5, current: 5 },
+  },
+  e2: {
+    Panel: { required: 3, current: 3 },
+    Paint: { required: 5, current: 5 },
+    QC: { required: 4, current: 3 },
+    SOP: { required: 3, current: 2 },
+    Training: { required: 4, current: 3 },
+  },
+  e3: {
+    Panel: { required: 3, current: 2 },
+    Paint: { required: 5, current: 4 },
+    QC: { required: 4, current: 2 },
+    SOP: { required: 3, current: 1 },
+    Training: { required: 4, current: 2 },
+  },
+  e4: {
+    Panel: { required: 5, current: 4 },
+    Paint: { required: 4, current: 3 },
+    QC: { required: 5, current: 4 },
+    SOP: { required: 4, current: 3 },
+    Training: { required: 4, current: 3 },
+  },
+  e5: {
+    Panel: { required: 5, current: 5 },
+    Paint: { required: 4, current: 4 },
+    QC: { required: 5, current: 5 },
+    SOP: { required: 4, current: 4 },
+    Training: { required: 4, current: 2 },
+  },
+  e6: {
+    Panel: { required: 2, current: 1 },
+    Paint: { required: 2, current: 1 },
+    QC: { required: 2, current: 0 },
+    SOP: { required: 2, current: 1 },
+    Training: { required: 3, current: 1 },
+  },
+};
+
+export const trainingRecommendations: Record<SkillCategory, string> = {
+  Panel: "Panel Repair & Alignment Workshop",
+  Paint: "Spray Technique & Colour Mixing",
+  QC: "Quality Control Inspection Cert",
+  SOP: "Standard Operating Procedures Refresher",
+  Training: "Onboarding & Mentorship Programme",
+};
+

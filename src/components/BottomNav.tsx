@@ -1,10 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Wrench, Wallet, HandCoins, User, Users, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Wrench, Wallet, HandCoins, User, Users, GraduationCap, Award } from "lucide-react";
 
 const tabs = [
   { to: "/", label: "Home", icon: LayoutDashboard },
   { to: "/jobs", label: "Jobs", icon: Wrench },
   { to: "/team", label: "Team", icon: Users },
+  { to: "/skills", label: "Skills", icon: Award },
   { to: "/learning", label: "Learn", icon: GraduationCap },
   { to: "/salary", label: "Salary", icon: Wallet },
   { to: "/advance", label: "Adv", icon: HandCoins },
@@ -16,7 +17,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
-      <ul className="mx-auto grid max-w-md grid-cols-7">
+      <ul className="mx-auto grid max-w-md grid-cols-8">
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
           return (
