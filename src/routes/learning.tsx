@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
@@ -291,9 +292,17 @@ function VideoCard({
   const { tr } = useT();
   return (
     <Card className="overflow-hidden">
-      <div className="relative aspect-video bg-muted">
+      <button
+        type="button"
+        onClick={() => {
+          onView();
+          toast(tr("Opening: {a}", { a: tr(item.title) }));
+        }}
+        className="relative block aspect-video w-full bg-muted active:opacity-90"
+        aria-label={tr("Play")}
+      >
         {item.thumb && (
-          <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" />
+          <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
         )}
         <div className="absolute inset-0 grid place-items-center bg-black/30">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-primary">
@@ -305,7 +314,7 @@ function VideoCard({
             {item.duration}
           </span>
         )}
-      </div>
+      </button>
       <div className="p-3">
         <p className="text-sm font-semibold leading-snug">{tr(item.title)}</p>
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
@@ -335,12 +344,21 @@ function DocCard({
   const isPhoto = item.source === "photo" && item.thumb;
   return (
     <Card className="p-3">
-      <div className="flex gap-3">
+      <button
+        type="button"
+        onClick={() => {
+          onView();
+          toast(tr("Opening: {a}", { a: tr(item.title) }));
+        }}
+        className="flex w-full gap-3 text-left active:opacity-90"
+      >
         {isPhoto ? (
           <img
             src={item.thumb}
             alt={item.title}
             className="h-16 w-16 shrink-0 rounded-lg object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
@@ -363,7 +381,7 @@ function DocCard({
             <SourceBadge source={item.source} />
           </div>
         </div>
-      </div>
+      </button>
       <MarkButtons viewed={viewed} learned={learned} onView={onView} onLearn={onLearn} />
     </Card>
   );

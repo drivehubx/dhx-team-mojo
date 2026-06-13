@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -97,18 +98,50 @@ function JobDetailPage() {
   const job = jobs.find((j) => j.id === id);
   if (!job) throw notFound();
 
+  // Persistence: stage override + extra photos + running state
+  const storeKey = `dhx:job:${id}`;
+  const [stageOverride, setStageOverride] = useState<number | null>(null);
+  const [extraPhotos, setExtraPhotos] = useState<string[]>([]);
+  const [running, setRunning] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storeKey);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (typeof s.stageOverride === "number") setStageOverride(s.stageOverride);
+        if (Array.isArray(s.extraPhotos)) setExtraPhotos(s.extraPhotos);
+        if (typeof s.running === "boolean") setRunning(s.running);
+      }
+    } catch {}
+    setHydrated(true);
+  }, [storeKey]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(
+        storeKey,
+        JSON.stringify({ stageOverride, extraPhotos, running }),
+      );
+    } catch {}
+  }, [storeKey, stageOverride, extraPhotos, running, hydrated]);
+
   const owner = (() => {
     const part = job.plate.split(" ")[1];
     return part ? `Customer ${part}` : "Walk-in";
   })();
   const ownerPhone = "+60 1" + (job.id.charCodeAt(1) % 9) + " " + "234 5678";
 
-  const all = job.photos;
+  const all = [...job.photos, ...extraPhotos];
   const beforePhotos = all.slice(0, Math.max(1, Math.ceil(all.length / 3)));
   const duringPhotos = all.slice(beforePhotos.length, beforePhotos.length + Math.max(1, Math.floor(all.length / 3)));
   const afterPhotos = job.status === "Completed" || job.progress >= 90 ? all.slice(-1) : [];
 
-  const step = currentStep(job);
+  const computedStep = currentStep(job);
+  const step = stageOverride ?? computedStep;
   const checklist = checklistFor(job);
 
   const costs = {
@@ -628,21 +661,104 @@ function JobDetailPage() {
       {/* Spacer for sticky actions */}
       <div className="h-40" />
 
+      {/* Hidden file input for photo capture */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          if (files.length === 0) return;
+          const readers = files.map(
+            (f) =>
+              new Promise<string>((resolve, reject) => {
+                if (f.size > 8 * 1024 * 1024) {
+                  reject(new Error("too-large"));
+                  return;
+                }
+                const r = new FileReader();
+                r.onload = () => resolve(String(r.result));
+                r.onerror = () => reject(r.error ?? new Error("read"));
+                r.readAsDataURL(f);
+              }),
+          );
+          Promise.allSettled(readers).then((results) => {
+            const ok = results
+              .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+              .map((r) => r.value);
+            const failed = results.length - ok.length;
+            if (ok.length) setExtraPhotos((p) => [...p, ...ok]);
+            if (ok.length) toast.success(tr("{n} photo(s) added", { n: ok.length }));
+            if (failed) toast.error(tr("{n} photo(s) failed (max 8MB)", { n: failed }));
+          });
+          if (fileRef.current) fileRef.current.value = "";
+        }}
+      />
+
       {/* Sticky Bottom Actions */}
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-md space-y-2">
           <div className="grid grid-cols-4 gap-1.5">
-            <StickyBtn icon={<Play className="h-4 w-4" />} label={tr("Start")} />
-            <StickyBtn icon={<Pause className="h-4 w-4" />} label={tr("Pause")} />
-            <StickyBtn icon={<Camera className="h-4 w-4" />} label={tr("Photo")} />
-            <StickyBtn icon={<CheckCheck className="h-4 w-4" />} label={tr("Complete")} primary />
+            <StickyBtn
+              icon={<Play className="h-4 w-4" />}
+              label={running ? tr("Running") : tr("Start")}
+              onClick={() => {
+                setRunning(true);
+                toast.success(tr("Job started"));
+              }}
+            />
+            <StickyBtn
+              icon={<Pause className="h-4 w-4" />}
+              label={tr("Pause")}
+              onClick={() => {
+                setRunning(false);
+                toast(tr("Job paused"));
+              }}
+            />
+            <StickyBtn
+              icon={<Camera className="h-4 w-4" />}
+              label={tr("Photo")}
+              onClick={() => fileRef.current?.click()}
+            />
+            <StickyBtn
+              icon={<CheckCheck className="h-4 w-4" />}
+              label={step >= WORKFLOW.length - 1 ? tr("Done") : tr("Complete")}
+              primary
+              onClick={() => {
+                const next = Math.min(WORKFLOW.length - 1, step + 1);
+                if (next === step) {
+                  toast(tr("Already at final stage"));
+                  return;
+                }
+                setStageOverride(next);
+                toast.success(tr("Moved to {s}", { s: tr(WORKFLOW[next]) }));
+              }}
+            />
           </div>
           {role !== "worker" && (
             <div className="grid grid-cols-3 gap-1.5">
-              <StickyBtn icon={<CheckCircle2 className="h-3.5 w-3.5" />} label={tr("Approve")} small />
-              <StickyBtn icon={<Shuffle className="h-3.5 w-3.5" />} label={tr("Reassign")} small />
+              <StickyBtn
+                icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                label={tr("Approve")}
+                small
+                onClick={() => toast.success(tr("Stage approved"))}
+              />
+              <StickyBtn
+                icon={<Shuffle className="h-3.5 w-3.5" />}
+                label={tr("Reassign")}
+                small
+                onClick={() => toast(tr("Open reassign panel"))}
+              />
               {role === "owner" && (
-                <StickyBtn icon={<ShieldCheck className="h-3.5 w-3.5" />} label={tr("Final Approve")} small />
+                <StickyBtn
+                  icon={<ShieldCheck className="h-3.5 w-3.5" />}
+                  label={tr("Final Approve")}
+                  small
+                  onClick={() => toast.success(tr("Final approval recorded"))}
+                />
               )}
             </div>
           )}
@@ -697,9 +813,22 @@ function CollapsibleSection({
   );
 }
 
-function StickyBtn({ icon, label, primary, small }: { icon: ReactNode; label: string; primary?: boolean; small?: boolean }) {
+function StickyBtn({
+  icon,
+  label,
+  primary,
+  small,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  primary?: boolean;
+  small?: boolean;
+  onClick?: () => void;
+}) {
   return (
     <button
+      onClick={onClick}
       className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl active:scale-95 transition-transform ${
         small ? "py-1.5 text-[10px]" : "py-2 text-[11px]"
       } ${primary ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-foreground"}`}
