@@ -79,7 +79,10 @@ function JobDetailPage() {
   const job = jobs.find((j) => j.id === id);
   if (!job) throw notFound();
 
-  const owner = `Customer ${job.plate.split(" ")[1] ?? ""}`.trim() || "Walk-in";
+  const owner = (() => {
+    const part = job.plate.split(" ")[1];
+    return part ? `Customer ${part}` : "Walk-in";
+  })();
   const ownerPhone = "+60 1" + (job.id.charCodeAt(1) % 9) + " " + "234 5678";
 
   const all = job.photos;
@@ -97,28 +100,24 @@ function JobDetailPage() {
   };
   const totalCost = costs.parts + costs.labour + costs.paint;
 
-  // Labour tracking — deterministic from job
-  const estHours = 8 + (job.id.charCodeAt(1) % 5) * 4; // 8..24
+  const estHours = 8 + (job.id.charCodeAt(1) % 5) * 4;
   const actualHours = Math.round((estHours * job.progress) / 100);
   const hourPct = Math.min(100, Math.round((actualHours / estHours) * 100));
 
-  // Completion dates
   const actualCompletion = job.status === "Completed" ? job.due : "—";
 
-  // Manager notes (mock)
   const managerNote =
     job.status === "Waiting Parts"
-      ? "Parts ordered — follow up with supplier daily."
+      ? tr("Parts ordered — follow up with supplier daily.")
       : job.status === "Pending QC"
-      ? "Run final QC checklist, photograph before release."
-      : "Keep customer updated every 24h. Photograph each stage.";
+      ? tr("Run final QC checklist, photograph before release.")
+      : tr("Keep customer updated every 24h. Photograph each stage.");
 
-  // Job timeline
   const timeline = [
-    { label: "Created", date: job.startedAt, done: true },
-    { label: "Started", date: job.startedAt, done: true },
-    { label: "Updated", date: "Today", done: true },
-    { label: "Completed", date: job.status === "Completed" ? job.due : "Pending", done: job.status === "Completed" },
+    { key: "Created", date: job.startedAt, done: true },
+    { key: "Started", date: job.startedAt, done: true },
+    { key: "Updated", date: tr("Today"), done: true },
+    { key: "Completed", date: job.status === "Completed" ? job.due : tr("Pending"), done: job.status === "Completed" },
   ];
 
   // Learning + Skills integration
