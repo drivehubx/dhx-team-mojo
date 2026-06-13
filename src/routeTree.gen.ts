@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TeamRouteImport } from './routes/team'
 import { Route as SalaryRouteImport } from './routes/salary'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as JobsRouteImport } from './routes/jobs'
@@ -16,6 +17,11 @@ import { Route as AdvanceRouteImport } from './routes/advance'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SalaryRoute = SalaryRouteImport.update({
   id: '/salary',
   path: '/salary',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/jobs': typeof JobsRouteWithChildren
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/jobs': typeof JobsRouteWithChildren
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
 }
 export interface FileRoutesById {
@@ -70,13 +78,28 @@ export interface FileRoutesById {
   '/jobs': typeof JobsRouteWithChildren
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
+  '/team': typeof TeamRoute
   '/jobs/$id': typeof JobsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/advance' | '/jobs' | '/profile' | '/salary' | '/jobs/$id'
+  fullPaths:
+    | '/'
+    | '/advance'
+    | '/jobs'
+    | '/profile'
+    | '/salary'
+    | '/team'
+    | '/jobs/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/advance' | '/jobs' | '/profile' | '/salary' | '/jobs/$id'
+  to:
+    | '/'
+    | '/advance'
+    | '/jobs'
+    | '/profile'
+    | '/salary'
+    | '/team'
+    | '/jobs/$id'
   id:
     | '__root__'
     | '/'
@@ -84,6 +107,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/profile'
     | '/salary'
+    | '/team'
     | '/jobs/$id'
   fileRoutesById: FileRoutesById
 }
@@ -93,10 +117,18 @@ export interface RootRouteChildren {
   JobsRoute: typeof JobsRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   SalaryRoute: typeof SalaryRoute
+  TeamRoute: typeof TeamRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/salary': {
       id: '/salary'
       path: '/salary'
@@ -158,7 +190,18 @@ const rootRouteChildren: RootRouteChildren = {
   JobsRoute: JobsRouteWithChildren,
   ProfileRoute: ProfileRoute,
   SalaryRoute: SalaryRoute,
+  TeamRoute: TeamRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
