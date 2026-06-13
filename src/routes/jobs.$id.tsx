@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -13,6 +14,16 @@ import {
   GraduationCap,
   History,
   MessageSquare,
+  Play,
+  Pause,
+  Camera,
+  CheckCheck,
+  UserPlus,
+  Shuffle,
+  ShieldCheck,
+  AlertTriangle,
+  Package,
+  Undo2,
 } from "lucide-react";
 import {
   jobs,
@@ -42,8 +53,8 @@ function NotFound() {
   return <div className="p-8 text-center text-sm text-muted-foreground">{tr("Job not found.")}</div>;
 }
 
-type Stage = "Received" | "Panel" | "Paint" | "QC" | "Ready";
-const WORKFLOW: Stage[] = ["Received", "Panel", "Paint", "QC", "Ready"];
+type Stage = "Received" | "Panel" | "Paint" | "QC" | "Ready" | "Delivered";
+const WORKFLOW: Stage[] = ["Received", "Panel", "Paint", "QC", "Ready", "Delivered"];
 
 function currentStep(job: Job): number {
   if (job.status === "Completed") return 4;
@@ -115,10 +126,25 @@ function JobDetailPage() {
 
   const timeline = [
     { key: "Created", date: job.startedAt, done: true },
+    { key: "Assigned", date: job.startedAt, done: true },
     { key: "Started", date: job.startedAt, done: true },
     { key: "Updated", date: tr("Today"), done: true },
+    { key: "QC", date: step >= 3 ? tr("Today") : tr("Pending"), done: step >= 3 },
     { key: "Completed", date: job.status === "Completed" ? job.due : tr("Pending"), done: job.status === "Completed" },
   ];
+
+  // Walk-in vs Fleet
+  const isFleet = ["BMW", "PNG", "MEX"].some((p) => job.plate.startsWith(p));
+  const channel = isFleet ? tr("Fleet") : tr("Walk-in");
+  const assignedManager = "Ron Tan";
+
+  // Parts (mock)
+  const parts = [
+    { name: tr("Front Bumper"), status: job.status === "Waiting Parts" ? "waiting" : "installed" },
+    { name: tr("Headlamp Assembly"), status: job.progress >= 50 ? "installed" : "waiting" },
+    { name: tr("Paint — Base Coat"), status: job.progress >= 40 ? "installed" : "waiting" },
+    { name: tr("Clip Set"), status: "returned" },
+  ] as const;
 
   // Learning + Skills integration
   const focus = jobSkillFocus(job);
@@ -160,6 +186,18 @@ function JobDetailPage() {
                 <p className="text-[11px] text-muted-foreground">{tr("Customer (optional)")}</p>
                 <p className="text-sm font-medium truncate">{owner === "Walk-in" ? tr("Walk-in") : owner}</p>
                 <p className="text-[11px] text-muted-foreground">{ownerPhone}</p>
+              </div>
+            </div>
+            <div className="col-span-2 grid grid-cols-2 gap-3 pt-2 border-t border-border">
+              <div>
+                <p className="text-muted-foreground">{tr("Channel")}</p>
+                <span className={`mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${isFleet ? "bg-primary/15 text-primary" : "bg-secondary text-foreground"}`}>
+                  {channel}
+                </span>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{tr("Assigned Manager")}</p>
+                <p className="mt-0.5 font-medium text-sm">{assignedManager}</p>
               </div>
             </div>
           </div>
@@ -225,6 +263,13 @@ function JobDetailPage() {
               );
             })}
           </ol>
+
+          <div className="mt-4 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{tr("Stage updated")} · {tr("Today")}</span>
+            <button className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-foreground active:scale-95">
+              <Undo2 className="h-3 w-3" /> {tr("Rollback")}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -232,28 +277,74 @@ function JobDetailPage() {
       <section className="px-5 mt-6">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">{tr("Team Assignment")}</h2>
         <ul className="space-y-2">
-          {job.assignedIds.map((eid) => {
+          {job.assignedIds.map((eid, idx) => {
             const e = getEmployee(eid);
+            const memberProgress = Math.min(100, Math.max(10, job.progress + (idx === 0 ? 5 : -10)));
+            const currentTask =
+              idx === 0
+                ? tr(WORKFLOW[Math.min(step, 4)]) + " — " + tr("in progress")
+                : tr("Assist & prep");
             return (
-              <li key={eid} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-                  {e.initials}
+              <li key={eid} className="rounded-2xl border border-border bg-card p-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                    {e.initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{e.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
+                  </div>
+                  <span className="text-[11px] font-semibold tabular-nums">{memberProgress}%</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{e.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{tr(e.role)}</p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
+                  <div className="h-full bg-primary" style={{ width: `${memberProgress}%` }} />
                 </div>
-                <span className="text-[11px] rounded-full bg-secondary px-2 py-1 text-muted-foreground">{e.phone.slice(-4)}</span>
+                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span className="truncate">{tr("Task")}: <span className="text-foreground">{currentTask}</span></span>
+                  <span>{tr("ETA")} {job.due}</span>
+                </div>
               </li>
             );
           })}
         </ul>
-        <div className="mt-2.5 rounded-2xl border border-border bg-card p-3.5">
-          <div className="flex items-center gap-2 mb-1.5">
-            <MessageSquare className="h-3.5 w-3.5 text-primary" />
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Manager Notes")}</p>
+        <div className="mt-2.5 grid grid-cols-3 gap-2">
+          <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
+            <UserPlus className="h-3.5 w-3.5" /> {tr("Assign")}
+          </button>
+          <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
+            <Shuffle className="h-3.5 w-3.5" /> {tr("Reassign")}
+          </button>
+          <button className="rounded-xl border border-border bg-card py-2 text-[11px] font-medium active:scale-95 inline-flex items-center justify-center gap-1">
+            <UserPlus className="h-3.5 w-3.5" /> {tr("Add Helper")}
+          </button>
+        </div>
+
+        <div className="mt-2.5 space-y-2">
+          <div className="rounded-2xl border border-border bg-card p-3.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Internal Notes")}</p>
+            </div>
+            <p className="text-sm leading-relaxed">{managerNote}</p>
           </div>
-          <p className="text-sm leading-relaxed">{managerNote}</p>
+          <div className="rounded-2xl border border-border bg-card p-3.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <User className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Customer Notes")}</p>
+            </div>
+            <p className="text-sm leading-relaxed">{tr("Customer prefers OEM parts. Update via WhatsApp.")}</p>
+          </div>
+          {(job.status === "Waiting Parts" || job.progress < 30) && (
+            <div className="rounded-2xl border border-[--color-warning]/40 bg-[--color-warning]/10 p-3.5">
+              <div className="flex items-center gap-2 mb-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-[--color-warning]" />
+                <p className="text-[11px] uppercase tracking-wider text-[--color-warning] font-semibold">{tr("Risk Alert")}</p>
+              </div>
+              <p className="text-sm leading-relaxed">
+                {job.status === "Waiting Parts" ? tr("Parts ordered — follow up with supplier daily.") : tr("Progress below schedule. Escalate if not improving by tomorrow.")}
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -302,10 +393,47 @@ function JobDetailPage() {
               style={{ width: `${hourPct}%` }}
             />
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {actualHours > estHours ? tr("Over budget") : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}
-          </p>
+          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{actualHours > estHours ? tr("Over budget") : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}</span>
+            <span>{tr("Variance")}: <span className={`font-semibold ${actualHours > estHours ? "text-[--color-warning]" : "text-foreground"}`}>{actualHours - estHours}h</span></span>
+          </div>
+          <div className="mt-3 pt-3 border-t border-border">
+            <p className="text-[11px] text-muted-foreground mb-1.5">{tr("Staff involved")}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {job.assignedIds.map((eid) => {
+                const e = getEmployee(eid);
+                return (
+                  <span key={eid} className="text-[11px] rounded-full bg-secondary px-2 py-1">{e.name}</span>
+                );
+              })}
+            </div>
+          </div>
         </div>
+      </section>
+
+      {/* Parts Tracking */}
+      <section className="px-5 mt-6">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5 flex items-center gap-2">
+          <Package className="h-4 w-4 text-primary" /> {tr("Parts Tracking")}
+        </h2>
+        <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
+          {parts.map((p) => (
+            <li key={p.name} className="flex items-center gap-3 p-3.5">
+              <span className="text-sm flex-1 truncate">{p.name}</span>
+              <span
+                className={`text-[11px] rounded-full px-2 py-0.5 font-medium ${
+                  p.status === "installed"
+                    ? "bg-[--color-success]/15 text-[--color-success]"
+                    : p.status === "waiting"
+                    ? "bg-[--color-warning]/15 text-[--color-warning]"
+                    : "bg-secondary text-muted-foreground"
+                }`}
+              >
+                {p.status === "installed" ? tr("Installed") : p.status === "waiting" ? tr("Waiting") : tr("Returned")}
+              </span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Completion */}
@@ -461,7 +589,40 @@ function JobDetailPage() {
         <h2 className="text-sm font-semibold tracking-tight mb-2">{tr("Notes")}</h2>
         <p className="rounded-2xl border border-border bg-card p-3.5 text-sm leading-relaxed">{job.notes}</p>
       </section>
+
+      {/* Spacer for sticky actions */}
+      <div className="h-28" />
+
+      {/* Sticky Bottom Actions */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur px-4 py-3">
+        <div className="mx-auto max-w-md space-y-2">
+          <div className="grid grid-cols-4 gap-1.5">
+            <StickyBtn icon={<Play className="h-4 w-4" />} label={tr("Start")} />
+            <StickyBtn icon={<Pause className="h-4 w-4" />} label={tr("Pause")} />
+            <StickyBtn icon={<Camera className="h-4 w-4" />} label={tr("Photo")} />
+            <StickyBtn icon={<CheckCheck className="h-4 w-4" />} label={tr("Complete")} primary />
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            <StickyBtn icon={<CheckCircle2 className="h-3.5 w-3.5" />} label={tr("Approve")} small />
+            <StickyBtn icon={<Shuffle className="h-3.5 w-3.5" />} label={tr("Reassign")} small />
+            <StickyBtn icon={<ShieldCheck className="h-3.5 w-3.5" />} label={tr("Final Approve")} small />
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function StickyBtn({ icon, label, primary, small }: { icon: ReactNode; label: string; primary?: boolean; small?: boolean }) {
+  return (
+    <button
+      className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl active:scale-95 transition-transform ${
+        small ? "py-1.5 text-[10px]" : "py-2 text-[11px]"
+      } ${primary ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-foreground"}`}
+    >
+      {icon}
+      <span className="leading-none">{label}</span>
+    </button>
   );
 }
 
