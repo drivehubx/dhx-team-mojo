@@ -1034,7 +1034,7 @@ function LanguageModal({ onChoose }: { onChoose: (l: Lang) => void }) {
           onClick={() => selected && onChoose(selected)}
           className="mt-5 w-full rounded-2xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-40"
         >
-          Continue
+          {tr("Continue")}
         </button>
       </div>
     </div>
