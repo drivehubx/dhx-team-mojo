@@ -1169,7 +1169,7 @@ export function useT() {
 }
 
 function LanguageModal({ onChoose }: { onChoose: (l: Lang) => void }) {
-  const { tr } = useT();
+  const { tr, lang } = useT();
   const [selected, setSelected] = useState<Lang>(lang);
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
