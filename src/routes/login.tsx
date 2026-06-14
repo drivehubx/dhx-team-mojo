@@ -5,10 +5,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
-    meta: [
-      { title: "Sign in — DHX Team Ops" },
-      { name: "description", content: "Sign in to DHX Team Ops." },
-    ],
+    meta: [{ title: "Sign in — DHX Team Ops" }, { name: "description", content: "Sign in to DHX Team Ops." }],
   }),
   component: LoginPage,
 });
@@ -21,10 +18,14 @@ function LoginPage() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || !pin) {
+
+    if (!phone.trim() || !pin.trim()) {
       toast.error(tr("Enter phone and PIN"));
       return;
     }
+
+    localStorage.setItem("dhx:profile:phone", phone.trim());
+
     toast.success(tr("Signed in"));
     router.navigate({ to: "/" });
   };
