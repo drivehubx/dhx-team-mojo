@@ -4,7 +4,7 @@ import { z } from "zod";
 import { AppHeader } from "@/components/AppHeader";
 import { jobs, getEmployee, type JobStatus, type Job } from "@/lib/mock-data";
 import { useT } from "@/lib/i18n";
-import { Search, AlertTriangle, Clock, UserPlus, ShieldAlert, ChevronRight } from "lucide-react";
+import { Search, AlertTriangle, Clock, UserPlus, ShieldAlert, ChevronRight, Car } from "lucide-react";
 
 const roleSchema = z.object({
   role: z.enum(["worker", "manager", "owner"]).catch("worker"),
@@ -182,8 +182,24 @@ function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" |
         className="block rounded-2xl border border-border bg-card px-4 py-3 active:bg-secondary"
       >
         {/* PHOTO */}
-        <div className="mb-3 overflow-hidden rounded-xl">
-          <img src={job.photos[0]} alt={job.vehicle} className="h-36 w-full object-cover" />
+        <div className="mb-3 overflow-hidden rounded-xl bg-secondary">
+          {job.photos[0] ? (
+            <img
+              src={job.photos[0]}
+              alt={job.vehicle}
+              loading="lazy"
+              className="h-36 w-full object-cover"
+              onError={(e) => {
+                const img = e.currentTarget;
+                img.style.display = "none";
+                img.parentElement?.classList.add("job-photo-fallback");
+              }}
+            />
+          ) : (
+            <div className="h-36 w-full grid place-items-center text-muted-foreground">
+              <Car className="h-8 w-8" />
+            </div>
+          )}
         </div>
 
         {/* Row 1 */}

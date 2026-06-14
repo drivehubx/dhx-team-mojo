@@ -353,7 +353,6 @@ const ZH: Dict = {
   "Mark Paid": "标记已付",
   "Team Attendance": "团队出勤",
   "Per Employee": "员工明细",
-  Adv: "预支",
   "Est. Net": "预估实发",
   "Already paid": "已支付",
   Remaining: "剩余",
@@ -692,7 +691,7 @@ const MS: Dict = {
   "Mark Paid": "Tanda Dibayar",
   "Team Attendance": "Kehadiran Pasukan",
   "Per Employee": "Setiap Pekerja",
-  Adv: "Pdhl",
+  
   "Est. Net": "Angg. Bersih",
   "Already paid": "Telah dibayar",
   Remaining: "Baki",
@@ -1031,7 +1030,7 @@ const ID: Dict = {
   "Mark Paid": "Tandai Dibayar",
   "Team Attendance": "Kehadiran Tim",
   "Per Employee": "Per Karyawan",
-  Adv: "Ksbn",
+  
   "Est. Net": "Est. Bersih",
   "Already paid": "Sudah dibayar",
   Remaining: "Sisa",
