@@ -122,10 +122,7 @@ function JobDetailPage() {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(
-        storeKey,
-        JSON.stringify({ stageOverride, extraPhotos, running }),
-      );
+      localStorage.setItem(storeKey, JSON.stringify({ stageOverride, extraPhotos, running }));
     } catch {}
   }, [storeKey, stageOverride, extraPhotos, running, hydrated]);
 
@@ -161,8 +158,8 @@ function JobDetailPage() {
     job.status === "Waiting Parts"
       ? tr("Parts ordered — follow up with supplier daily.")
       : job.status === "Pending QC"
-      ? tr("Run final QC checklist, photograph before release.")
-      : tr("Keep customer updated every 24h. Photograph each stage.");
+        ? tr("Run final QC checklist, photograph before release.")
+        : tr("Keep customer updated every 24h. Photograph each stage.");
 
   const timeline = [
     { key: "Created", date: job.startedAt, done: true },
@@ -185,8 +182,8 @@ function JobDetailPage() {
     job.status === "Waiting Parts"
       ? tr("Waiting on supplier parts delivery")
       : job.status === "Pending QC" && step < 3
-      ? tr("Awaiting QC slot")
-      : null;
+        ? tr("Awaiting QC slot")
+        : null;
 
   const parts = [
     { name: tr("Front Bumper"), status: job.status === "Waiting Parts" ? "waiting" : "installed" },
@@ -202,7 +199,10 @@ function JobDetailPage() {
     <div className="pb-6" style={{ WebkitOverflowScrolling: "touch" }}>
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex items-center gap-3 px-5 py-4">
-          <Link to="/jobs" className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-foreground active:scale-95">
+          <Link
+            to="/jobs"
+            className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-foreground active:scale-95"
+          >
             <ArrowLeft className="h-4.5 w-4.5" />
           </Link>
           <div className="min-w-0 flex-1">
@@ -260,19 +260,15 @@ function JobDetailPage() {
                       done
                         ? "h-7 w-7 bg-[--color-success] text-white"
                         : active
-                        ? "h-9 w-9 bg-primary text-primary-foreground ring-4 ring-primary/15 text-xs"
-                        : "h-7 w-7 bg-secondary text-muted-foreground/60"
+                          ? "h-9 w-9 bg-primary text-primary-foreground ring-4 ring-primary/15 text-xs"
+                          : "h-7 w-7 bg-secondary text-muted-foreground/60"
                     }`}
                   >
                     {done ? "✓" : i + 1}
                   </div>
                   <span
                     className={`text-[10px] truncate w-full text-center ${
-                      active
-                        ? "font-semibold text-foreground"
-                        : done
-                        ? "text-foreground"
-                        : "text-muted-foreground/60"
+                      active ? "font-semibold text-foreground" : done ? "text-foreground" : "text-muted-foreground/60"
                     }`}
                   >
                     {tr(label)}
@@ -288,7 +284,9 @@ function JobDetailPage() {
               <p className="text-[11px] uppercase tracking-wider text-primary font-semibold">
                 {tr("Current Stage")}: {tr(WORKFLOW[step])}
               </p>
-              <span className="text-[10px] text-muted-foreground">{tr("Updated")} · {tr("Today")}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {tr("Updated")} · {tr("Today")}
+              </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-[11px]">
               <div>
@@ -307,7 +305,9 @@ function JobDetailPage() {
             {blockReason && (
               <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-[--color-warning]/10 p-2 text-[11px] text-[--color-warning]">
                 <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
-                <span><span className="font-semibold">{tr("Blocked")}:</span> {blockReason}</span>
+                <span>
+                  <span className="font-semibold">{tr("Blocked")}:</span> {blockReason}
+                </span>
               </div>
             )}
           </div>
@@ -328,9 +328,7 @@ function JobDetailPage() {
             const e = getEmployee(eid);
             const memberProgress = Math.min(100, Math.max(10, job.progress + (idx === 0 ? 5 : -10)));
             const currentTask =
-              idx === 0
-                ? tr(WORKFLOW[Math.min(step, 4)]) + " — " + tr("in progress")
-                : tr("Assist & prep");
+              idx === 0 ? tr(WORKFLOW[Math.min(step, 4)]) + " — " + tr("in progress") : tr("Assist & prep");
             return (
               <li key={eid} className="rounded-2xl border border-border bg-card p-3">
                 <div className="flex items-center gap-3">
@@ -347,8 +345,12 @@ function JobDetailPage() {
                   <div className="h-full bg-primary" style={{ width: `${memberProgress}%` }} />
                 </div>
                 <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span className="truncate">{tr("Task")}: <span className="text-foreground">{currentTask}</span></span>
-                  <span>{tr("ETA")} {job.due}</span>
+                  <span className="truncate">
+                    {tr("Task")}: <span className="text-foreground">{currentTask}</span>
+                  </span>
+                  <span>
+                    {tr("ETA")} {job.due}
+                  </span>
                 </div>
               </li>
             );
@@ -387,10 +389,14 @@ function JobDetailPage() {
             <div className="rounded-2xl border border-[--color-warning]/40 bg-[--color-warning]/10 p-3.5">
               <div className="flex items-center gap-2 mb-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 text-[--color-warning]" />
-                <p className="text-[11px] uppercase tracking-wider text-[--color-warning] font-semibold">{tr("Risk Alert")}</p>
+                <p className="text-[11px] uppercase tracking-wider text-[--color-warning] font-semibold">
+                  {tr("Risk Alert")}
+                </p>
               </div>
               <p className="text-sm leading-relaxed">
-                {job.status === "Waiting Parts" ? tr("Parts ordered — follow up with supplier daily.") : tr("Progress below schedule. Escalate if not improving by tomorrow.")}
+                {job.status === "Waiting Parts"
+                  ? tr("Parts ordered — follow up with supplier daily.")
+                  : tr("Progress below schedule. Escalate if not improving by tomorrow.")}
               </p>
             </div>
           )}
@@ -398,7 +404,7 @@ function JobDetailPage() {
       </section>
 
       {/* Photo Timeline (collapsible) */}
-      <CollapsibleSection title={tr("Photos")} defaultOpen={false}>
+      <CollapsibleSection title={tr("Photos")} defaultOpen={all.length > 0}>
         <PhotoGroup tKey="Before Photos" photos={beforePhotos} />
         <PhotoGroup tKey="During Photos" photos={duringPhotos} />
         <PhotoGroup tKey="After Photos" photos={afterPhotos} emptyKey="Pending — job not complete" />
@@ -415,7 +421,9 @@ function JobDetailPage() {
               ) : (
                 <Circle className="h-5 w-5 text-muted-foreground/50" />
               )}
-              <span className={`text-sm ${c.done ? "font-medium" : "text-muted-foreground"}`}>{tr(c.key === "Parts" ? "Parts" : c.key)}</span>
+              <span className={`text-sm ${c.done ? "font-medium" : "text-muted-foreground"}`}>
+                {tr(c.key === "Parts" ? "Parts" : c.key)}
+              </span>
               <span className="ml-auto text-[11px] text-muted-foreground">{c.done ? tr("Done") : tr("Pending")}</span>
             </li>
           ))}
@@ -445,8 +453,19 @@ function JobDetailPage() {
             />
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>{actualHours > estHours ? tr("Over budget") : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}</span>
-            <span>{tr("Variance")}: <span className={`font-semibold ${actualHours > estHours ? "text-[--color-warning]" : "text-foreground"}`}>{actualHours - estHours}h</span></span>
+            <span>
+              {actualHours > estHours
+                ? tr("Over budget")
+                : tr("{n}h remaining", { n: Math.max(0, estHours - actualHours) })}
+            </span>
+            <span>
+              {tr("Variance")}:{" "}
+              <span
+                className={`font-semibold ${actualHours > estHours ? "text-[--color-warning]" : "text-foreground"}`}
+              >
+                {actualHours - estHours}h
+              </span>
+            </span>
           </div>
           <div className="mt-3 pt-3 border-t border-border">
             <p className="text-[11px] text-muted-foreground mb-1.5">{tr("Staff involved")}</p>
@@ -454,7 +473,9 @@ function JobDetailPage() {
               {job.assignedIds.map((eid) => {
                 const e = getEmployee(eid);
                 return (
-                  <span key={eid} className="text-[11px] rounded-full bg-secondary px-2 py-1">{e.name}</span>
+                  <span key={eid} className="text-[11px] rounded-full bg-secondary px-2 py-1">
+                    {e.name}
+                  </span>
                 );
               })}
             </div>
@@ -476,8 +497,8 @@ function JobDetailPage() {
                   p.status === "installed"
                     ? "bg-[--color-success]/15 text-[--color-success]"
                     : p.status === "waiting"
-                    ? "bg-[--color-warning]/15 text-[--color-warning]"
-                    : "bg-secondary text-muted-foreground"
+                      ? "bg-[--color-warning]/15 text-[--color-warning]"
+                      : "bg-secondary text-muted-foreground"
                 }`}
               >
                 {p.status === "installed" ? tr("Installed") : p.status === "waiting" ? tr("Waiting") : tr("Returned")}
@@ -506,12 +527,13 @@ function JobDetailPage() {
       <CollapsibleSection
         title={tr("Learning Integration")}
         icon={<GraduationCap className="h-4 w-4 text-primary" />}
-        defaultOpen={false}
+        defaultOpen={all.length > 0}
       >
         <div className="px-5">
           <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
             <p className="text-[11px] text-muted-foreground">
-              {tr("Focus area for this job: ")}<span className="font-medium text-foreground">{tr(focus)}</span>
+              {tr("Focus area for this job: ")}
+              <span className="font-medium text-foreground">{tr(focus)}</span>
             </p>
             <div>
               <div className="flex items-center gap-1.5 mb-1.5">
@@ -520,7 +542,9 @@ function JobDetailPage() {
               </div>
               <ul className="space-y-1">
                 {suggestion.videos.map((v) => (
-                  <li key={v} className="text-sm">• {tr(v)}</li>
+                  <li key={v} className="text-sm">
+                    • {tr(v)}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -531,7 +555,9 @@ function JobDetailPage() {
               </div>
               <ul className="space-y-1">
                 {suggestion.sops.map((s) => (
-                  <li key={s} className="text-sm">• {tr(s)}</li>
+                  <li key={s} className="text-sm">
+                    • {tr(s)}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -584,7 +610,8 @@ function JobDetailPage() {
                 </div>
                 {gap > 0 && (
                   <p className="mt-2 text-[11px] text-muted-foreground">
-                    {tr("Suggested: ")}<span className="text-foreground">{tr(suggestion.videos[0])}</span>
+                    {tr("Suggested: ")}
+                    <span className="text-foreground">{tr(suggestion.videos[0])}</span>
                   </p>
                 )}
               </li>
@@ -597,7 +624,7 @@ function JobDetailPage() {
       <CollapsibleSection
         title={tr("Job Timeline")}
         icon={<History className="h-4 w-4 text-primary" />}
-        defaultOpen={false}
+        defaultOpen={all.length > 0}
       >
         <div className="px-5">
           <ol className="rounded-2xl border border-border bg-card p-4">
@@ -612,7 +639,10 @@ function JobDetailPage() {
                     {tl.done ? "✓" : i + 1}
                   </div>
                   {i < timeline.length - 1 && (
-                    <div className={`w-px flex-1 mt-1 ${tl.done ? "bg-primary/40" : "bg-border"}`} style={{ minHeight: 14 }} />
+                    <div
+                      className={`w-px flex-1 mt-1 ${tl.done ? "bg-primary/40" : "bg-border"}`}
+                      style={{ minHeight: 14 }}
+                    />
                   )}
                 </div>
                 <div>
@@ -630,7 +660,7 @@ function JobDetailPage() {
         <CollapsibleSection
           title={tr("Cost tracking")}
           icon={<Wallet className="h-4 w-4 text-primary" />}
-          defaultOpen={false}
+          defaultOpen={all.length > 0}
         >
           <div className="px-5">
             <div className="rounded-2xl border border-border bg-card p-4 space-y-2.5">
@@ -641,7 +671,9 @@ function JobDetailPage() {
                   <CostRow label={tr("Paint & Materials")} value={costs.paint} />
                 </>
               ) : (
-                <p className="text-[11px] text-muted-foreground">{tr("Summary view — full breakdown for Owner only.")}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {tr("Summary view — full breakdown for Owner only.")}
+                </p>
               )}
               <div className="pt-2.5 mt-1 border-t border-border flex items-center justify-between">
                 <span className="text-sm font-semibold">{tr("Total")}</span>
@@ -865,7 +897,14 @@ function PhotoGroup({ tKey, photos, emptyKey }: { tKey: string; photos: string[]
       ) : (
         <div className="grid grid-cols-3 gap-2">
           {photos.map((src, i) => (
-            <img key={i} src={src} alt="" className="aspect-square w-full rounded-xl object-cover bg-secondary" loading="lazy" decoding="async" />
+            <img
+              key={i}
+              src={src}
+              alt=""
+              className="aspect-square w-full rounded-xl object-cover bg-secondary"
+              loading="lazy"
+              decoding="async"
+            />
           ))}
         </div>
       )}
