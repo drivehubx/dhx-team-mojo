@@ -31,7 +31,7 @@ function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="bg-[--color-navy] text-[--color-navy-foreground] px-6 pt-[max(env(safe-area-inset-top),2rem)] pb-10 rounded-b-3xl">
+      <div className="bg-navy text-navy-foreground px-6 pt-[max(env(safe-area-inset-top),2rem)] pb-10 rounded-b-3xl">
         <p className="text-xs uppercase tracking-widest text-white/60">{t("common.brand")}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{tr("Sign in")}</h1>
         <p className="mt-1 text-sm text-white/70">{tr("Welcome back. Please sign in to continue.")}</p>
