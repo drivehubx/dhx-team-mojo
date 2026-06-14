@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 
@@ -16,6 +16,17 @@ function LoginPage() {
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
 
+  useEffect(() => {
+    const saved = localStorage.getItem("dhx:profile:phone");
+
+    if (saved?.trim()) {
+      void router.navigate({
+        to: "/",
+        replace: true,
+      });
+    }
+  }, [router]);
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -27,7 +38,10 @@ function LoginPage() {
     localStorage.setItem("dhx:profile:phone", phone.trim());
 
     toast.success(tr("Signed in"));
-    router.navigate({ to: "/" });
+    void router.navigate({
+      to: "/",
+      replace: true,
+    });
   };
 
   return (
