@@ -434,7 +434,7 @@ function AttendanceCard({ a }: { a: Attendance }) {
       <div className="grid grid-cols-4 gap-2 text-center">
         <Stat label={tr("Days")} value={String(a.worked)} />
         <Stat label={tr("Hours")} value={String(a.hours)} />
-        <Stat label={tr("OT hrs")} value={String(a.ot)} accent="text-[--color-success]" />
+        <Stat label={tr("OT Hours")} value={String(a.ot)} accent="text-[--color-success]" />
         <Stat label={tr("Late")} value={String(a.late)} accent={a.late > 0 ? "text-[--color-warning]" : ""} />
       </div>
     </SectionCard>
@@ -458,7 +458,7 @@ function DeductionPreview({ basic, ot, advance }: { basic: number; ot: number; a
     <SectionCard title={tr("Deduction Preview")} icon={<TrendingDown className="h-3.5 w-3.5" />}>
       <div className="space-y-2 text-sm">
         <Line label={tr("Salary Estimate")} value={fmtMYR(est)} />
-        <Line label={tr("Advance Deduction")} value={`- ${fmtMYR(advance)}`} tone="destructive" />
+        <Line label={tr("Advance deduction")} value={`- ${fmtMYR(advance)}`} tone="destructive" />
         <div className="flex items-center justify-between border-t border-border pt-2">
           <span className="text-xs text-muted-foreground">{tr("Estimated Take Home")}</span>
           <span className="text-base font-semibold text-primary">{fmtMYR(take)}</span>
