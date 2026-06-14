@@ -1006,13 +1006,14 @@ export function useT() {
 }
 
 function LanguageModal({ onChoose }: { onChoose: (l: Lang) => void }) {
+  const { tr } = useT();
   const [selected, setSelected] = useState<Lang | null>(null);
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl">
         <p className="text-xs uppercase tracking-widest text-muted-foreground">DHX Team Ops</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight"> {tr("Choose your language")} </h2>
-        <p className="mt-1 text-sm text-muted-foreground">请选择您的首选语言 · Pilih bahasa anda · Pilih bahasa Anda</p>
+        <p className="mt-1 text-sm text-muted-foreground">{tr("Select your preferred language to continue.")}</p>
         <ul className="mt-5 space-y-2">
           {LANGS.map((l) => (
             <li key={l.code}>
@@ -1042,7 +1043,7 @@ function LanguageModal({ onChoose }: { onChoose: (l: Lang) => void }) {
 }
 
 export function LanguagePicker({ onClose }: { onClose: () => void }) {
-  const { lang, setLang } = useT();
+  const { lang, setLang, tr } = useT();
   return (
     <div
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4"
