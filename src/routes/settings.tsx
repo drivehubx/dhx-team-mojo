@@ -74,9 +74,7 @@ function SettingsPage() {
       </header>
 
       <section className="mt-5 px-5">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-          {tr("Account")}
-        </h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{tr("Account")}</h2>
         <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
           <Link to="/profile">
             <Row icon={User} label={tr("Profile")} />
@@ -84,24 +82,16 @@ function SettingsPage() {
           <button onClick={() => setPickerOpen(true)} className="w-full text-left">
             <Row icon={Languages} label={tr("Change Language")} />
           </button>
-          <button
-            onClick={() => toast.info(tr("Password change coming soon"))}
-            className="w-full text-left"
-          >
+          <button onClick={() => toast.info(tr("Password change coming soon"))} className="w-full text-left">
             <Row icon={KeyRound} label={tr("Change Password")} />
           </button>
         </ul>
       </section>
 
       <section className="mt-5 px-5">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-          {tr("Session")}
-        </h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{tr("Session")}</h2>
         <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
-          <button
-            onClick={() => setConfirmLogout(true)}
-            className="w-full text-left"
-          >
+          <button onClick={() => setConfirmLogout(true)} className="w-full text-left">
             <Row icon={LogOut} label={tr("Logout")} destructive />
           </button>
         </ul>
@@ -149,9 +139,7 @@ function SettingsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{tr("Logout?")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {tr("You will be returned to the login screen.")}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{tr("You will be returned to the login screen.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tr("Cancel")}</AlertDialogCancel>
@@ -163,15 +151,7 @@ function SettingsPage() {
   );
 }
 
-function Row({
-  icon: Icon,
-  label,
-  destructive,
-}: {
-  icon: typeof User;
-  label: string;
-  destructive?: boolean;
-}) {
+function Row({ icon: Icon, label, destructive }: { icon: typeof User; label: string; destructive?: boolean }) {
   return (
     <div className="flex items-center gap-3 p-3.5">
       <div
