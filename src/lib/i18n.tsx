@@ -1052,7 +1052,7 @@ export function LanguagePicker({ onClose }: { onClose: () => void }) {
         className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-semibold tracking-tight">Preferred Language</h2>
+        <h2 className="text-xl font-semibold tracking-tight"> {tr("Preferred Language")} </h2>
         <ul className="mt-4 space-y-2">
           {LANGS.map((l) => (
             <li key={l.code}>
