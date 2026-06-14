@@ -46,9 +46,13 @@ function etaRisk(due: string, status: JobStatus): Risk {
 // Map status → stage chip styling/dot
 const stageStyles: Record<JobStatus, { dot: string; chip: string; label: string }> = {
   "In Progress": { dot: "bg-primary", chip: "bg-primary/10 text-primary", label: "In Progress" },
-  "Pending QC": { dot: "bg-[--color-warning]", chip: "bg-[--color-warning]/15 text-[--color-warning]", label: "Pending QC" },
+  "Pending QC": {
+    dot: "bg-[--color-warning]",
+    chip: "bg-[--color-warning]/15 text-[--color-warning]",
+    label: "Pending QC",
+  },
   "Waiting Parts": { dot: "bg-orange-500", chip: "bg-orange-500/15 text-orange-600", label: "Waiting Parts" },
-  "Completed": { dot: "bg-[--color-success]", chip: "bg-[--color-success]/15 text-[--color-success]", label: "Ready" },
+  Completed: { dot: "bg-[--color-success]", chip: "bg-[--color-success]/15 text-[--color-success]", label: "Ready" },
 };
 
 // Mock "self" id per role (Owner default user has no assignments).
@@ -61,12 +65,18 @@ type FilterKey = "All" | "Mine" | "Blocked" | "In Progress" | "QC" | "Ready";
 
 function matchesFilter(job: Job, f: FilterKey, selfId: string): boolean {
   switch (f) {
-    case "All": return true;
-    case "Mine": return job.assignedIds.includes(selfId);
-    case "Blocked": return job.status === "Waiting Parts";
-    case "In Progress": return job.status === "In Progress";
-    case "QC": return job.status === "Pending QC";
-    case "Ready": return job.status === "Completed";
+    case "All":
+      return true;
+    case "Mine":
+      return job.assignedIds.includes(selfId);
+    case "Blocked":
+      return job.status === "Waiting Parts";
+    case "In Progress":
+      return job.status === "In Progress";
+    case "QC":
+      return job.status === "Pending QC";
+    case "Ready":
+      return job.status === "Completed";
   }
 }
 
@@ -85,16 +95,17 @@ function JobsPage() {
       if (!matchesFilter(j, filter, selfId)) return false;
       if (!q) return true;
       return (
-        j.plate.toLowerCase().includes(q) ||
-        j.vehicle.toLowerCase().includes(q) ||
-        j.notes.toLowerCase().includes(q)
+        j.plate.toLowerCase().includes(q) || j.vehicle.toLowerCase().includes(q) || j.notes.toLowerCase().includes(q)
       );
     });
   }, [filter, query, selfId]);
 
   return (
     <div className="pb-8">
-      <AppHeader title={t("page.jobs.title") || tr("Jobs")} subtitle={tr("{n} jobs shown").replace("{n}", String(list.length))} />
+      <AppHeader
+        title={t("page.jobs.title") || tr("Jobs")}
+        subtitle={tr("{n} jobs shown").replace("{n}", String(list.length))}
+      />
 
       {/* Sticky search + filters */}
       <div className="sticky top-[88px] z-30 -mt-4 px-5 pb-2 pt-3 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -116,13 +127,13 @@ function JobsPage() {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-muted-foreground border border-border"
+                  active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground border border-border"
                 }`}
               >
                 {tr(f)}
-                <span className={`text-[10px] font-semibold ${active ? "text-primary-foreground/80" : "text-muted-foreground/70"}`}>
+                <span
+                  className={`text-[10px] font-semibold ${active ? "text-primary-foreground/80" : "text-muted-foreground/70"}`}
+                >
                   {count}
                 </span>
               </button>
@@ -170,6 +181,12 @@ function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" |
         search={{ role }}
         className="block rounded-2xl border border-border bg-card px-4 py-3 active:bg-secondary"
       >
+        {/* PHOTO */}
+        <div className="mb-3 overflow-hidden rounded-xl">
+          <img src={job.photos[0]} alt={job.vehicle} className="h-36 w-full object-cover" />
+        </div>
+
+        {/* Row 1 */}
         {/* Row 1: plate + vehicle + stage */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -183,7 +200,9 @@ function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" |
             </div>
             <p className="text-[15px] font-semibold leading-tight truncate">{job.vehicle}</p>
           </div>
-          <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${stage.chip}`}>
+          <span
+            className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${stage.chip}`}
+          >
             <span className={`h-1.5 w-1.5 rounded-full ${stage.dot}`} />
             {tr(stage.label)}
           </span>
@@ -235,12 +254,8 @@ function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" |
             )}
           </div>
           <div className="flex items-center gap-1">
-            {role === "manager" && (
-              <QuickAction icon={UserPlus} label={tr("Assign")} />
-            )}
-            {role === "owner" && (
-              <QuickAction icon={ShieldAlert} label={tr("Override")} />
-            )}
+            {role === "manager" && <QuickAction icon={UserPlus} label={tr("Assign")} />}
+            {role === "owner" && <QuickAction icon={ShieldAlert} label={tr("Override")} />}
             <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-primary">
               {tr("Open")} <ChevronRight className="h-3.5 w-3.5" />
             </span>
