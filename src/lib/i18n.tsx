@@ -898,7 +898,7 @@ const STORAGE_KEY = "dhx_lang";
 function interpolate(str: string, vars?: Record<string, string | number>) {
   if (!vars) return str;
   let out = str;
-  for (const k in vars) out = out.replace(`{${k}}`, String(vars[k]));
+  for (const k in vars) out = out.replaceAll(`{${k}}`, String(vars[k]));
   return out;
 }
 
@@ -926,7 +926,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   };
 
   const tr = (en: string, vars?: Record<string, string | number>) => {
-    const source = String(en).trim();
+    const source = String(en ?? "").trim();
 
     if (lang === "en") {
       return interpolate(source, vars);
@@ -1007,7 +1007,7 @@ export function useT() {
 
 function LanguageModal({ onChoose }: { onChoose: (l: Lang) => void }) {
   const { tr } = useT();
-  const [selected, setSelected] = useState<Lang | null>(null);
+  const [selected, setSelected] = useState<Lang>(lang);
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl">
@@ -1107,7 +1107,7 @@ export function Translatable({
         e.stopPropagation();
         setShowOriginal((v) => !v);
       }}
-      title={showOriginal ? "Show Translation" : "Show Original"}
+      title={tr(showOriginal ? "Show Translation" : "Show Original")}
     >
       {showOriginal ? en : translated}
     </As>
