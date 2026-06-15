@@ -1,101 +1,76 @@
-## Goal
+# Clean Reset & Production-Ready State
 
-Turn the existing UI (which currently reads from `mock-data.ts` + `localStorage`) into a real multi-user workshop app on Supabase. Owner / Manager / Worker each get working buttons end-to-end.
+## 0. Confirmation required (destructive)
+This plan **deletes every existing auth user, profile, role, salary, advance, driver, vehicle, rental, payment, and storage object**. Schema (tables, policies, functions) is kept. The first email that signs up after the reset becomes Owner.
 
-I'll ship this in **5 phases**, each independently usable. After every phase you can actually use that workflow. We do NOT redesign any page — only wire actions, persist data, and gate by role.
+If you want to preserve any specific account (e.g. your own login), tell me the email before approving.
 
----
+## 1. Database migration (single migration, requires approval)
 
-## Phase 0 — Foundation (auth + roles + employee table)
+### 1a. Wipe demo data
+- Truncate: `salaries`, `advances`, `payments`, `rentals`, `drivers`, `vehicles`, `mc_parkour_scores`, `dhx_dodge_scores`, `user_roles`, `profiles`.
+- Delete all `auth.users` rows.
+- Empty storage buckets `driver-documents` and `vehicle-photos`.
 
-Without this, no role-based action can be enforced.
+### 1b. Add `documents` bucket + profile docs table
+- Private bucket `profile-documents`.
+- Table `profile_documents (id, owner_id, name, path, size, mime, created_at)` with RLS: owner reads/writes own; owner-role reads all.
 
-**DB:**
-- `app_role` enum: `owner | manager | worker`
-- `profiles(id uuid PK → auth.users, full_name, phone, initials, active)`
-- `user_roles(user_id, role)` + `has_role(_user_id, _role)` security-definer fn
-- Trigger: on `auth.users` insert → create profile row
-- Migrate the 6 seed employees into `profiles` (linked once owner signs up; rest invited)
+### 1c. Fix `handle_new_user` trigger (first-user-becomes-owner)
+The trigger already does this, but it's not firing for all users (3 of 5 users have no role row). After truncation this is moot, but I'll re-create the trigger explicitly to be safe.
 
-**Code:**
-- Replace the mock `currentUser` with `useAuth()` hook reading `supabase.auth` + role
-- `_authenticated/route.tsx` already managed by integration → use it
-- Role switcher in dev only; production reads `user_roles`
+### 1d. Keep existing RLS — it's already correct
+- `salaries` SELECT: own row OR owner/manager — ✅
+- `advances` SELECT: own row OR staff — ✅
+- `user_roles`: owner ALL, user can read own — ✅
+- `profiles` SELECT: authenticated true — ✅
 
----
+The real bug was missing role rows, not the policies. After reset + working trigger, Owner sees all rows.
 
-## Phase 1 — Advance (request → approve → repay)
+## 2. Frontend changes
 
-**DB:** `advances(id, employee_id → profiles, type 'borrow'|'repayment', amount, reason, status 'pending'|'approved'|'rejected', requested_by, approved_by, created_at)`
+### 2a. Remove all mock-data usage from live pages
+- `src/routes/team.tsx`: switch from `employees`/`workerMeta` mock to `profiles` + `user_roles` from Supabase.
+- `src/routes/jobs.new.tsx` and `src/routes/jobs.$id.tsx`: load assignable workers from `profiles` filtered by active + worker role.
+- `src/routes/profile.tsx`: replace mock `salaries`/`advanceBalance` reads with Supabase queries scoped to current user.
+- `src/routes/advance.tsx`: already Supabase-backed — no change.
+- `src/routes/salary.tsx`: already Supabase-backed — no change (will work once roles exist).
 
-**Server fns (`src/lib/advances.functions.ts`):**
-- `listAdvances()` — role-scoped (worker sees own; manager/owner sees all)
-- `requestAdvance({ amount, reason })` — worker creates pending borrow
-- `approveAdvance({ id })` / `rejectAdvance({ id })` — manager/owner
-- `recordRepayment({ employee_id, amount })` — manager/owner
+### 2b. Profile documents (upload / list / download / empty state)
+Replace stubbed "2 files" with a real document drawer:
+- List from `profile_documents` for `auth.uid()`.
+- Upload via `supabase.storage.from('profile-documents').upload(...)` + insert row.
+- Download via signed URL.
+- Empty state when zero docs.
 
-**UI changes to `src/routes/advance.tsx`:**
-- Worker view: "Request Advance" button (already exists, wire it)
-- Pending approvals tab for manager/owner with Approve / Reject
-- Balance tab reads live aggregate, not mock
+### 2c. Owner team management (new section under `/team`)
+Owner-only panel with:
+- Create worker (invite by email via `supabase.auth.admin.inviteUserByEmail` — needs a server function with `supabaseAdmin`).
+- Edit name/phone (update `profiles`).
+- Change role (insert/delete in `user_roles`: owner ↔ manager ↔ worker, single-role per user).
+- Disable / enable (`profiles.is_active`).
+- Delete user (server fn → `supabaseAdmin.auth.admin.deleteUser`).
+- Reset password (server fn → `supabaseAdmin.auth.admin.generateLink('recovery')`, return link or email).
 
----
+All admin operations go through `createServerFn` with `requireSupabaseAuth` + `has_role(uid,'owner')` check before invoking `supabaseAdmin`.
 
-## Phase 2 — Salary (adjust + mark paid + history)
+## 3. Files touched
+- new migration in `supabase/migrations/`
+- new `src/lib/admin.functions.ts` (server fns: invite, delete, set-role, reset-password)
+- `src/routes/team.tsx` (rewrite — real data, owner mgmt panel)
+- `src/routes/jobs.new.tsx`, `src/routes/jobs.$id.tsx` (real worker picker)
+- `src/routes/profile.tsx` (real docs, real stats)
+- delete/ignore `src/lib/mock-data.ts` (kept only for types until removed)
 
-**DB:** `salaries(id, employee_id, period_month date, basic, ot, bonus, deduction, advance_deduction, paid bool, paid_at)`
-Auto-pulls active advance balance into `advance_deduction` at month roll.
+## 4. After approval
+1. Run the reset migration (you approve it).
+2. Push frontend changes.
+3. You sign up — your account becomes Owner automatically.
+4. Verify empty state across all pages.
 
-**Server fns:**
-- `getSalaryForMonth({ employee_id, month })`
-- `upsertSalary({ … })` — manager/owner only
-- `markSalaryPaid({ id })`
-- `listSalaryHistory({ employee_id })`
+## 5. Notes / risks
+- Deleting auth users invalidates current sessions; everyone is signed out.
+- Storage objects deletion is irreversible.
+- If you want me to **keep one owner account** through the reset, say which email and I'll exclude it from the wipe.
 
-**UI:** existing `salary.tsx` becomes live — Edit sheet writes to DB; Mark Paid button persists; History tab shows real months.
-
----
-
-## Phase 3 — Team (assign / swap / remove / attendance / check-in)
-
-**DB:**
-- `attendance(employee_id, date, status, check_in_at, check_out_at)`
-- Jobs already client-stored → migrate to `jobs` + `job_assignments` tables so Assign / Swap / Remove are real
-
-**Server fns:**
-- `checkIn()` / `checkOut()` — worker self-service
-- `setAttendance({ employee_id, status })` — manager/owner
-- `assignWorker({ job_id, employee_id })`, `removeWorker(...)`, `swapWorker(...)`
-
-**UI:** the existing Assign / Swap / Remove buttons on team cards open a real picker and persist.
-
----
-
-## Phase 4 — Skills (assessment submit + approve)
-
-**DB:**
-- `employee_skills(employee_id, category, current, required)`
-- `assessment_requests(id, employee_id, category, current_level, requested_level, reason, status, reviewer_id, decided_at)`
-- `assessment_history(...)` — written on approval
-
-**Server fns:**
-- `submitAssessment({ category, requested_level, reason })` — worker
-- `decideAssessment({ id, decision: 'approve' | 'reject' })` — manager/owner, on approve updates `employee_skills` + writes history
-
-**UI:** existing skills page approval queue and submit form become live.
-
----
-
-## Out of scope (kept as-is)
-
-- i18n strings, layouts, colors, navigation, routing — unchanged
-- Jobs CRUD (already works via localStorage) — only migrated to Supabase as part of Phase 3 because Team actions touch it
-- Login screen UI — already exists; only wired to `supabase.auth`
-
----
-
-## Order of execution
-
-I will start with **Phase 0 + Phase 1** in this turn (foundation is mandatory; Advance is your top priority). Each subsequent phase is a follow-up message so you can verify before we move on.
-
-Confirm and I'll create the Phase 0 + Phase 1 migration now.
+**Reply "go" to proceed, or tell me which account to preserve.**
