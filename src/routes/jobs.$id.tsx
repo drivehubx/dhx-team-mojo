@@ -28,16 +28,19 @@ import {
   ChevronDown,
 } from "lucide-react";
 import {
-  jobs,
+  employees,
   getEmployee,
   fmtMYR,
   employeeSkills,
   trainingSuggestions,
   type Job,
+  type JobStatus,
   type SkillCategory,
 } from "@/lib/mock-data";
+import { useJobs } from "@/lib/jobs-store";
 import { StatusBadge } from "./index";
 import { useT } from "@/lib/i18n";
+import { Pencil, X } from "lucide-react";
 
 export const Route = createFileRoute("/jobs/$id")({
   head: ({ params }) => ({
