@@ -156,6 +156,16 @@ function JobsPage() {
           </li>
         )}
       </ul>
+
+      {/* New Job FAB */}
+      <Link
+        to="/jobs/new"
+        search={{ role }}
+        aria-label={tr("New Job")}
+        className="fixed bottom-24 right-4 z-30 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 active:scale-95"
+      >
+        <Plus className="h-4 w-4" /> {tr("New Job")}
+      </Link>
     </div>
   );
 }
