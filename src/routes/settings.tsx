@@ -50,9 +50,10 @@ function SettingsPage() {
     toast.success(`${tr("Role")}: ${tr(r === "worker" ? "Worker" : r === "manager" ? "Manager" : "Owner")}`);
   };
 
-  const doLogout = () => {
+  const doLogout = async () => {
     SESSION_KEYS.forEach((k) => localStorage.removeItem(k));
     setConfirmLogout(false);
+    await signOut();
     toast.success(tr("Signed out"));
     router.navigate({ to: "/login" });
   };
