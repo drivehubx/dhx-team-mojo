@@ -176,8 +176,8 @@ function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" |
   const risk = etaRisk(job.due, job.status);
   const isBlocked = job.status === "Waiting Parts";
   const isMine = job.assignedIds.includes(selfId);
-  const owner = getEmployee(job.assignedIds[0]);
-  const others = job.assignedIds.length - 1;
+  const owner = job.assignedIds[0] ? getEmployee(job.assignedIds[0]) : null;
+  const others = Math.max(0, job.assignedIds.length - 1);
 
   const riskMeta: Record<Risk, { label: string; cls: string }> = {
     ok: { label: tr("Due") + " " + job.due, cls: "text-muted-foreground" },
