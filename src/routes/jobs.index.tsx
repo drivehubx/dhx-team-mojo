@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { AppHeader } from "@/components/AppHeader";
-import { jobs, getEmployee, type JobStatus, type Job } from "@/lib/mock-data";
+import { getEmployee, type JobStatus, type Job } from "@/lib/mock-data";
+import { useJobs } from "@/lib/jobs-store";
 import { useT } from "@/lib/i18n";
-import { Search, AlertTriangle, Clock, UserPlus, ShieldAlert, ChevronRight, Car } from "lucide-react";
+import { Search, AlertTriangle, Clock, UserPlus, ShieldAlert, ChevronRight, Car, Plus } from "lucide-react";
 
 const roleSchema = z.object({
   role: z.enum(["worker", "manager", "owner"]).catch("worker"),
