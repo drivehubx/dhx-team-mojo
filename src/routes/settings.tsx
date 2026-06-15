@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -32,6 +33,7 @@ type DevRole = "worker" | "manager" | "owner";
 function SettingsPage() {
   const { t, tr } = useT();
   const router = useRouter();
+  const { signOut } = useAuth();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [devRole, setDevRole] = useState<DevRole | null>(null);
@@ -48,9 +50,10 @@ function SettingsPage() {
     toast.success(`${tr("Role")}: ${tr(r === "worker" ? "Worker" : r === "manager" ? "Manager" : "Owner")}`);
   };
 
-  const doLogout = () => {
+  const doLogout = async () => {
     SESSION_KEYS.forEach((k) => localStorage.removeItem(k));
     setConfirmLogout(false);
+    await signOut();
     toast.success(tr("Signed out"));
     router.navigate({ to: "/login" });
   };
