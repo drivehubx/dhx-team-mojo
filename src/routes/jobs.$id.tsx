@@ -214,9 +214,28 @@ function JobDetailPage() {
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{job.plate}</p>
             <h1 className="text-base font-semibold tracking-tight truncate">{job.vehicle}</h1>
           </div>
+          <button
+            onClick={() => setEditOpen(true)}
+            aria-label={tr("Edit")}
+            className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-foreground active:scale-95"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
           <StatusBadge status={job.status} />
         </div>
       </header>
+
+      {editOpen && (
+        <EditJobSheet
+          job={job}
+          onClose={() => setEditOpen(false)}
+          onSave={(patch) => {
+            updateJob(job.id, patch);
+            setEditOpen(false);
+            toast.success(tr("Job updated"));
+          }}
+        />
+      )}
 
       {/* Compact Vehicle Info */}
       <section className="px-5 mt-4">
