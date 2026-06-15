@@ -28,16 +28,19 @@ import {
   ChevronDown,
 } from "lucide-react";
 import {
-  jobs,
+  employees,
   getEmployee,
   fmtMYR,
   employeeSkills,
   trainingSuggestions,
   type Job,
+  type JobStatus,
   type SkillCategory,
 } from "@/lib/mock-data";
+import { useJobs } from "@/lib/jobs-store";
 import { StatusBadge } from "./index";
 import { useT } from "@/lib/i18n";
+import { Pencil, X } from "lucide-react";
 
 export const Route = createFileRoute("/jobs/$id")({
   head: ({ params }) => ({
@@ -95,7 +98,9 @@ function JobDetailPage() {
   const { tr } = useT();
   const { id } = Route.useParams();
   const { role } = Route.useSearch();
-  const job = jobs.find((j) => j.id === id);
+  const { getJob, updateJob } = useJobs();
+  const job = getJob(id);
+  const [editOpen, setEditOpen] = useState(false);
   if (!job) throw notFound();
 
   // Persistence: stage override + extra photos + running state
@@ -175,7 +180,7 @@ function JobDetailPage() {
   const assignedManager = "Ron Tan";
 
   // Current stage details
-  const stageOwnerEmp = getEmployee(job.assignedIds[0]);
+  const stageOwnerEmp = job.assignedIds[0] ? getEmployee(job.assignedIds[0]) : null;
   const stageStarted = job.startedAt;
   const stageDuration = Math.max(1, Math.round((actualHours / Math.max(1, step + 1)) * 10) / 10);
   const blockReason =
@@ -209,9 +214,28 @@ function JobDetailPage() {
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{job.plate}</p>
             <h1 className="text-base font-semibold tracking-tight truncate">{job.vehicle}</h1>
           </div>
+          <button
+            onClick={() => setEditOpen(true)}
+            aria-label={tr("Edit")}
+            className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-foreground active:scale-95"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
           <StatusBadge status={job.status} />
         </div>
       </header>
+
+      {editOpen && (
+        <EditJobSheet
+          job={job}
+          onClose={() => setEditOpen(false)}
+          onSave={(patch) => {
+            updateJob(job.id, patch);
+            setEditOpen(false);
+            toast.success(tr("Job updated"));
+          }}
+        />
+      )}
 
       {/* Compact Vehicle Info */}
       <section className="px-5 mt-4">
@@ -291,7 +315,7 @@ function JobDetailPage() {
             <div className="grid grid-cols-3 gap-2 text-[11px]">
               <div>
                 <p className="text-muted-foreground">{tr("Owner")}</p>
-                <p className="font-medium text-foreground truncate">{stageOwnerEmp.name}</p>
+                <p className="font-medium text-foreground truncate">{stageOwnerEmp?.name ?? tr("Unassigned")}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">{tr("Started")}</p>
@@ -722,7 +746,10 @@ function JobDetailPage() {
               .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
               .map((r) => r.value);
             const failed = results.length - ok.length;
-            if (ok.length) setExtraPhotos((p) => [...p, ...ok]);
+            if (ok.length) {
+              setExtraPhotos((p) => [...p, ...ok]);
+              updateJob(job.id, (j) => ({ photos: [...ok, ...j.photos] }));
+            }
             if (ok.length) toast.success(tr("{n} photo(s) added", { n: ok.length }));
             if (failed) toast.error(tr("{n} photo(s) failed (max 8MB)", { n: failed }));
           });
@@ -766,6 +793,13 @@ function JobDetailPage() {
                   return;
                 }
                 setStageOverride(next);
+                const stageProgress = [10, 30, 50, 75, 95, 100][next] ?? job.progress;
+                const newStatus: JobStatus =
+                  next >= 5 ? "Completed" : next >= 3 ? "Pending QC" : "In Progress";
+                updateJob(job.id, {
+                  progress: Math.max(job.progress, stageProgress),
+                  status: newStatus,
+                });
                 toast.success(tr("Moved to {s}", { s: tr(WORKFLOW[next]) }));
               }}
             />
@@ -911,3 +945,124 @@ function PhotoGroup({ tKey, photos, emptyKey }: { tKey: string; photos: string[]
     </section>
   );
 }
+
+function EditJobSheet({
+  job,
+  onClose,
+  onSave,
+}: {
+  job: Job;
+  onClose: () => void;
+  onSave: (patch: Partial<Job>) => void;
+}) {
+  const { tr } = useT();
+  const [plate, setPlate] = useState(job.plate);
+  const [vehicle, setVehicle] = useState(job.vehicle);
+  const [customerName, setCustomerName] = useState(job.customerName ?? "");
+  const [customerPhone, setCustomerPhone] = useState(job.customerPhone ?? "");
+  const [notes, setNotes] = useState(job.notes);
+  const [assignedIds, setAssignedIds] = useState<string[]>(job.assignedIds);
+
+  const toggle = (id: string) =>
+    setAssignedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
+      <div
+        className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-2xl bg-background p-5 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold">{tr("Edit Job")}</h2>
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-secondary">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <Field label={tr("Plate")}>
+            <input value={plate} onChange={(e) => setPlate(e.target.value)} className="inp" />
+          </Field>
+          <Field label={tr("Vehicle")}>
+            <input value={vehicle} onChange={(e) => setVehicle(e.target.value)} className="inp" />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={tr("Customer")}>
+              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="inp" />
+            </Field>
+            <Field label={tr("Phone")}>
+              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="inp" />
+            </Field>
+          </div>
+
+          <Field label={tr("Assigned Workers")}>
+            <div className="flex flex-wrap gap-1.5">
+              {employees
+                .filter((e) => e.active && e.role !== "Owner")
+                .map((e) => {
+                  const on = assignedIds.includes(e.id);
+                  return (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => toggle(e.id)}
+                      className={`rounded-full px-3 py-1.5 text-xs ${
+                        on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                      }`}
+                    >
+                      {e.name}
+                    </button>
+                  );
+                })}
+            </div>
+          </Field>
+
+          <Field label={tr("Notes")}>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className="inp resize-none"
+            />
+          </Field>
+        </div>
+
+        <div className="mt-5 flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-border bg-card py-2.5 text-sm font-medium"
+          >
+            {tr("Cancel")}
+          </button>
+          <button
+            onClick={() =>
+              onSave({
+                plate: plate.trim(),
+                vehicle: vehicle.trim(),
+                customerName: customerName.trim() || undefined,
+                customerPhone: customerPhone.trim() || undefined,
+                notes,
+                assignedIds,
+              })
+            }
+            className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground"
+          >
+            {tr("Save")}
+          </button>
+        </div>
+
+        <style>{`.inp{width:100%;border:1px solid hsl(var(--border));background:hsl(var(--card));border-radius:0.75rem;padding:0.6rem 0.75rem;font-size:0.875rem;outline:none}.inp:focus{box-shadow:0 0 0 2px hsl(var(--primary)/0.25)}`}</style>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      {children}
+    </label>
+  );
+}
+

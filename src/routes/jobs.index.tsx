@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { AppHeader } from "@/components/AppHeader";
-import { jobs, getEmployee, type JobStatus, type Job } from "@/lib/mock-data";
+import { getEmployee, type JobStatus, type Job } from "@/lib/mock-data";
+import { useJobs } from "@/lib/jobs-store";
 import { useT } from "@/lib/i18n";
-import { Search, AlertTriangle, Clock, UserPlus, ShieldAlert, ChevronRight, Car } from "lucide-react";
+import { Search, AlertTriangle, Clock, UserPlus, ShieldAlert, ChevronRight, Car, Plus } from "lucide-react";
 
 const roleSchema = z.object({
   role: z.enum(["worker", "manager", "owner"]).catch("worker"),
@@ -84,6 +85,7 @@ function JobsPage() {
   const { t, tr } = useT();
   const { role } = Route.useSearch();
   const selfId = selfIdFor(role);
+  const { jobs } = useJobs();
 
   const allFilters: FilterKey[] = ["All", "Mine", "Blocked", "In Progress", "QC", "Ready"];
   const [filter, setFilter] = useState<FilterKey>(role === "worker" ? "Mine" : "All");
@@ -98,7 +100,7 @@ function JobsPage() {
         j.plate.toLowerCase().includes(q) || j.vehicle.toLowerCase().includes(q) || j.notes.toLowerCase().includes(q)
       );
     });
-  }, [filter, query, selfId]);
+  }, [jobs, filter, query, selfId]);
 
   return (
     <div className="pb-8">
@@ -106,6 +108,7 @@ function JobsPage() {
         title={t("page.jobs.title") || tr("Jobs")}
         subtitle={tr("{n} jobs shown").replace("{n}", String(list.length))}
       />
+
 
       {/* Sticky search + filters */}
       <div className="sticky top-[88px] z-30 -mt-4 px-5 pb-2 pt-3 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -153,6 +156,16 @@ function JobsPage() {
           </li>
         )}
       </ul>
+
+      {/* New Job FAB */}
+      <Link
+        to="/jobs/new"
+        search={{ role }}
+        aria-label={tr("New Job")}
+        className="fixed bottom-24 right-4 z-30 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 active:scale-95"
+      >
+        <Plus className="h-4 w-4" /> {tr("New Job")}
+      </Link>
     </div>
   );
 }
@@ -163,8 +176,8 @@ function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" |
   const risk = etaRisk(job.due, job.status);
   const isBlocked = job.status === "Waiting Parts";
   const isMine = job.assignedIds.includes(selfId);
-  const owner = getEmployee(job.assignedIds[0]);
-  const others = job.assignedIds.length - 1;
+  const owner = job.assignedIds[0] ? getEmployee(job.assignedIds[0]) : null;
+  const others = Math.max(0, job.assignedIds.length - 1);
 
   const riskMeta: Record<Risk, { label: string; cls: string }> = {
     ok: { label: tr("Due") + " " + job.due, cls: "text-muted-foreground" },
@@ -242,7 +255,7 @@ function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" |
               })}
             </div>
             <span className="text-[11px] text-muted-foreground truncate">
-              {owner.initials}
+              {owner ? owner.initials : tr("Unassigned")}
               {others > 0 && ` +${others}`}
             </span>
           </div>

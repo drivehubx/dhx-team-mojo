@@ -22,6 +22,8 @@ export type Job = {
   notes: string;
   startedAt: string;
   due: string;
+  customerName?: string;
+  customerPhone?: string;
 };
 
 export type Salary = {
