@@ -413,6 +413,62 @@ export type Database = {
           },
         ]
       }
+      salaries: {
+        Row: {
+          basic: number
+          bonus: number
+          created_at: string
+          created_by: string | null
+          deduction: number
+          employee_id: string
+          id: string
+          notes: string | null
+          ot: number
+          paid: boolean
+          period: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          basic?: number
+          bonus?: number
+          created_at?: string
+          created_by?: string | null
+          deduction?: number
+          employee_id: string
+          id?: string
+          notes?: string | null
+          ot?: number
+          paid?: boolean
+          period: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          basic?: number
+          bonus?: number
+          created_at?: string
+          created_by?: string | null
+          deduction?: number
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          ot?: number
+          paid?: boolean
+          period?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salaries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
