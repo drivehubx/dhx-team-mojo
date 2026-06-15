@@ -727,7 +727,10 @@ function JobDetailPage() {
               .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
               .map((r) => r.value);
             const failed = results.length - ok.length;
-            if (ok.length) setExtraPhotos((p) => [...p, ...ok]);
+            if (ok.length) {
+              setExtraPhotos((p) => [...p, ...ok]);
+              updateJob(job.id, (j) => ({ photos: [...ok, ...j.photos] }));
+            }
             if (ok.length) toast.success(tr("{n} photo(s) added", { n: ok.length }));
             if (failed) toast.error(tr("{n} photo(s) failed (max 8MB)", { n: failed }));
           });
