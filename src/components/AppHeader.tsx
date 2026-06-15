@@ -4,7 +4,7 @@ import { useT } from "@/lib/i18n";
 export function AppHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   const { t } = useT();
   return (
-    <header className="sticky top-0 z-40 bg-[--color-navy] text-[--color-navy-foreground] pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
+    <header className="sticky top-0 z-40 mb-4 bg-[--color-navy] text-[--color-navy-foreground] pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs uppercase tracking-widest text-white/60">{t("common.brand")}</p>
