@@ -52,7 +52,7 @@ function Dashboard() {
     <div>
       <AppHeader title={`${t("page.dashboard.greet")}, ${currentUser.name.split(" ")[0]}`} subtitle={tr(currentUser.role)} />
 
-      <div className="px-5 -mt-4">
+      <div className="px-5">
         <div className="grid grid-cols-2 gap-3">
           <KpiCard label={t("page.dashboard.activeWorkers")} value={String(totals.activeWorkers)} icon={Users} accent="bg-primary/10 text-primary" />
           <KpiCard label={t("page.dashboard.todayJobsKpi")} value={String(totals.todayJobs)} icon={Wrench} accent="bg-[--color-warning]/15 text-[--color-warning]" />

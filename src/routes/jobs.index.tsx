@@ -111,7 +111,7 @@ function JobsPage() {
 
 
       {/* Sticky search + filters */}
-      <div className="sticky top-[88px] z-30 -mt-4 px-5 pb-2 pt-3 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="sticky top-[88px] z-30 px-5 pb-2 pt-3 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input

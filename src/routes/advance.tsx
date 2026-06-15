@@ -56,7 +56,7 @@ function AdvancePage() {
     <div>
       <AppHeader title={tr("Advance")} subtitle={tr("Employee credit ledger")} />
 
-      <div className="px-5 -mt-4">
+      <div className="px-5">
         <div className="rounded-2xl bg-card border border-border p-4 shadow-sm">
           <div className="grid grid-cols-3 gap-2 text-center">
             <Stat label={tr("Borrowed")} value={fmtMYR(summary.totalBorrow)} accent="text-destructive" />

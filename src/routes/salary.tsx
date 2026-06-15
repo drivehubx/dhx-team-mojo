@@ -105,7 +105,7 @@ function SalaryPage() {
         subtitle={isStaff ? "Manage monthly pay" : "My monthly pay"}
       />
 
-      <div className="px-5 -mt-4 space-y-4">
+      <div className="px-5 space-y-4">
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4 text-primary" />

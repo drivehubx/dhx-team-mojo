@@ -163,7 +163,7 @@ function SkillsPage() {
     <div>
       <AppHeader title={tr("Skills")} subtitle={tr("Capability, assessments & training")} />
 
-      <div className="px-5 -mt-4 space-y-4 pb-8">
+      <div className="px-5 space-y-4 pb-8">
         {/* Role switcher (demo) */}
         <div className="flex items-center justify-between rounded-lg border border-border bg-card/40 p-2">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{tr("Viewing as")}</p>
