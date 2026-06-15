@@ -1,71 +1,101 @@
-# DHX Team Ops — UI Build Plan
+## Goal
 
-A standalone, mobile-first internal ops app for DriveHubX workshop. UI only, mock data, no backend wiring.
+Turn the existing UI (which currently reads from `mock-data.ts` + `localStorage`) into a real multi-user workshop app on Supabase. Owner / Manager / Worker each get working buttons end-to-end.
 
-## Design direction
+I'll ship this in **5 phases**, each independently usable. After every phase you can actually use that workflow. We do NOT redesign any page — only wire actions, persist data, and gate by role.
 
-- **Theme:** Dark blue (#0B1E3F primary, #1E3A8A accent) on white surface, with light slate neutrals. Professional, minimal, lots of whitespace.
-- **Typography:** Inter (body) + a tighter display weight for numbers/KPIs.
-- **Mobile-first:** Designed for 390px width. Bottom tab navigation (5 tabs), sticky top header per page.
-- **Components:** shadcn cards, badges, tabs, sheets, avatars. Lucide icons. Rounded-xl, soft shadows, subtle dividers.
+---
 
-## Information architecture
+## Phase 0 — Foundation (auth + roles + employee table)
 
-Bottom tab bar with 5 routes:
+Without this, no role-based action can be enforced.
 
-```text
-[ Dashboard ] [ Jobs ] [ Salary ] [ Advance ] [ Profile ]
-```
+**DB:**
+- `app_role` enum: `owner | manager | worker`
+- `profiles(id uuid PK → auth.users, full_name, phone, initials, active)`
+- `user_roles(user_id, role)` + `has_role(_user_id, _role)` security-definer fn
+- Trigger: on `auth.users` insert → create profile row
+- Migrate the 6 seed employees into `profiles` (linked once owner signs up; rest invited)
 
-## Pages
+**Code:**
+- Replace the mock `currentUser` with `useAuth()` hook reading `supabase.auth` + role
+- `_authenticated/route.tsx` already managed by integration → use it
+- Role switcher in dev only; production reads `user_roles`
 
-**1. Dashboard (`/`)**
-- Greeting + role chip (Owner / Painter / Body Tech / Helper — switchable via mock role pill for demo).
-- 4 KPI cards in a 2×2 grid: Active Workers, Today's Jobs, Outstanding Salary (MYR), Employee Advances (MYR).
-- "Today's jobs" preview list (3 items) → links to Jobs.
-- "Recent activity" feed (advance requested, job completed, salary paid).
+---
 
-**2. Jobs (`/jobs`)**
-- Status filter chips: All / In Progress / Pending QC / Completed.
-- Job cards: vehicle (plate + model), thumbnail photo strip (3 mock images), assigned staff avatars, status badge, progress bar.
-- Tap a card → bottom sheet with full photos grid, staff list, status timeline, notes.
+## Phase 1 — Advance (request → approve → repay)
 
-**3. Salary (`/salary`)**
-- Month selector (current month).
-- Per-employee salary cards showing breakdown: Basic, OT, Bonus, Deduction → Net total (highlighted).
-- Summary card at top: total payroll this month, paid vs outstanding.
+**DB:** `advances(id, employee_id → profiles, type 'borrow'|'repayment', amount, reason, status 'pending'|'approved'|'rejected', requested_by, approved_by, created_at)`
 
-**4. Advance (`/advance`)**
-- Summary header: Total Borrowed, Total Repaid, Outstanding Balance.
-- Tabs: Borrow | Repayment | Balance.
-- Borrow tab: list of advance entries (employee, amount, date, reason).
-- Repayment tab: repayment history.
-- Balance tab: per-employee outstanding balance list with mini progress bar (repaid / borrowed).
+**Server fns (`src/lib/advances.functions.ts`):**
+- `listAdvances()` — role-scoped (worker sees own; manager/owner sees all)
+- `requestAdvance({ amount, reason })` — worker creates pending borrow
+- `approveAdvance({ id })` / `rejectAdvance({ id })` — manager/owner
+- `recordRepayment({ employee_id, amount })` — manager/owner
 
-**5. Profile (`/profile`)**
-- Avatar, name, role, employee ID, contact.
-- Personal stats: this month's salary, OT hours, advance balance.
-- Sections: Documents, Settings, Sign out (visual only).
+**UI changes to `src/routes/advance.tsx`:**
+- Worker view: "Request Advance" button (already exists, wire it)
+- Pending approvals tab for manager/owner with Approve / Reject
+- Balance tab reads live aggregate, not mock
 
-## Mock data
+---
 
-Single `src/lib/mock-data.ts` exporting:
-- `employees` (5–6: 1 Owner, 2 Painters, 2 Body Techs, 1 Helper) with avatars (initials), role, contact.
-- `jobs` (6–8) with vehicle, plate, status, assigned staff IDs, photo URLs (Unsplash car/workshop), progress %.
-- `salaries` (current month per employee) with basic/OT/bonus/deduction.
-- `advances` (borrow + repayment entries) per employee.
-- `currentUser` (mock, defaults to Owner so all data visible).
+## Phase 2 — Salary (adjust + mark paid + history)
 
-## Technical notes
+**DB:** `salaries(id, employee_id, period_month date, basic, ot, bonus, deduction, advance_deduction, paid bool, paid_at)`
+Auto-pulls active advance balance into `advance_deduction` at month roll.
 
-- Routes under `src/routes/`: `index.tsx`, `jobs.tsx`, `salary.tsx`, `advance.tsx`, `profile.tsx`.
-- Shared layout in `__root.tsx`: bottom tab nav (fixed), content area with safe-area padding.
-- Tokens added to `src/styles.css`: deep navy primary, ink foreground, slate muted, success/warn/destructive for status badges.
-- Preview viewport set to mobile.
-- No backend, no auth, no Lovable Cloud.
+**Server fns:**
+- `getSalaryForMonth({ employee_id, month })`
+- `upsertSalary({ … })` — manager/owner only
+- `markSalaryPaid({ id })`
+- `listSalaryHistory({ employee_id })`
 
-## Out of scope
+**UI:** existing `salary.tsx` becomes live — Edit sheet writes to DB; Mark Paid button persists; History tab shows real months.
 
-- Real auth / role switching logic (role is a static mock pill).
-- Creating/editing records (read-only UI; buttons are visual).
-- Backend, persistence, file uploads.
+---
+
+## Phase 3 — Team (assign / swap / remove / attendance / check-in)
+
+**DB:**
+- `attendance(employee_id, date, status, check_in_at, check_out_at)`
+- Jobs already client-stored → migrate to `jobs` + `job_assignments` tables so Assign / Swap / Remove are real
+
+**Server fns:**
+- `checkIn()` / `checkOut()` — worker self-service
+- `setAttendance({ employee_id, status })` — manager/owner
+- `assignWorker({ job_id, employee_id })`, `removeWorker(...)`, `swapWorker(...)`
+
+**UI:** the existing Assign / Swap / Remove buttons on team cards open a real picker and persist.
+
+---
+
+## Phase 4 — Skills (assessment submit + approve)
+
+**DB:**
+- `employee_skills(employee_id, category, current, required)`
+- `assessment_requests(id, employee_id, category, current_level, requested_level, reason, status, reviewer_id, decided_at)`
+- `assessment_history(...)` — written on approval
+
+**Server fns:**
+- `submitAssessment({ category, requested_level, reason })` — worker
+- `decideAssessment({ id, decision: 'approve' | 'reject' })` — manager/owner, on approve updates `employee_skills` + writes history
+
+**UI:** existing skills page approval queue and submit form become live.
+
+---
+
+## Out of scope (kept as-is)
+
+- i18n strings, layouts, colors, navigation, routing — unchanged
+- Jobs CRUD (already works via localStorage) — only migrated to Supabase as part of Phase 3 because Team actions touch it
+- Login screen UI — already exists; only wired to `supabase.auth`
+
+---
+
+## Order of execution
+
+I will start with **Phase 0 + Phase 1** in this turn (foundation is mandatory; Advance is your top priority). Each subsequent phase is a follow-up message so you can verify before we move on.
+
+Confirm and I'll create the Phase 0 + Phase 1 migration now.
