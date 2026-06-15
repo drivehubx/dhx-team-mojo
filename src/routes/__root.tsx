@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BottomNav } from "../components/BottomNav";
 import { LanguageProvider } from "../lib/i18n";
 import { JobsProvider } from "../lib/jobs-store";
+import { AuthProvider } from "../lib/auth";
 import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
