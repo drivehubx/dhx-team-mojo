@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      advances: {
+        Row: {
+          amount: number
+          approved_by: string | null
+          created_at: string
+          decided_at: string | null
+          employee_id: string
+          id: string
+          reason: string | null
+          requested_by: string | null
+          status: Database["public"]["Enums"]["advance_status"]
+          type: Database["public"]["Enums"]["advance_type"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_by?: string | null
+          created_at?: string
+          decided_at?: string | null
+          employee_id: string
+          id?: string
+          reason?: string | null
+          requested_by?: string | null
+          status?: Database["public"]["Enums"]["advance_status"]
+          type: Database["public"]["Enums"]["advance_type"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_by?: string | null
+          created_at?: string
+          decided_at?: string | null
+          employee_id?: string
+          id?: string
+          reason?: string | null
+          requested_by?: string | null
+          status?: Database["public"]["Enums"]["advance_status"]
+          type?: Database["public"]["Enums"]["advance_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advances_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dhx_dodge_scores: {
         Row: {
           best_combo: number
@@ -255,6 +305,7 @@ export type Database = {
           created_at: string | null
           full_name: string
           id: string
+          initials: string
           is_active: boolean | null
           phone: string | null
           role: string
@@ -265,6 +316,7 @@ export type Database = {
           created_at?: string | null
           full_name: string
           id: string
+          initials?: string
           is_active?: boolean | null
           phone?: string | null
           role?: string
@@ -275,6 +327,7 @@ export type Database = {
           created_at?: string | null
           full_name?: string
           id?: string
+          initials?: string
           is_active?: boolean | null
           phone?: string | null
           role?: string
@@ -360,6 +413,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           color: string | null
@@ -440,10 +514,19 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      advance_status: "pending" | "approved" | "rejected"
+      advance_type: "borrow" | "repayment"
+      app_role: "owner" | "manager" | "worker"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -570,6 +653,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      advance_status: ["pending", "approved", "rejected"],
+      advance_type: ["borrow", "repayment"],
+      app_role: ["owner", "manager", "worker"],
+    },
   },
 } as const
