@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
