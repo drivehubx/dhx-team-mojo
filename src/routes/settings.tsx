@@ -33,6 +33,7 @@ type DevRole = "worker" | "manager" | "owner";
 function SettingsPage() {
   const { t, tr } = useT();
   const router = useRouter();
+  const { signOut } = useAuth();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [devRole, setDevRole] = useState<DevRole | null>(null);
