@@ -183,7 +183,7 @@ function TeamPage() {
     <div>
       <AppHeader title={tr("Team")} subtitle={tr("Workforce control center")} />
 
-      <div className="px-5 -mt-4 space-y-4 pb-28">
+      <div className="px-5 space-y-4 pb-28">
         {/* 1. Summary */}
         <div className="grid grid-cols-3 gap-2">
           <MiniStat label={tr("Total Staff")} value={stats.total} />

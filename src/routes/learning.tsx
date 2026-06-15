@@ -122,7 +122,7 @@ function LearningPage() {
     <div>
       <AppHeader title={tr("Learn")} subtitle={tr("Train, learn, level up")} />
 
-      <div className="px-5 -mt-4 space-y-4">
+      <div className="px-5 space-y-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-full bg-primary/15 text-primary">

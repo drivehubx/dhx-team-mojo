@@ -76,7 +76,7 @@ function ProfilePage() {
     return (
       <div>
         <AppHeader title={t("page.profile.title")} />
-        <div className="px-5 -mt-4">
+        <div className="px-5">
           <div className="rounded-2xl bg-card border border-border p-5 shadow-sm h-24 animate-pulse" />
         </div>
       </div>
@@ -90,7 +90,7 @@ function ProfilePage() {
     <div>
       <AppHeader title={t("page.profile.title")} />
 
-      <div className="px-5 -mt-4">
+      <div className="px-5">
         <button onClick={() => setEditOpen(true)} className="w-full text-left">
           <div className="rounded-2xl bg-card border border-border p-5 shadow-sm flex items-center gap-4">
             <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground text-xl font-semibold">
