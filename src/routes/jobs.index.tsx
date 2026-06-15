@@ -85,6 +85,7 @@ function JobsPage() {
   const { t, tr } = useT();
   const { role } = Route.useSearch();
   const selfId = selfIdFor(role);
+  const { jobs } = useJobs();
 
   const allFilters: FilterKey[] = ["All", "Mine", "Blocked", "In Progress", "QC", "Ready"];
   const [filter, setFilter] = useState<FilterKey>(role === "worker" ? "Mine" : "All");
@@ -99,7 +100,7 @@ function JobsPage() {
         j.plate.toLowerCase().includes(q) || j.vehicle.toLowerCase().includes(q) || j.notes.toLowerCase().includes(q)
       );
     });
-  }, [filter, query, selfId]);
+  }, [jobs, filter, query, selfId]);
 
   return (
     <div className="pb-8">
@@ -107,6 +108,7 @@ function JobsPage() {
         title={t("page.jobs.title") || tr("Jobs")}
         subtitle={tr("{n} jobs shown").replace("{n}", String(list.length))}
       />
+
 
       {/* Sticky search + filters */}
       <div className="sticky top-[88px] z-30 -mt-4 px-5 pb-2 pt-3 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
