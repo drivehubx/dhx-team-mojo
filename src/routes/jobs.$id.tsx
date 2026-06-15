@@ -945,3 +945,124 @@ function PhotoGroup({ tKey, photos, emptyKey }: { tKey: string; photos: string[]
     </section>
   );
 }
+
+function EditJobSheet({
+  job,
+  onClose,
+  onSave,
+}: {
+  job: Job;
+  onClose: () => void;
+  onSave: (patch: Partial<Job>) => void;
+}) {
+  const { tr } = useT();
+  const [plate, setPlate] = useState(job.plate);
+  const [vehicle, setVehicle] = useState(job.vehicle);
+  const [customerName, setCustomerName] = useState(job.customerName ?? "");
+  const [customerPhone, setCustomerPhone] = useState(job.customerPhone ?? "");
+  const [notes, setNotes] = useState(job.notes);
+  const [assignedIds, setAssignedIds] = useState<string[]>(job.assignedIds);
+
+  const toggle = (id: string) =>
+    setAssignedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
+      <div
+        className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-2xl bg-background p-5 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold">{tr("Edit Job")}</h2>
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-secondary">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <Field label={tr("Plate")}>
+            <input value={plate} onChange={(e) => setPlate(e.target.value)} className="inp" />
+          </Field>
+          <Field label={tr("Vehicle")}>
+            <input value={vehicle} onChange={(e) => setVehicle(e.target.value)} className="inp" />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={tr("Customer")}>
+              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="inp" />
+            </Field>
+            <Field label={tr("Phone")}>
+              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="inp" />
+            </Field>
+          </div>
+
+          <Field label={tr("Assigned Workers")}>
+            <div className="flex flex-wrap gap-1.5">
+              {employees
+                .filter((e) => e.active && e.role !== "Owner")
+                .map((e) => {
+                  const on = assignedIds.includes(e.id);
+                  return (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => toggle(e.id)}
+                      className={`rounded-full px-3 py-1.5 text-xs ${
+                        on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                      }`}
+                    >
+                      {e.name}
+                    </button>
+                  );
+                })}
+            </div>
+          </Field>
+
+          <Field label={tr("Notes")}>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className="inp resize-none"
+            />
+          </Field>
+        </div>
+
+        <div className="mt-5 flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-border bg-card py-2.5 text-sm font-medium"
+          >
+            {tr("Cancel")}
+          </button>
+          <button
+            onClick={() =>
+              onSave({
+                plate: plate.trim(),
+                vehicle: vehicle.trim(),
+                customerName: customerName.trim() || undefined,
+                customerPhone: customerPhone.trim() || undefined,
+                notes,
+                assignedIds,
+              })
+            }
+            className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground"
+          >
+            {tr("Save")}
+          </button>
+        </div>
+
+        <style>{`.inp{width:100%;border:1px solid hsl(var(--border));background:hsl(var(--card));border-radius:0.75rem;padding:0.6rem 0.75rem;font-size:0.875rem;outline:none}.inp:focus{box-shadow:0 0 0 2px hsl(var(--primary)/0.25)}`}</style>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      {children}
+    </label>
+  );
+}
+
