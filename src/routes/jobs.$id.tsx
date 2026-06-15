@@ -774,6 +774,13 @@ function JobDetailPage() {
                   return;
                 }
                 setStageOverride(next);
+                const stageProgress = [10, 30, 50, 75, 95, 100][next] ?? job.progress;
+                const newStatus: JobStatus =
+                  next >= 5 ? "Completed" : next >= 3 ? "Pending QC" : "In Progress";
+                updateJob(job.id, {
+                  progress: Math.max(job.progress, stageProgress),
+                  status: newStatus,
+                });
                 toast.success(tr("Moved to {s}", { s: tr(WORKFLOW[next]) }));
               }}
             />
