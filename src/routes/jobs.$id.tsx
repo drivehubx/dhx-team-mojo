@@ -315,7 +315,7 @@ function JobDetailPage() {
             <div className="grid grid-cols-3 gap-2 text-[11px]">
               <div>
                 <p className="text-muted-foreground">{tr("Owner")}</p>
-                <p className="font-medium text-foreground truncate">{stageOwnerEmp.name}</p>
+                <p className="font-medium text-foreground truncate">{stageOwnerEmp?.name ?? tr("Unassigned")}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">{tr("Started")}</p>
