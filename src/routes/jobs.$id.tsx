@@ -98,7 +98,9 @@ function JobDetailPage() {
   const { tr } = useT();
   const { id } = Route.useParams();
   const { role } = Route.useSearch();
-  const job = jobs.find((j) => j.id === id);
+  const { getJob, updateJob } = useJobs();
+  const job = getJob(id);
+  const [editOpen, setEditOpen] = useState(false);
   if (!job) throw notFound();
 
   // Persistence: stage override + extra photos + running state
