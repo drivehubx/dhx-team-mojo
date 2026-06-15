@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
-import { currentUser, salaries, fmtMYR, netSalary, advanceBalance } from "@/lib/mock-data";
+import { salaries, fmtMYR, netSalary, advanceBalance } from "@/lib/mock-data";
 import {
   Phone,
   IdCard,
@@ -14,9 +14,12 @@ import {
   Languages,
   X,
   Download,
+  User as UserIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useT, LANGS, LanguagePicker } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -28,48 +31,81 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
-const PHONE_KEY = "dhx:profile:phone";
+function deriveInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const letters = (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "");
+  return letters.toUpperCase() || "??";
+}
 
 function ProfilePage() {
   const { t, tr, lang } = useT();
+  const { user, profile, refresh, loading } = useAuth();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
-  const [phone, setPhone] = useState(currentUser.phone);
+  const [hydrated, setHydrated] = useState(false);
 
+  // One-time fallback: if profile name is empty/placeholder, seed from auth metadata.
   useEffect(() => {
-    const stored = localStorage.getItem(PHONE_KEY);
-    if (stored) setPhone(stored);
-  }, []);
+    if (!user || !profile || hydrated) return;
+    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const metaName = (meta.full_name as string) || (meta.name as string) || "";
+    const needsName = !profile.full_name || profile.full_name.trim() === "";
+    const needsInitials = !profile.initials || profile.initials === "??";
+    if (needsName || needsInitials) {
+      const finalName = needsName ? (metaName || user.email?.split("@")[0] || "") : profile.full_name;
+      const finalInitials = needsInitials ? deriveInitials(finalName) : profile.initials;
+      if (finalName) {
+        supabase
+          .from("profiles")
+          .update({ full_name: finalName, initials: finalInitials })
+          .eq("id", user.id)
+          .then(({ error }) => {
+            if (!error) refresh();
+          });
+      }
+    }
+    setHydrated(true);
+  }, [user, profile, hydrated, refresh]);
 
-  const savePhone = (next: string) => {
-    setPhone(next);
-    localStorage.setItem(PHONE_KEY, next);
-    setPhoneOpen(false);
-    toast.success(tr("Phone updated"));
-  };
-
-  const mySalary = salaries.find((s) => s.employeeId === currentUser.id);
-  const myAdvance = advanceBalance(currentUser.id);
   const activeLang = LANGS.find((l) => l.code === lang)!;
+  const mySalary = profile ? salaries.find((s) => s.employeeId === profile.id) : undefined;
+  const myAdvance = profile ? advanceBalance(profile.id) : { balance: 0 };
+
+  if (loading || !profile) {
+    return (
+      <div>
+        <AppHeader title={t("page.profile.title")} />
+        <div className="px-5 -mt-4">
+          <div className="rounded-2xl bg-card border border-border p-5 shadow-sm h-24 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  const displayName = profile.full_name || tr("Unnamed");
+  const initials = profile.initials || deriveInitials(displayName);
 
   return (
     <div>
       <AppHeader title={t("page.profile.title")} />
 
       <div className="px-5 -mt-4">
-        <div className="rounded-2xl bg-card border border-border p-5 shadow-sm flex items-center gap-4">
-          <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground text-xl font-semibold">
-            {currentUser.initials}
+        <button onClick={() => setEditOpen(true)} className="w-full text-left">
+          <div className="rounded-2xl bg-card border border-border p-5 shadow-sm flex items-center gap-4">
+            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground text-xl font-semibold">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-semibold truncate">{displayName}</p>
+              <p className="text-xs text-muted-foreground">{tr(profile.role)}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground flex items-center gap-1">
+                <IdCard className="h-3 w-3" /> EMP-{profile.id.slice(0, 8).toUpperCase()}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="min-w-0">
-            <p className="text-base font-semibold truncate">{currentUser.name}</p>
-            <p className="text-xs text-muted-foreground">{tr(currentUser.role)}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground flex items-center gap-1">
-              <IdCard className="h-3 w-3" /> EMP-{currentUser.id.toUpperCase()}
-            </p>
-          </div>
-        </div>
+        </button>
       </div>
 
       <section className="mt-5 px-5">
@@ -84,8 +120,11 @@ function ProfilePage() {
       <section className="mt-5 px-5">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{t("page.profile.account")}</h2>
         <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
-          <button onClick={() => setPhoneOpen(true)} className="w-full text-left">
-            <Row icon={Phone} label={t("page.profile.phone")} value={phone} />
+          <button onClick={() => setEditOpen(true)} className="w-full text-left">
+            <Row icon={UserIcon} label={tr("Edit Profile")} value={displayName} />
+          </button>
+          <button onClick={() => setEditOpen(true)} className="w-full text-left">
+            <Row icon={Phone} label={t("page.profile.phone")} value={profile.phone || tr("Not set")} />
           </button>
           <button onClick={() => setDocsOpen(true)} className="w-full text-left">
             <Row icon={FileText} label={t("page.profile.documents")} value={tr("{n} files", { n: 2 })} />
@@ -106,23 +145,75 @@ function ProfilePage() {
       <p className="mt-6 mb-4 text-center text-[11px] text-muted-foreground">{t("common.brand")} · v1.0</p>
 
       {pickerOpen && <LanguagePicker onClose={() => setPickerOpen(false)} />}
-      {phoneOpen && <PhoneEditor current={phone} onClose={() => setPhoneOpen(false)} onSave={savePhone} />}
+      {editOpen && (
+        <EditProfileModal
+          fullName={profile.full_name}
+          phone={profile.phone ?? ""}
+          initials={profile.initials}
+          userId={profile.id}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => {
+            setEditOpen(false);
+            refresh();
+          }}
+        />
+      )}
       {docsOpen && <DocsModal onClose={() => setDocsOpen(false)} />}
     </div>
   );
 }
 
-function PhoneEditor({
-  current,
+function EditProfileModal({
+  fullName,
+  phone,
+  initials,
+  userId,
   onClose,
-  onSave,
+  onSaved,
 }: {
-  current: string;
+  fullName: string;
+  phone: string;
+  initials: string;
+  userId: string;
   onClose: () => void;
-  onSave: (v: string) => void;
+  onSaved: () => void;
 }) {
   const { tr } = useT();
-  const [value, setValue] = useState(current);
+  const [name, setName] = useState(fullName);
+  const [ph, setPh] = useState(phone);
+  const [ini, setIni] = useState(initials);
+  const [saving, setSaving] = useState(false);
+
+  // Auto-derive initials while user hasn't manually overridden
+  const [iniTouched, setIniTouched] = useState(false);
+  useEffect(() => {
+    if (!iniTouched) setIni(deriveInitials(name));
+  }, [name, iniTouched]);
+
+  const save = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      toast.error(tr("Full name is required"));
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        full_name: trimmedName,
+        phone: ph.trim() || null,
+        initials: (ini.trim() || deriveInitials(trimmedName)).slice(0, 4).toUpperCase(),
+      })
+      .eq("id", userId);
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(tr("Profile updated"));
+    onSaved();
+  };
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4"
@@ -133,33 +224,58 @@ function PhoneEditor({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">{tr("Edit Phone")}</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{tr("Edit Profile")}</h2>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-secondary">
             <X className="h-4 w-4" />
           </button>
         </div>
+
         <label className="mt-4 block">
-          <span className="text-xs font-medium text-muted-foreground">{tr("Phone")}</span>
+          <span className="text-xs font-medium text-muted-foreground">{tr("Full Name")}</span>
           <input
-            type="tel"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none focus:border-primary"
           />
         </label>
+
+        <label className="mt-3 block">
+          <span className="text-xs font-medium text-muted-foreground">{tr("Phone")}</span>
+          <input
+            type="tel"
+            value={ph}
+            onChange={(e) => setPh(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none focus:border-primary"
+          />
+        </label>
+
+        <label className="mt-3 block">
+          <span className="text-xs font-medium text-muted-foreground">{tr("Initials (optional)")}</span>
+          <input
+            value={ini}
+            maxLength={4}
+            onChange={(e) => {
+              setIniTouched(true);
+              setIni(e.target.value.toUpperCase());
+            }}
+            className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none focus:border-primary uppercase"
+          />
+        </label>
+
         <div className="mt-5 flex gap-2">
           <button
             onClick={onClose}
+            disabled={saving}
             className="flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-semibold"
           >
             {tr("Cancel")}
           </button>
           <button
-            onClick={() => onSave(value.trim())}
-            disabled={!value.trim()}
+            onClick={save}
+            disabled={saving || !name.trim()}
             className="flex-1 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
           >
-            {tr("Save")}
+            {saving ? tr("Saving…") : tr("Save")}
           </button>
         </div>
       </div>
@@ -169,7 +285,6 @@ function PhoneEditor({
 
 function DocsModal({ onClose }: { onClose: () => void }) {
   const { tr } = useT();
-  // Names of files intentionally untranslated.
   const files = [
     { name: "IC-Copy.pdf", size: "342 KB" },
     { name: "Driving-License.pdf", size: "210 KB" },
@@ -191,10 +306,7 @@ function DocsModal({ onClose }: { onClose: () => void }) {
         </div>
         <ul className="mt-4 space-y-2">
           {files.map((f) => (
-            <li
-              key={f.name}
-              className="flex items-center gap-3 rounded-2xl border border-border p-3"
-            >
+            <li key={f.name} className="flex items-center gap-3 rounded-2xl border border-border p-3">
               <div className="grid h-9 w-9 place-items-center rounded-xl bg-secondary text-primary">
                 <FileText className="h-4 w-4" />
               </div>
