@@ -255,7 +255,7 @@ function JobCard({ job, role, selfId }: { job: Job; role: "worker" | "manager" |
               })}
             </div>
             <span className="text-[11px] text-muted-foreground truncate">
-              {owner.initials}
+              {owner ? owner.initials : tr("Unassigned")}
               {others > 0 && ` +${others}`}
             </span>
           </div>
