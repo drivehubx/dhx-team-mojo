@@ -180,7 +180,7 @@ function JobDetailPage() {
   const assignedManager = "Ron Tan";
 
   // Current stage details
-  const stageOwnerEmp = getEmployee(job.assignedIds[0]);
+  const stageOwnerEmp = job.assignedIds[0] ? getEmployee(job.assignedIds[0]) : null;
   const stageStarted = job.startedAt;
   const stageDuration = Math.max(1, Math.round((actualHours / Math.max(1, step + 1)) * 10) / 10);
   const blockReason =
