@@ -123,11 +123,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-24">
-          <Outlet />
-        </div>
-        <BottomNav />
-        <Toaster position="top-center" richColors closeButton />
+        <JobsProvider>
+          <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-24">
+            <Outlet />
+          </div>
+          <BottomNav />
+          <Toaster position="top-center" richColors closeButton />
+        </JobsProvider>
       </LanguageProvider>
     </QueryClientProvider>
   );
