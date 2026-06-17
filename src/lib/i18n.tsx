@@ -16,7 +16,7 @@ type Dict = Record<string, string>;
 
 const ZH: Dict = {
   // Brand / Nav
-  "DHX Body & Paint": "DHX Team Ops",
+  "DHX Body & Paint": "DHX Body & Paint",
   Home: "首页",
   Jobs: "工单",
   Team: "团队",
@@ -369,7 +369,7 @@ const ZH: Dict = {
 
 
 const MS: Dict = {
-  "DHX Body & Paint": "DHX Team Ops",
+  "DHX Body & Paint": "DHX Body & Paint",
   Home: "Utama",
   Jobs: "Kerja",
   Team: "Pasukan",
@@ -707,7 +707,7 @@ const MS: Dict = {
 };
 
 const ID: Dict = {
-  "DHX Body & Paint": "DHX Team Ops",
+  "DHX Body & Paint": "DHX Body & Paint",
   Home: "Beranda",
   Jobs: "Pekerjaan",
   Team: "Tim",
