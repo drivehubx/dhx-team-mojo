@@ -16,7 +16,7 @@ type Dict = Record<string, string>;
 
 const ZH: Dict = {
   // Brand / Nav
-  "DHX Team Ops": "DHX Team Ops",
+  "DHX Body & Paint": "DHX Team Ops",
   Home: "首页",
   Jobs: "工单",
   Team: "团队",
@@ -369,7 +369,7 @@ const ZH: Dict = {
 
 
 const MS: Dict = {
-  "DHX Team Ops": "DHX Team Ops",
+  "DHX Body & Paint": "DHX Team Ops",
   Home: "Utama",
   Jobs: "Kerja",
   Team: "Pasukan",
@@ -707,7 +707,7 @@ const MS: Dict = {
 };
 
 const ID: Dict = {
-  "DHX Team Ops": "DHX Team Ops",
+  "DHX Body & Paint": "DHX Team Ops",
   Home: "Beranda",
   Jobs: "Pekerjaan",
   Team: "Tim",
@@ -1121,7 +1121,7 @@ export function useT() {
   // Backwards-compat: provide `t(key)` that proxies to tr() so existing call sites still work.
   // Existing keys like "page.dashboard.title" map to their EN string here.
   const legacyKeyMap: Record<string, string> = {
-    "common.brand": "DHX Team Ops",
+    "common.brand": "DHX Body & Paint",
     "common.viewAll": "View all",
     "common.signOut": "Sign out",
     "nav.home": "Home",
@@ -1173,7 +1173,7 @@ function LanguageModal({ onChoose }: { onChoose: (l: Lang) => void }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">DHX Team Ops</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">DHX Body & Paint</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight"> {tr("Choose your language")} </h2>
         <p className="mt-1 text-sm text-muted-foreground">{tr("Select your preferred language to continue.")}</p>
         <ul className="mt-5 space-y-2">

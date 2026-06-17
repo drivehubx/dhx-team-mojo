@@ -21,7 +21,7 @@ import {
 export const Route = createFileRoute("/learning")({
   head: () => ({
     meta: [
-      { title: "Learning — DHX Team Ops" },
+      { title: "Learning — DHX Body & Paint" },
       { name: "description", content: "Internal training: videos, repair notes, SOPs." },
     ],
   }),

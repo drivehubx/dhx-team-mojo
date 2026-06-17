@@ -38,7 +38,7 @@ import {
 export const Route = createFileRoute("/skills")({
   head: () => ({
     meta: [
-      { title: "Skills — DHX Team Ops" },
+      { title: "Skills — DHX Body & Paint" },
       { name: "description", content: "Team skill levels, gaps, assessments, and training recommendations." },
     ],
   }),

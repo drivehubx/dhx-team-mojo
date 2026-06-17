@@ -45,7 +45,7 @@ import { Pencil, X } from "lucide-react";
 export const Route = createFileRoute("/jobs/$id")({
   head: ({ params }) => ({
     meta: [
-      { title: `Job ${params.id} — DHX Team Ops` },
+      { title: `Job ${params.id} — DHX Body & Paint` },
       { name: "description", content: "Job detail with workflow, checklist, photos, labour, learning and skills." },
     ],
   }),

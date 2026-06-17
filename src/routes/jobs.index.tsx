@@ -15,7 +15,7 @@ export const Route = createFileRoute("/jobs/")({
   validateSearch: roleSchema,
   head: () => ({
     meta: [
-      { title: "Jobs — DHX Team Ops" },
+      { title: "Jobs — DHX Body & Paint" },
       { name: "description", content: "Workshop control board: scan jobs, stages, ETA risk." },
     ],
   }),

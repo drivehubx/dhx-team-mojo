@@ -18,7 +18,7 @@ import { useAuth } from "@/lib/auth";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — DHX Team Ops" },
+      { title: "Settings — DHX Body & Paint" },
       { name: "description", content: "Account, language, and session settings." },
     ],
   }),

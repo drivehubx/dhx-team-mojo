@@ -39,7 +39,7 @@ export const Route = createFileRoute("/team")({
   }),
   head: () => ({
     meta: [
-      { title: "Team — DHX Team Ops" },
+      { title: "Team — DHX Body & Paint" },
       { name: "description", content: "Workforce control center: attendance, assignments, workload, skills." },
     ],
   }),

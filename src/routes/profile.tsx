@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "Profile — DHX Team Ops" },
+      { title: "Profile — DHX Body & Paint" },
       { name: "description", content: "Your profile and personal workshop stats." },
     ],
   }),
