@@ -9,7 +9,7 @@ import { Wallet, Loader2, Save } from "lucide-react";
 export const Route = createFileRoute("/salary")({
   head: () => ({
     meta: [
-      { title: "Salary — DHX Team Ops" },
+      { title: "Salary — DHX Body & Paint" },
       { name: "description", content: "Monthly salary: basic, OT, bonus, deduction." },
     ],
   }),

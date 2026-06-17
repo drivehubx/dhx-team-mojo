@@ -8,8 +8,8 @@ import { useT, tStatus } from "@/lib/i18n";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dashboard — DHX Team Ops" },
-      { name: "description", content: "Workshop operations dashboard for DHX Team Ops." },
+      { title: "Dashboard — DHX Body & Paint" },
+      { name: "description", content: "Workshop operations dashboard for DHX Body & Paint." },
     ],
   }),
   component: Dashboard,

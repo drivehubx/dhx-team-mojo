@@ -19,7 +19,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/advance")({
   head: () => ({
     meta: [
-      { title: "Advance — DHX Team Ops" },
+      { title: "Advance — DHX Body & Paint" },
       { name: "description", content: "Employee advances: borrow, repayment, balance tracking." },
     ],
   }),
