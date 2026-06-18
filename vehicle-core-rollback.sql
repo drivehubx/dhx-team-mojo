@@ -15,13 +15,11 @@ DROP FUNCTION IF EXISTS public.sync_vehicle_core_from_legacy();
 
 DROP VIEW IF EXISTS public.vehicle_master_view;
 
-DROP TRIGGER IF EXISTS vehicle_driver_set_updated_at ON public.vehicle_driver;
 DROP TRIGGER IF EXISTS vehicle_rental_set_updated_at ON public.vehicle_rental;
 DROP TRIGGER IF EXISTS vehicle_fleet_set_updated_at ON public.vehicle_fleet;
 DROP TRIGGER IF EXISTS vehicle_core_set_updated_at ON public.vehicle_core;
 DROP FUNCTION IF EXISTS public.set_updated_at();
 
-DROP TABLE IF EXISTS public.vehicle_driver;
 DROP TABLE IF EXISTS public.vehicle_rental;
 DROP TABLE IF EXISTS public.vehicle_fleet;
 DROP TABLE IF EXISTS public.vehicle_core;
