@@ -4,21 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  employees,
-  employeeSkills,
-  skillCategories,
-  currentUser,
-  trainingRecommendations,
-  assessmentRequests as initialRequests,
-  assessmentHistory,
-  lastAssessmentDate,
-  trainingSuggestions,
-  getEmployee,
-  type AssessmentRequest,
-  type SkillCategory,
-} from "@/lib/mock-data";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Minus,
   Plus,
@@ -32,24 +18,106 @@ import {
   Video,
   FileText,
   Wrench,
-  CalendarDays,
+  Loader2,
 } from "lucide-react";
+import { sbCore, sbWorkshop } from "@/integrations/supabase/shared-schema";
+import { useWorkspace } from "@/lib/workspace";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/skills")({
   head: () => ({
     meta: [
       { title: "Skills — DHX Body & Paint" },
-      { name: "description", content: "Team skill levels, gaps, assessments, and training recommendations." },
+      { name: "description", content: "Crew skill levels, gaps, assessments, and training recommendations." },
     ],
   }),
   component: SkillsPage,
 });
 
-type Role = "Owner" | "Manager" | "Worker";
-// Role simulation — Owner is currentUser; allow toggling for demo
-const baseRole: Role = currentUser.role === "Owner" ? "Owner" : "Worker";
+const SKILL_CATS = ["Panel", "Paint", "QC", "SOP", "Training"] as const;
+type SkillCat = (typeof SKILL_CATS)[number];
 
-const canEditFor = (role: Role) => role === "Owner";
+type DbStatus = "pending_manager" | "pending_owner" | "approved" | "rejected";
+
+type CrewRow = {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  is_active: boolean;
+  role: "owner" | "manager" | "crew" | null;
+};
+
+type SkillCell = { current_level: number; required_level: number };
+
+type RequestRow = {
+  id: string;
+  workspace_id: string;
+  requester_id: string;
+  skill_category: SkillCat;
+  current_level: number;
+  requested_level: number;
+  reason: string;
+  status: DbStatus;
+  reviewer_id: string | null;
+  reviewer_note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type HistoryRow = {
+  id: string;
+  workspace_id: string;
+  profile_id: string;
+  skill_category: SkillCat;
+  level_from: number;
+  level_to: number;
+  reason: string | null;
+  approved_by_id: string | null;
+  approved_at: string;
+};
+
+const trainingRecommendations: Record<SkillCat, string> = {
+  Panel: "Panel Repair & Alignment Workshop",
+  Paint: "Spray Technique & Colour Mixing",
+  QC: "Quality Control Inspection Cert",
+  SOP: "Standard Operating Procedures Refresher",
+  Training: "Onboarding & Mentorship Programme",
+};
+
+const trainingSuggestions: Record<SkillCat, { videos: string[]; sops: string[]; jobs: string[] }> = {
+  Panel: {
+    videos: ["Panel Alignment 101", "Dent Pulling Basics"],
+    sops: ["SOP-PNL-02 Panel Replacement"],
+    jobs: ["Shadow senior tech on next panel job", "Assist on rear quarter replacement"],
+  },
+  Paint: {
+    videos: ["Spray Gun Setup", "Colour Mixing Masterclass"],
+    sops: ["SOP-PNT-01 Booth Prep", "SOP-PNT-04 Blending"],
+    jobs: ["Solo respray on bumper", "Shadow lead painter on bonnet"],
+  },
+  QC: {
+    videos: ["QC Checklist Walkthrough"],
+    sops: ["SOP-QC-01 Final Inspection"],
+    jobs: ["Run QC on next 3 completed jobs"],
+  },
+  SOP: {
+    videos: ["Workshop SOP Overview"],
+    sops: ["SOP-GEN-00 Workshop Standards"],
+    jobs: ["Document next job using SOP template"],
+  },
+  Training: {
+    videos: ["Mentorship Best Practices"],
+    sops: ["SOP-TRN-01 Onboarding"],
+    jobs: ["Mentor helper on 1 job this week"],
+  },
+};
+
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0][0]!.toUpperCase();
+  return (parts[0][0]! + parts[parts.length - 1][0]!).toUpperCase();
+}
 
 function gapColor(gap: number) {
   if (gap === 0) return "text-emerald-400";
@@ -67,14 +135,14 @@ function LevelDots({ level, max = 5 }: { level: number; max?: number }) {
   );
 }
 
-function StatusPill({ status }: { status: AssessmentRequest["status"] }) {
+function StatusPill({ status }: { status: DbStatus }) {
   const { tr } = useT();
-  const map = {
-    "Pending Manager": { cls: "bg-amber-500/15 text-amber-300", icon: Clock, label: "Manager Review" },
-    "Pending Owner": { cls: "bg-blue-500/15 text-blue-300", icon: Clock, label: "Owner Approval" },
-    Approved: { cls: "bg-emerald-500/15 text-emerald-300", icon: CheckCircle2, label: "Approved" },
-    Rejected: { cls: "bg-rose-500/15 text-rose-300", icon: XCircle, label: "Rejected" },
-  } as const;
+  const map: Record<DbStatus, { cls: string; icon: typeof Clock; label: string }> = {
+    pending_manager: { cls: "bg-amber-500/15 text-amber-300", icon: Clock, label: "Manager Review" },
+    pending_owner: { cls: "bg-blue-500/15 text-blue-300", icon: Clock, label: "Owner Approval" },
+    approved: { cls: "bg-emerald-500/15 text-emerald-300", icon: CheckCircle2, label: "Approved" },
+    rejected: { cls: "bg-rose-500/15 text-rose-300", icon: XCircle, label: "Rejected" },
+  };
   const { cls, icon: Icon, label } = map[status];
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
@@ -84,104 +152,214 @@ function StatusPill({ status }: { status: AssessmentRequest["status"] }) {
   );
 }
 
+function fmtDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { day: "2-digit", month: "short" });
+  } catch {
+    return iso;
+  }
+}
+
 function SkillsPage() {
   const { tr } = useT();
-  const [role, setRole] = useState<Role>(baseRole);
-  const [editMode, setEditMode] = useState(false);
-  const [skills, setSkills] = useState(employeeSkills);
-  const [requests, setRequests] = useState<AssessmentRequest[]>(initialRequests);
+  const { workspaceId, profile, role, isOwner, isManager } = useWorkspace();
 
-  // Request form
+  const [loading, setLoading] = useState(true);
+  const [crew, setCrew] = useState<CrewRow[]>([]);
+  const [skills, setSkills] = useState<Map<string, Map<SkillCat, SkillCell>>>(new Map());
+  const [requests, setRequests] = useState<RequestRow[]>([]);
+  const [history, setHistory] = useState<HistoryRow[]>([]);
+
+  const [editMode, setEditMode] = useState(false);
   const [openRequest, setOpenRequest] = useState(false);
-  const [reqCat, setReqCat] = useState<SkillCategory>("Paint");
+  const [reqCat, setReqCat] = useState<SkillCat>("Paint");
   const [reqLevel, setReqLevel] = useState(0);
   const [reqReason, setReqReason] = useState("");
+  const [noteMap, setNoteMap] = useState<Record<string, string>>({});
 
-  // For demo workers: pick a non-owner to represent "me"
-  const workerSelf = useMemo(() => employees.find((e) => e.role !== "Owner") ?? employees[0], []);
-  const meId = role === "Worker" ? workerSelf.id : currentUser.id;
+  const canEdit = isOwner;
+  const isCrew = (role as string) === "crew" || role === "worker";
 
-  const canEdit = canEditFor(role);
+  const skillFor = (pid: string, cat: SkillCat): SkillCell => {
+    return skills.get(pid)?.get(cat) ?? { current_level: 0, required_level: 3 };
+  };
 
-  const adjust = (empId: string, cat: string, delta: number) => {
+  const loadAll = async () => {
+    if (!workspaceId) return;
+    setLoading(true);
+    try {
+      const [profilesRes, rolesRes, skillsRes, reqRes, histRes] = await Promise.all([
+        sbCore().from("profiles").select("id, full_name, avatar_url, is_active").eq("workspace_id", workspaceId),
+        sbCore().from("roles").select("profile_id, role").eq("workspace_id", workspaceId),
+        sbWorkshop().from("crew_skills").select("*").eq("workspace_id", workspaceId),
+        sbWorkshop()
+          .from("assessment_requests")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .order("created_at", { ascending: false }),
+        sbWorkshop()
+          .from("assessment_history")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .order("approved_at", { ascending: false }),
+      ]);
+
+      const roleByProfile = new Map<string, CrewRow["role"]>();
+      for (const r of (rolesRes.data ?? []) as Array<{ profile_id: string; role: CrewRow["role"] }>) {
+        roleByProfile.set(r.profile_id, r.role);
+      }
+      const merged: CrewRow[] = ((profilesRes.data ?? []) as Array<Omit<CrewRow, "role">>).map((p) => ({
+        ...p,
+        role: roleByProfile.get(p.id) ?? null,
+      }));
+      setCrew(merged);
+
+      const skillMap = new Map<string, Map<SkillCat, SkillCell>>();
+      for (const row of (skillsRes.data ?? []) as Array<{
+        profile_id: string;
+        skill_category: SkillCat;
+        current_level: number;
+        required_level: number;
+      }>) {
+        if (!skillMap.has(row.profile_id)) skillMap.set(row.profile_id, new Map());
+        skillMap.get(row.profile_id)!.set(row.skill_category, {
+          current_level: row.current_level,
+          required_level: row.required_level,
+        });
+      }
+      setSkills(skillMap);
+      setRequests((reqRes.data ?? []) as RequestRow[]);
+      setHistory((histRes.data ?? []) as HistoryRow[]);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to load skills");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
+
+  const adjust = async (pid: string, cat: SkillCat, delta: number) => {
+    const cur = skillFor(pid, cat);
+    const newLevel = Math.max(0, Math.min(5, cur.current_level + delta));
+    if (newLevel === cur.current_level) return;
+    // Optimistic
     setSkills((prev) => {
-      const next = { ...prev };
-      const emp = { ...next[empId] };
-      const skill = { ...emp[cat as keyof typeof emp] };
-      skill.current = Math.max(0, Math.min(5, skill.current + delta));
-      emp[cat as keyof typeof emp] = skill;
-      next[empId] = emp;
+      const next = new Map(prev);
+      const inner = new Map(next.get(pid) ?? new Map());
+      inner.set(cat, { current_level: newLevel, required_level: cur.required_level });
+      next.set(pid, inner);
       return next;
     });
+    const { error } = await sbWorkshop()
+      .from("crew_skills")
+      .upsert(
+        {
+          workspace_id: workspaceId,
+          profile_id: pid,
+          skill_category: cat,
+          current_level: newLevel,
+          required_level: cur.required_level || 3,
+        },
+        { onConflict: "workspace_id,profile_id,skill_category" },
+      );
+    if (error) {
+      toast.error(error.message);
+      void loadAll();
+    }
   };
 
-  const totalGaps = employees.reduce((sum, e) => {
-    const s = skills[e.id];
-    return sum + skillCategories.reduce((g, c) => g + Math.max(0, s[c].required - s[c].current), 0);
-  }, 0);
+  const totalGaps = useMemo(() => {
+    return crew.reduce((sum, e) => {
+      return (
+        sum +
+        SKILL_CATS.reduce((g, c) => {
+          const s = skillFor(e.id, c);
+          return g + Math.max(0, s.required_level - s.current_level);
+        }, 0)
+      );
+    }, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crew, skills]);
 
-  const avgSkill = Math.round(
-    employees.reduce((sum, e) => {
-      const s = skills[e.id];
-      return sum + skillCategories.reduce((t, c) => t + s[c].current, 0) / skillCategories.length;
-    }, 0) / employees.length,
-  );
-
-  const advanceRequest = (id: string, action: "approve" | "reject") => {
-    setRequests((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r;
-        if (action === "reject") return { ...r, status: "Rejected", reviewer: role };
-        if (role === "Manager" && r.status === "Pending Manager")
-          return { ...r, status: "Pending Owner", reviewer: "Manager" };
-        if (role === "Owner") return { ...r, status: "Approved", reviewer: "Owner" };
-        return r;
-      }),
+  const avgSkill = useMemo(() => {
+    if (crew.length === 0) return 0;
+    return Math.round(
+      crew.reduce((sum, e) => {
+        return (
+          sum +
+          SKILL_CATS.reduce((t, c) => t + skillFor(e.id, c).current_level, 0) / SKILL_CATS.length
+        );
+      }, 0) / crew.length,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crew, skills]);
+
+  const advanceRequest = async (id: string, action: "approve" | "reject") => {
+    const note = noteMap[id]?.trim() || null;
+    const rpc = action === "approve" ? "approve_assessment" : "reject_assessment";
+    const { error } = await sbWorkshop().rpc(rpc, { p_request_id: id, p_note: note });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(action === "approve" ? tr("Approved") : tr("Rejected"));
+    setNoteMap((m) => {
+      const next = { ...m };
+      delete next[id];
+      return next;
+    });
+    void loadAll();
   };
 
-  const submitRequest = () => {
-    if (!reqReason.trim()) return;
-    const cur = skills[meId][reqCat].current;
-    const newReq: AssessmentRequest = {
-      id: `ar${Date.now()}`,
-      employeeId: meId,
-      category: reqCat,
-      currentLevel: cur,
-      requestedLevel: Math.max(cur + 1, reqLevel),
-      reason: reqReason,
-      date: "Today",
-      status: "Pending Manager",
-    };
-    setRequests((prev) => [newReq, ...prev]);
+  const submitRequest = async () => {
+    if (!reqReason.trim() || !profile || !workspaceId) return;
+    const cur = skillFor(profile.id, reqCat).current_level;
+    const requested = Math.max(cur + 1, reqLevel);
+    const { error } = await sbWorkshop().from("assessment_requests").insert({
+      workspace_id: workspaceId,
+      requester_id: profile.id,
+      skill_category: reqCat,
+      current_level: cur,
+      requested_level: requested,
+      reason: reqReason.trim(),
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(tr("Request submitted"));
     setOpenRequest(false);
     setReqReason("");
     setReqLevel(0);
+    void loadAll();
   };
+
+  const crewById = useMemo(() => {
+    const m = new Map<string, CrewRow>();
+    for (const c of crew) m.set(c.id, c);
+    return m;
+  }, [crew]);
+
+  if (loading) {
+    return (
+      <div>
+        <AppHeader title={tr("Skills")} subtitle={tr("Capability, assessments & training")} />
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <AppHeader title={tr("Skills")} subtitle={tr("Capability, assessments & training")} />
 
       <div className="px-5 space-y-4 pb-8">
-        {/* Role switcher (demo) */}
-        <div className="flex items-center justify-between rounded-lg border border-border bg-card/40 p-2">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{tr("Viewing as")}</p>
-          <div className="flex gap-1">
-            {(["Owner", "Manager", "Worker"] as Role[]).map((r) => (
-              <button
-                key={r}
-                onClick={() => setRole(r)}
-                className={`rounded-md px-2 py-1 text-[11px] font-medium ${
-                  role === r ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                }`}
-              >
-                {tr(r)}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Summary */}
         <div className="grid grid-cols-2 gap-3">
           <Card className="p-3">
@@ -214,8 +392,8 @@ function SkillsPage() {
           </div>
         )}
 
-        {/* Worker request CTA */}
-        {role === "Worker" && (
+        {/* Crew request CTA */}
+        {isCrew && profile && (
           <Card className="p-3">
             {!openRequest ? (
               <Button onClick={() => setOpenRequest(true)} className="w-full h-9 text-xs">
@@ -229,25 +407,25 @@ function SkillsPage() {
                     <p className="text-[10px] text-muted-foreground mb-1">{tr("Category")}</p>
                     <select
                       value={reqCat}
-                      onChange={(e) => setReqCat(e.target.value as SkillCategory)}
+                      onChange={(e) => setReqCat(e.target.value as SkillCat)}
                       className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
                     >
-                      {skillCategories.map((c) => (
+                      {SKILL_CATS.map((c) => (
                         <option key={c}>{c}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">
-                      {tr("Current {a} → Requested", { a: skills[meId][reqCat].current })}
+                      {tr("Current {a} → Requested", { a: skillFor(profile.id, reqCat).current_level })}
                     </p>
                     <select
-                      value={reqLevel || skills[meId][reqCat].current + 1}
+                      value={reqLevel || skillFor(profile.id, reqCat).current_level + 1}
                       onChange={(e) => setReqLevel(Number(e.target.value))}
                       className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
                     >
                       {[1, 2, 3, 4, 5]
-                        .filter((n) => n > skills[meId][reqCat].current)
+                        .filter((n) => n > skillFor(profile.id, reqCat).current_level)
                         .map((n) => (
                           <option key={n} value={n}>
                             {tr("Level {n}", { n })}
@@ -287,95 +465,96 @@ function SkillsPage() {
               {tr("Assessment Requests")}
             </p>
             <span className="text-[10px] text-muted-foreground">
-              {tr("Flow: Worker → Manager → Owner")}
+              {tr("Flow: Crew → Manager → Owner")}
             </span>
           </div>
           {requests.length === 0 && (
             <Card className="p-4 text-center text-xs text-muted-foreground">{tr("No requests")}</Card>
           )}
           {requests.map((r) => {
-            const emp = getEmployee(r.employeeId);
-            const canManagerAct = role === "Manager" && r.status === "Pending Manager";
-            const canOwnerAct = role === "Owner" && r.status === "Pending Owner";
+            const emp = crewById.get(r.requester_id);
+            const name = emp?.full_name ?? "—";
+            const canManagerAct = isManager && r.status === "pending_manager";
+            const canOwnerAct = isOwner && (r.status === "pending_manager" || r.status === "pending_owner");
             const canAct = canManagerAct || canOwnerAct;
             return (
               <Card key={r.id} className="p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold">{emp.name}</p>
+                    <p className="text-sm font-semibold">{name}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {tr(r.category)}: {r.currentLevel} → {r.requestedLevel} · {r.date}
+                      {tr(r.skill_category)}: {r.current_level} → {r.requested_level} · {fmtDate(r.created_at)}
                     </p>
                   </div>
                   <StatusPill status={r.status} />
                 </div>
                 <p className="mt-2 rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
-                  "{tr(r.reason)}"
+                  "{r.reason}"
                 </p>
                 {canAct && (
-                  <div className="mt-2 flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1 h-7 text-xs"
-                      onClick={() => advanceRequest(r.id, "approve")}
-                    >
-                      <CheckCircle2 className="h-3 w-3" />
-                      {canManagerAct ? tr("Approve → Owner") : tr("Final Approve")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 h-7 text-xs"
-                      onClick={() => advanceRequest(r.id, "reject")}
-                    >
-                      <XCircle className="h-3 w-3" />
-                      {tr("Reject")}
-                    </Button>
-                  </div>
-                )}
-                {role === "Manager" && r.status === "Pending Manager" && (
-                  <Textarea
-                    placeholder={tr("Comment (optional)")}
-                    className="mt-2 min-h-[40px] text-xs"
-                  />
+                  <>
+                    <Textarea
+                      placeholder={tr("Comment (optional)")}
+                      className="mt-2 min-h-[40px] text-xs"
+                      value={noteMap[r.id] ?? ""}
+                      onChange={(e) => setNoteMap((m) => ({ ...m, [r.id]: e.target.value }))}
+                    />
+                    <div className="mt-2 flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => advanceRequest(r.id, "approve")}
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        {canManagerAct && !isOwner ? tr("Approve → Owner") : tr("Final Approve")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => advanceRequest(r.id, "reject")}
+                      >
+                        <XCircle className="h-3 w-3" />
+                        {tr("Reject")}
+                      </Button>
+                    </div>
+                  </>
                 )}
               </Card>
             );
           })}
         </div>
 
-        {/* Employee skill cards */}
+        {/* Crew skill cards */}
         <div className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {tr("Team Skills")}
+            {tr("Crew Skills")}
           </p>
-          {employees.map((emp) => {
-            const s = skills[emp.id];
-            const gaps = skillCategories.map((c) => ({
-              cat: c,
-              gap: Math.max(0, s[c].required - s[c].current),
-            }));
+          {crew.length === 0 && (
+            <Card className="p-4 text-center text-xs text-muted-foreground">{tr("No crew yet")}</Card>
+          )}
+          {crew.map((emp) => {
+            const gaps = SKILL_CATS.map((c) => {
+              const s = skillFor(emp.id, c);
+              return { cat: c, gap: Math.max(0, s.required_level - s.current_level) };
+            });
             const hasGap = gaps.some((g) => g.gap > 0);
             const topGap = gaps.reduce((a, b) => (a.gap > b.gap ? a : b), gaps[0]);
-            const teachable = skillCategories.filter((c) => s[c].current >= 4);
-            const learning = skillCategories.filter((c) => s[c].current <= 3);
-            const empHistory = assessmentHistory.filter((h) => h.employeeId === emp.id);
+            const teachable = SKILL_CATS.filter((c) => skillFor(emp.id, c).current_level >= 4);
+            const learning = SKILL_CATS.filter((c) => skillFor(emp.id, c).current_level <= 3);
+            const empHistory = history.filter((h) => h.profile_id === emp.id);
 
             return (
               <Card key={emp.id} className="p-4">
                 {/* Header */}
                 <div className="flex items-start gap-3">
                   <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-                    {emp.initials}
+                    {initialsOf(emp.full_name)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{emp.name}</p>
-                    <p className="text-xs text-muted-foreground">{tr(emp.role)}</p>
-                    <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <CalendarDays className="h-3 w-3" />
-                      {lastAssessmentDate[emp.id]
-                        ? tr("Last assessed: {d}", { d: lastAssessmentDate[emp.id] })
-                        : tr("Last assessed: —")}
+                    <p className="text-sm font-semibold">{emp.full_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {emp.role ? tr(emp.role.charAt(0).toUpperCase() + emp.role.slice(1)) : "—"}
                     </p>
                   </div>
                   {hasGap && (
@@ -387,8 +566,8 @@ function SkillsPage() {
 
                 {/* Skill rows */}
                 <div className="mt-4 space-y-3">
-                  {skillCategories.map((cat) => {
-                    const { required, current } = s[cat];
+                  {SKILL_CATS.map((cat) => {
+                    const { required_level: required, current_level: current } = skillFor(emp.id, cat);
                     const gap = Math.max(0, required - current);
                     const canTeach = current >= 4;
                     return (
@@ -463,7 +642,7 @@ function SkillsPage() {
                   ))}
                 </div>
 
-                {/* Training recommendation (expanded with videos/SOP/jobs) */}
+                {/* Training recommendation */}
                 {hasGap && (
                   <div className="mt-3 rounded-lg bg-primary/5 p-2.5 space-y-2">
                     <div className="flex items-start gap-2">
@@ -508,13 +687,13 @@ function SkillsPage() {
                         <div key={h.id} className="rounded-md bg-muted/30 p-2">
                           <div className="flex items-center justify-between">
                             <p className="text-[11px] font-semibold">
-                              {tr(h.category)}: {h.from} → {h.to}
+                              {tr(h.skill_category)}: {h.level_from} → {h.level_to}
                             </p>
-                            <span className="text-[10px] text-muted-foreground">{h.date}</span>
+                            <span className="text-[10px] text-muted-foreground">{fmtDate(h.approved_at)}</span>
                           </div>
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            {tr(h.reason)} · {tr("by {a}", { a: tr(h.approvedBy) })}
-                          </p>
+                          {h.reason && (
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">{h.reason}</p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -533,7 +712,7 @@ function SkillsPage() {
           <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
             <p><span className="font-semibold text-foreground">{tr("Owner")}:</span> {tr("Full edit · quick adjust · final approval")}</p>
             <p><span className="font-semibold text-foreground">{tr("Manager")}:</span> {tr("Review requests · comment · forward to Owner")}</p>
-            <p><span className="font-semibold text-foreground">{tr("Worker")}:</span> {tr("View · request assessment")}</p>
+            <p><span className="font-semibold text-foreground">{tr("Crew")}:</span> {tr("View · request assessment")}</p>
           </div>
         </Card>
       </div>
