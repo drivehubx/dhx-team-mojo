@@ -20,9 +20,9 @@ export const Route = createFileRoute("/jobs/")({
   ),
 });
 
-type FilterKey = "All" | "Open" | "In Progress" | "Completed" | "Cancelled";
+type FilterKey = "Mine" | "All" | "Open" | "In Progress" | "Completed" | "Cancelled";
 
-const statusOfFilter: Record<Exclude<FilterKey, "All">, JobStatus> = {
+const statusOfFilter: Record<Exclude<FilterKey, "Mine" | "All">, JobStatus> = {
   Open: "open",
   "In Progress": "in_progress",
   Completed: "completed",
