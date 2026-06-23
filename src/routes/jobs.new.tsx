@@ -1,63 +1,57 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
-import { useT } from "@/lib/i18n";
-import { useJobs } from "@/lib/jobs-store";
-import { employees } from "@/lib/mock-data";
-
-const roleSchema = z.object({
-  role: z.enum(["worker", "manager", "owner"]).catch("worker"),
-});
+import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
+import { useVehicles, useWorkspaceProfiles, useCreateJob } from "@/lib/jobs";
 
 export const Route = createFileRoute("/jobs/new")({
-  validateSearch: roleSchema,
   head: () => ({
     meta: [
       { title: "New Job — DHX Body & Paint" },
       { name: "description", content: "Create a new workshop job." },
     ],
   }),
-  component: NewJobPage,
+  component: () => (
+    <WorkspaceGate>
+      <NewJobPage />
+    </WorkspaceGate>
+  ),
 });
 
 function NewJobPage() {
-  const { tr } = useT();
-  const { role } = Route.useSearch();
-  const { addJob } = useJobs();
+  const { workspaceId } = useWorkspace();
   const navigate = useNavigate();
+  const vehiclesQ = useVehicles(workspaceId);
+  const profilesQ = useWorkspaceProfiles(workspaceId);
+  const create = useCreateJob(workspaceId);
 
-  const [plate, setPlate] = useState("");
-  const [vehicle, setVehicle] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [notes, setNotes] = useState("");
-  const [assignedIds, setAssignedIds] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
+  const [vehicleId, setVehicleId] = useState("");
+  const [description, setDescription] = useState("");
+  const [workerIds, setWorkerIds] = useState<string[]>([]);
 
   const toggle = (id: string) =>
-    setAssignedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setWorkerIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
-  const canSave = plate.trim().length > 0 && vehicle.trim().length > 0;
+  const canSave = vehicleId.length > 0;
 
-  const onSave = () => {
-    if (!canSave || saving) return;
-    setSaving(true);
-    const job = addJob({
-      plate: plate.trim().toUpperCase(),
-      vehicle: vehicle.trim(),
-      assignedIds,
-      notes: notes.trim(),
-      photos: [],
-      status: "In Progress",
-      progress: 5,
-      customerName: customerName.trim() || undefined,
-      customerPhone: customerPhone.trim() || undefined,
-    });
-    toast.success(tr("Job created"));
-    navigate({ to: "/jobs/$id", params: { id: job.id }, search: { role } });
+  const onSave = async () => {
+    if (!canSave) return;
+    try {
+      const job = await create.mutateAsync({
+        vehicle_id: vehicleId,
+        description: description.trim(),
+        worker_ids: workerIds,
+      });
+      toast.success("Job created");
+      navigate({ to: "/jobs/$id", params: { id: job.id } });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
   };
+
+  const vehicles = vehiclesQ.data ?? [];
+  const profiles = (profilesQ.data ?? []).filter((p) => p.is_active);
 
   return (
     <div className="pb-32">
@@ -65,113 +59,95 @@ function NewJobPage() {
         <div className="flex items-center gap-3 px-5 py-4">
           <Link
             to="/jobs"
-            search={{ role }}
             className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-foreground active:scale-95"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0 flex-1">
-            <h1 className="text-base font-semibold tracking-tight">{tr("New Job")}</h1>
-            <p className="text-[11px] text-muted-foreground">{tr("Add basic info now, photos later.")}</p>
+            <h1 className="text-base font-semibold tracking-tight">New Job</h1>
+            <p className="text-[11px] text-muted-foreground">Pick a vehicle, assign workers.</p>
           </div>
         </div>
       </header>
 
       <div className="px-5 mt-4 space-y-3">
-        <Field label={tr("Plate") + " *"}>
-          <input
-            value={plate}
-            onChange={(e) => setPlate(e.target.value)}
-            placeholder="WXY 1234"
-            autoFocus
-            className="inp uppercase"
-          />
+        <Field label="Vehicle *">
+          {vehiclesQ.isLoading ? (
+            <div className="py-3 text-center text-sm text-muted-foreground">
+              <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+            </div>
+          ) : vehicles.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No vehicles in this workspace. Add one in the main vehicle registry first.
+            </p>
+          ) : (
+            <select
+              value={vehicleId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              className="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
+            >
+              <option value="">— Select a vehicle —</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.plate_number}
+                  {v.make || v.model ? ` · ${[v.make, v.model].filter(Boolean).join(" ")}` : ""}
+                </option>
+              ))}
+            </select>
+          )}
         </Field>
-        <Field label={tr("Vehicle") + " *"}>
-          <input
-            value={vehicle}
-            onChange={(e) => setVehicle(e.target.value)}
-            placeholder="Honda Civic 2019"
-            className="inp"
-          />
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={tr("Customer")}>
-            <input
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder={tr("Optional")}
-              className="inp"
-            />
-          </Field>
-          <Field label={tr("Phone")}>
-            <input
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              placeholder={tr("Optional")}
-              inputMode="tel"
-              className="inp"
-            />
-          </Field>
-        </div>
 
-        <Field label={tr("Assigned Workers")}>
+        <Field label="Description">
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Damage description, customer requests..."
+            rows={4}
+            className="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary resize-none"
+          />
+        </Field>
+
+        <Field label="Assigned Workers">
           <div className="flex flex-wrap gap-1.5">
-            {employees
-              .filter((e) => e.active && e.role !== "Owner")
-              .map((e) => {
-                const on = assignedIds.includes(e.id);
-                return (
-                  <button
-                    key={e.id}
-                    type="button"
-                    onClick={() => toggle(e.id)}
-                    className={`rounded-full px-3 py-1.5 text-xs ${
-                      on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-                    }`}
-                  >
-                    {e.name}
-                  </button>
-                );
-              })}
+            {profiles.length === 0 && (
+              <p className="text-xs text-muted-foreground">No active workers.</p>
+            )}
+            {profiles.map((p) => {
+              const on = workerIds.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => toggle(p.id)}
+                  className={`rounded-full px-3 py-1.5 text-xs ${
+                    on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                  }`}
+                >
+                  {p.full_name}
+                </button>
+              );
+            })}
           </div>
         </Field>
-
-        <Field label={tr("Notes")}>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder={tr("Damage description, customer requests...")}
-            rows={4}
-            className="inp resize-none"
-          />
-        </Field>
-
-        <p className="pt-1 text-[11px] text-muted-foreground">
-          {tr("Tip: You can add photos and update progress after the job is created.")}
-        </p>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-md flex gap-2">
           <Link
             to="/jobs"
-            search={{ role }}
             className="flex-1 rounded-xl border border-border bg-card py-3 text-center text-sm font-medium"
           >
-            {tr("Cancel")}
+            Cancel
           </Link>
           <button
-            disabled={!canSave || saving}
+            disabled={!canSave || create.isPending}
             onClick={onSave}
             className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
           >
-            {tr("Save Job")}
+            {create.isPending ? "Saving…" : "Save Job"}
           </button>
         </div>
       </div>
-
-      <style>{`.inp{width:100%;border:1px solid hsl(var(--border));background:hsl(var(--card));border-radius:0.75rem;padding:0.7rem 0.85rem;font-size:0.9rem;outline:none}.inp:focus{box-shadow:0 0 0 2px hsl(var(--primary)/0.25)}`}</style>
     </div>
   );
 }
