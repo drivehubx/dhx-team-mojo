@@ -30,6 +30,12 @@ function LoginPage() {
     }
   }, [loading, user, router]);
 
+  useEffect(() => {
+    if (mode === "signup") {
+      setLoginMethod("email");
+    }
+  }, [mode]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
