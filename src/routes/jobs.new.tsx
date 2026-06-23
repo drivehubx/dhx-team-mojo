@@ -149,7 +149,7 @@ function NewJobPage() {
                   </label>
                 ))}
                 {profiles.length === 0 && !profilesQ.isLoading && (
-                  <p className="text-sm text-muted-foreground">No team members found.</p>
+                  <p className="text-sm text-muted-foreground">No crew found.</p>
                 )}
               </div>
             </section>
