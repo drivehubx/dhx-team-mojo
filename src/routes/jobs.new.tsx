@@ -132,8 +132,8 @@ function NewJobPage() {
             </section>
 
             <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <h2 className="text-sm font-medium">Assigned Workers</h2>
-              <p className="text-xs text-muted-foreground">Optional — select one or more.</p>
+              <h2 className="text-sm font-medium">Assigned Crew</h2>
+              <p className="text-xs text-muted-foreground">Optional — assign crew to this job.</p>
               <div className="mt-3 space-y-3">
                 {profiles.map((p) => (
                   <label
