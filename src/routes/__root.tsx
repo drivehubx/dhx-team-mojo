@@ -13,8 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BottomNav } from "../components/BottomNav";
 import { LanguageProvider } from "../lib/i18n";
-import { JobsProvider } from "../lib/jobs-store";
 import { AuthProvider } from "../lib/auth";
+import { WorkspaceProvider } from "../lib/workspace";
 import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
@@ -82,14 +82,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { title: "DHX Body & Paint" },
+      { name: "description", content: "Workshop operations for DHX Body & Paint." },
+      { name: "author", content: "DHX Body & Paint" },
     ],
     links: [
       {
@@ -124,15 +119,15 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <LanguageProvider>
-          <JobsProvider>
+        <WorkspaceProvider>
+          <LanguageProvider>
             <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-24">
               <Outlet />
             </div>
             <BottomNav />
             <Toaster position="top-center" richColors closeButton />
-          </JobsProvider>
-        </LanguageProvider>
+          </LanguageProvider>
+        </WorkspaceProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

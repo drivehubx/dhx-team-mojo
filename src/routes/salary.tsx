@@ -2,32 +2,24 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
-import { useAuth } from "@/lib/auth";
-import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
+import { useWorkspaceProfiles } from "@/lib/jobs";
+import { sbWorkshop, type WorkshopSalary, type CoreProfile } from "@/integrations/supabase/shared-schema";
 import { Wallet, Loader2, Save } from "lucide-react";
 
 export const Route = createFileRoute("/salary")({
   head: () => ({
     meta: [
       { title: "Salary — DHX Body & Paint" },
-      { name: "description", content: "Monthly salary: basic, OT, bonus, deduction." },
+      { name: "description", content: "Monthly salary: basic, allowances, bonus, deductions." },
     ],
   }),
-  component: SalaryPage,
+  component: () => (
+    <WorkspaceGate>
+      <SalaryPage />
+    </WorkspaceGate>
+  ),
 });
-
-type Profile = { id: string; full_name: string; initials: string | null };
-type Salary = {
-  id: string;
-  employee_id: string;
-  period: string;
-  basic: number;
-  ot: number;
-  bonus: number;
-  deduction: number;
-  paid: boolean;
-  notes: string | null;
-};
 
 const fmtMYR = (n: number) =>
   new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR" }).format(n || 0);
@@ -38,72 +30,46 @@ const thisPeriod = () => {
 };
 
 function SalaryPage() {
-  const { user, profile, isOwner, isManager, loading } = useAuth();
-  const isStaff = isOwner || isManager;
+  const { profile, workspaceId, isStaff, isOwner, isManager } = useWorkspace();
+  const profilesQ = useWorkspaceProfiles(workspaceId);
 
   const [period, setPeriod] = useState(thisPeriod());
-  const [employees, setEmployees] = useState<Profile[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [salary, setSalary] = useState<Salary | null>(null);
+  const [salary, setSalary] = useState<WorkshopSalary | null>(null);
   const [fetching, setFetching] = useState(false);
 
-  // Load employees (staff) or default to self (worker)
-  useEffect(() => {
-    if (!user) return;
-    if (isStaff) {
-      supabase
-        .from("profiles")
-        .select("id, full_name, initials")
-        .order("full_name")
-        .then(({ data }) => {
-          const list = (data ?? []) as Profile[];
-          setEmployees(list);
-          setSelectedId((cur) => cur ?? list[0]?.id ?? user.id);
-        });
-    } else {
-      setSelectedId(user.id);
-      if (profile) setEmployees([{ id: user.id, full_name: profile.full_name, initials: profile.initials }]);
-    }
-  }, [user?.id, isStaff, profile?.full_name]);
+  const employees = useMemo<CoreProfile[]>(() => {
+    if (!profile) return [];
+    if (isStaff) return profilesQ.data ?? [];
+    return [profile];
+  }, [profile, isStaff, profilesQ.data]);
 
-  // Load salary for selected employee + period
   useEffect(() => {
-    if (!selectedId) return;
+    if (!profile) return;
+    setSelectedId((cur) => cur ?? (isStaff ? employees[0]?.id ?? profile.id : profile.id));
+  }, [profile?.id, isStaff, employees.length]);
+
+  useEffect(() => {
+    if (!selectedId || !workspaceId) return;
     setFetching(true);
-    supabase
+    sbWorkshop()
       .from("salaries")
       .select("*")
-      .eq("employee_id", selectedId)
+      .eq("workspace_id", workspaceId)
+      .eq("profile_id", selectedId)
       .eq("period", period)
       .maybeSingle()
-      .then(({ data }) => {
-        setSalary((data as Salary) ?? null);
+      .then(({ data }: { data: WorkshopSalary | null }) => {
+        setSalary(data);
         setFetching(false);
       });
-  }, [selectedId, period]);
-
-  if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">Please sign in to view salary.</div>
-    );
-  }
+  }, [selectedId, period, workspaceId]);
 
   const selectedEmp = employees.find((e) => e.id === selectedId);
 
   return (
     <div className="pb-24">
-      <AppHeader
-        title="Salary"
-        subtitle={isStaff ? "Manage monthly pay" : "My monthly pay"}
-      />
+      <AppHeader title="Salary" subtitle={isStaff ? "Manage monthly pay" : "My monthly pay"} />
 
       <div className="px-5 space-y-4">
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
@@ -150,6 +116,7 @@ function SalaryPage() {
         ) : (
           <SalaryEditor
             key={`${selectedId}-${period}`}
+            workspaceId={workspaceId!}
             employee={selectedEmp ?? null}
             period={period}
             initial={salary}
@@ -164,6 +131,7 @@ function SalaryPage() {
 }
 
 function SalaryEditor({
+  workspaceId,
   employee,
   period,
   initial,
@@ -171,48 +139,47 @@ function SalaryEditor({
   isManager,
   onSaved,
 }: {
-  employee: Profile | null;
+  workspaceId: string;
+  employee: CoreProfile | null;
   period: string;
-  initial: Salary | null;
+  initial: WorkshopSalary | null;
   isOwner: boolean;
   isManager: boolean;
-  onSaved: (s: Salary) => void;
+  onSaved: (s: WorkshopSalary) => void;
 }) {
   const isStaff = isOwner || isManager;
-  const canEditBasic = isOwner;
-  const canEditOps = isOwner || isManager; // OT/Bonus/Deduction/Notes
-  const canTogglePaid = isOwner;
   const readOnly = !isStaff;
 
   const [basic, setBasic] = useState(initial?.basic ?? 0);
-  const [ot, setOt] = useState(initial?.ot ?? 0);
+  const [allowances, setAllowances] = useState(initial?.allowances ?? 0);
   const [bonus, setBonus] = useState(initial?.bonus ?? 0);
-  const [deduction, setDeduction] = useState(initial?.deduction ?? 0);
+  const [deductions, setDeductions] = useState(initial?.deductions ?? 0);
   const [paid, setPaid] = useState(initial?.paid ?? false);
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
   const net = useMemo(
-    () => Number(basic) + Number(ot) + Number(bonus) - Number(deduction),
-    [basic, ot, bonus, deduction],
+    () => Number(basic) + Number(allowances) + Number(bonus) - Number(deductions),
+    [basic, allowances, bonus, deductions],
   );
 
   const save = async () => {
     if (!employee) return;
     setSaving(true);
     const payload = {
-      employee_id: employee.id,
+      workspace_id: workspaceId,
+      profile_id: employee.id,
       period,
       basic: Number(basic) || 0,
-      ot: Number(ot) || 0,
+      allowances: Number(allowances) || 0,
       bonus: Number(bonus) || 0,
-      deduction: Number(deduction) || 0,
+      deductions: Number(deductions) || 0,
       paid,
       notes: notes || null,
     };
-    const { data, error } = await supabase
+    const { data, error } = await sbWorkshop()
       .from("salaries")
-      .upsert(payload, { onConflict: "employee_id,period" })
+      .upsert(payload, { onConflict: "workspace_id,profile_id,period" })
       .select()
       .single();
     setSaving(false);
@@ -221,7 +188,7 @@ function SalaryEditor({
       return;
     }
     toast.success("Salary saved");
-    onSaved(data as Salary);
+    onSaved(data as WorkshopSalary);
   };
 
   return (
@@ -238,28 +205,17 @@ function SalaryEditor({
         )}
       </header>
 
-      <Field
-        label="Basic"
-        value={basic}
-        onChange={setBasic}
-        disabled={readOnly || !canEditBasic}
-        hint={!canEditBasic && isStaff ? "Owner only" : undefined}
-      />
-      <Field label="OT" value={ot} onChange={setOt} disabled={readOnly || !canEditOps} />
-      <Field label="Bonus" value={bonus} onChange={setBonus} disabled={readOnly || !canEditOps} />
-      <Field
-        label="Deduction"
-        value={deduction}
-        onChange={setDeduction}
-        disabled={readOnly || !canEditOps}
-      />
+      <Field label="Basic" value={basic} onChange={setBasic} disabled={readOnly} />
+      <Field label="Allowances (OT etc)" value={allowances} onChange={setAllowances} disabled={readOnly} />
+      <Field label="Bonus" value={bonus} onChange={setBonus} disabled={readOnly} />
+      <Field label="Deductions" value={deductions} onChange={setDeductions} disabled={readOnly} />
 
       <label className="block">
         <span className="text-[11px] text-muted-foreground">Notes</span>
         <textarea
-          value={notes}
+          value={notes ?? ""}
           onChange={(e) => setNotes(e.target.value)}
-          disabled={readOnly || !canEditOps}
+          disabled={readOnly}
           rows={2}
           className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm disabled:opacity-60"
         />
@@ -271,11 +227,9 @@ function SalaryEditor({
             type="checkbox"
             checked={paid}
             onChange={(e) => setPaid(e.target.checked)}
-            disabled={!canTogglePaid}
             className="h-4 w-4"
           />
           <span>Mark as paid</span>
-          {!canTogglePaid && <span className="text-[10px] text-muted-foreground">(Owner only)</span>}
         </label>
       )}
 
@@ -303,20 +257,15 @@ function Field({
   value,
   onChange,
   disabled,
-  hint,
 }: {
   label: string;
   value: number;
   onChange: (n: number) => void;
   disabled?: boolean;
-  hint?: string;
 }) {
   return (
     <label className="block">
-      <span className="flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{label}</span>
-        {hint && <span className="text-[10px]">{hint}</span>}
-      </span>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
       <input
         type="number"
         inputMode="decimal"

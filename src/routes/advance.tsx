@@ -1,115 +1,102 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { useT } from "@/lib/i18n";
-import { AppHeader } from "@/components/AppHeader";
-import { fmtMYR } from "@/lib/mock-data";
-import { ArrowDownLeft, ArrowUpRight, Plus, Check, X, Loader2 } from "lucide-react";
-import { useAuth } from "@/lib/auth";
-import {
-  useAdvances,
-  useRequestAdvance,
-  useDecideAdvance,
-  useRecordRepayment,
-  summarizeAdvances,
-  balanceByEmployee,
-  type AdvanceWithProfile,
-} from "@/lib/advances-api";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { toast } from "sonner";
+import { AppHeader } from "@/components/AppHeader";
+import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
+import { useAdvances, useRequestAdvance, useDecideAdvance, type AdvanceWithProfile } from "@/lib/advances";
+import { ArrowDownLeft, Plus, Check, X, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/advance")({
   head: () => ({
     meta: [
       { title: "Advance — DHX Body & Paint" },
-      { name: "description", content: "Employee advances: borrow, repayment, balance tracking." },
+      { name: "description", content: "Employee advances: request, approve, track." },
     ],
   }),
-  component: AdvancePage,
+  component: () => (
+    <WorkspaceGate>
+      <AdvancePage />
+    </WorkspaceGate>
+  ),
 });
 
-type Tab = "Pending" | "Borrow" | "Repayment" | "Balance";
+type Tab = "Pending" | "Approved" | "Rejected" | "Mine";
+
+const fmtMYR = (n: number) =>
+  new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR" }).format(n || 0);
 
 function AdvancePage() {
-  const { tr } = useT();
-  const router = useRouter();
-  const { user, loading: authLoading, isStaff } = useAuth();
-  const [tab, setTab] = useState<Tab>(isStaff ? "Pending" : "Borrow");
+  const { workspaceId, profile, isStaff } = useWorkspace();
+  const [tab, setTab] = useState<Tab>(isStaff ? "Pending" : "Mine");
   const [requestOpen, setRequestOpen] = useState(false);
-  const [repayOpen, setRepayOpen] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && !user) router.navigate({ to: "/login" });
-  }, [authLoading, user, router]);
-
-  const advancesQ = useAdvances();
-  const list = advancesQ.data ?? [];
-  const summary = summarizeAdvances(list);
+  const q = useAdvances(workspaceId, {
+    mineOnly: !isStaff,
+    userId: profile?.id,
+  });
+  const list = q.data ?? [];
 
   const pending = list.filter((a) => a.status === "pending");
-  const borrows = list.filter((a) => a.type === "borrow" && a.status !== "rejected");
-  const repays = list.filter((a) => a.type === "repayment" && a.status === "approved");
+  const approved = list.filter((a) => a.status === "approved");
+  const rejected = list.filter((a) => a.status === "rejected");
 
-  const tabs: Tab[] = isStaff ? ["Pending", "Borrow", "Repayment", "Balance"] : ["Borrow", "Repayment", "Balance"];
+  const totalApproved = approved.reduce((s, a) => s + Number(a.amount), 0);
+  const totalPending = pending.reduce((s, a) => s + Number(a.amount), 0);
 
-  if (authLoading) return <CenterLoader />;
+  const tabs: Tab[] = isStaff ? ["Pending", "Approved", "Rejected"] : ["Mine"];
+  const shown =
+    tab === "Pending" ? pending : tab === "Approved" ? approved : tab === "Rejected" ? rejected : list;
 
   return (
     <div>
-      <AppHeader title={tr("Advance")} subtitle={tr("Employee credit ledger")} />
+      <AppHeader title="Advance" subtitle="Employee credit ledger" />
 
       <div className="px-5">
-        <div className="rounded-2xl bg-card border border-border p-4 shadow-sm">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <Stat label={tr("Borrowed")} value={fmtMYR(summary.totalBorrow)} accent="text-destructive" />
-            <Stat label={tr("Repaid")} value={fmtMYR(summary.totalRepay)} accent="text-[--color-success]" />
-            <Stat label={tr("Balance")} value={fmtMYR(summary.outstanding)} accent="text-primary" />
-          </div>
+        <div className="rounded-2xl bg-card border border-border p-4 shadow-sm grid grid-cols-2 gap-2 text-center">
+          <Stat label="Pending" value={fmtMYR(totalPending)} accent="text-[--color-warning]" />
+          <Stat label="Approved" value={fmtMYR(totalApproved)} accent="text-[--color-success]" />
         </div>
       </div>
 
-      {!isStaff && (
-        <div className="mt-4 px-5">
-          <button
-            onClick={() => setRequestOpen(true)}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"
-          >
-            <Plus className="h-4 w-4" /> {tr("Request Advance")}
-          </button>
+      <div className="mt-4 px-5">
+        <button
+          onClick={() => setRequestOpen(true)}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"
+        >
+          <Plus className="h-4 w-4" /> Request Advance
+        </button>
+      </div>
+
+      {tabs.length > 1 && (
+        <div className="mt-5 px-5">
+          <div className={`grid grid-cols-${tabs.length} rounded-xl bg-secondary p-1`}>
+            {tabs.map((tb) => (
+              <button
+                key={tb}
+                onClick={() => setTab(tb)}
+                className={`rounded-lg py-2 text-xs font-semibold transition-colors ${
+                  tab === tb ? "bg-card text-primary shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                {tb}
+                {tb === "Pending" && pending.length > 0 ? ` (${pending.length})` : ""}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="mt-5 px-5">
-        <div className={`grid grid-cols-${tabs.length} rounded-xl bg-secondary p-1`}>
-          {tabs.map((tb) => (
-            <button
-              key={tb}
-              onClick={() => setTab(tb)}
-              className={`rounded-lg py-2 text-xs font-semibold transition-colors ${
-                tab === tb ? "bg-card text-primary shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              {tr(tb)}
-              {tb === "Pending" && pending.length > 0 ? ` (${pending.length})` : ""}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className="mt-4 px-5 pb-4">
-        {advancesQ.isLoading ? (
+        {q.isLoading ? (
           <CenterLoader />
-        ) : tab === "Pending" ? (
+        ) : tab === "Pending" && isStaff ? (
           <PendingList list={pending} />
-        ) : tab === "Borrow" ? (
-          <EntryList list={borrows} />
-        ) : tab === "Repayment" ? (
-          <EntryList list={repays} />
         ) : (
-          <BalanceList list={list} onRepay={isStaff ? (id) => setRepayOpen(id) : undefined} />
+          <EntryList list={shown} />
         )}
       </div>
 
       {requestOpen && <RequestModal onClose={() => setRequestOpen(false)} />}
-      {repayOpen && <RepayModal employeeId={repayOpen} onClose={() => setRepayOpen(null)} />}
     </div>
   );
 }
@@ -138,53 +125,42 @@ function fmtDate(iso: string) {
 }
 
 function EntryList({ list }: { list: AdvanceWithProfile[] }) {
-  const { tr } = useT();
   if (list.length === 0)
-    return <p className="text-center text-sm text-muted-foreground py-10">{tr("No entries.")}</p>;
+    return <p className="text-center text-sm text-muted-foreground py-10">No entries.</p>;
   return (
     <ul className="space-y-2.5">
-      {list.map((a) => {
-        const isBorrow = a.type === "borrow";
-        return (
-          <li key={a.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
-            <div
-              className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
-                isBorrow ? "bg-destructive/10 text-destructive" : "bg-[--color-success]/15 text-[--color-success]"
-              }`}
-            >
-              {isBorrow ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold truncate">{a.employee?.full_name ?? "—"}</p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {fmtDate(a.created_at)}
-                {a.reason ? ` · ${a.reason}` : ""}
-                {a.status === "pending" ? ` · ${tr("Pending")}` : ""}
-              </p>
-            </div>
-            <span className={`text-sm font-semibold ${isBorrow ? "text-destructive" : "text-[--color-success]"}`}>
-              {isBorrow ? "-" : "+"}
-              {fmtMYR(Number(a.amount))}
-            </span>
-          </li>
-        );
-      })}
+      {list.map((a) => (
+        <li key={a.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-destructive/10 text-destructive">
+            <ArrowDownLeft className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate">{a.profile?.full_name ?? "—"}</p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {fmtDate(a.created_at)}
+              {a.reason ? ` · ${a.reason}` : ""}
+              {` · ${a.status}`}
+            </p>
+          </div>
+          <span className="text-sm font-semibold text-destructive">{fmtMYR(Number(a.amount))}</span>
+        </li>
+      ))}
     </ul>
   );
 }
 
 function PendingList({ list }: { list: AdvanceWithProfile[] }) {
-  const { tr } = useT();
-  const decide = useDecideAdvance();
+  const { workspaceId, profile } = useWorkspace();
+  const decide = useDecideAdvance(workspaceId, profile?.id ?? null);
   if (list.length === 0)
-    return <p className="text-center text-sm text-muted-foreground py-10">{tr("No pending requests.")}</p>;
+    return <p className="text-center text-sm text-muted-foreground py-10">No pending requests.</p>;
 
   const handle = async (id: string, decision: "approved" | "rejected") => {
     try {
       await decide.mutateAsync({ id, decision });
-      toast.success(decision === "approved" ? tr("Approved") : tr("Rejected"));
+      toast.success(decision === "approved" ? "Approved" : "Rejected");
     } catch (e: any) {
-      toast.error(e?.message ?? tr("Failed"));
+      toast.error(e?.message ?? "Failed");
     }
   };
 
@@ -194,10 +170,10 @@ function PendingList({ list }: { list: AdvanceWithProfile[] }) {
         <li key={a.id} className="rounded-2xl border border-border bg-card p-3.5">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-300 text-xs font-semibold">
-              {a.employee?.initials ?? "??"}
+              {(a.profile?.full_name ?? "??").slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold truncate">{a.employee?.full_name ?? "—"}</p>
+              <p className="text-sm font-semibold truncate">{a.profile?.full_name ?? "—"}</p>
               <p className="text-[11px] text-muted-foreground truncate">
                 {fmtDate(a.created_at)}
                 {a.reason ? ` · ${a.reason}` : ""}
@@ -211,14 +187,14 @@ function PendingList({ list }: { list: AdvanceWithProfile[] }) {
               disabled={decide.isPending}
               className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-[--color-success] px-2 py-2 text-xs font-semibold text-white disabled:opacity-60"
             >
-              <Check className="h-3.5 w-3.5" /> {tr("Approve")}
+              <Check className="h-3.5 w-3.5" /> Approve
             </button>
             <button
               onClick={() => handle(a.id, "rejected")}
               disabled={decide.isPending}
               className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-destructive px-2 py-2 text-xs font-semibold text-destructive-foreground disabled:opacity-60"
             >
-              <X className="h-3.5 w-3.5" /> {tr("Reject")}
+              <X className="h-3.5 w-3.5" /> Reject
             </button>
           </div>
         </li>
@@ -227,79 +203,22 @@ function PendingList({ list }: { list: AdvanceWithProfile[] }) {
   );
 }
 
-function BalanceList({
-  list,
-  onRepay,
-}: {
-  list: AdvanceWithProfile[];
-  onRepay?: (employeeId: string) => void;
-}) {
-  const { tr } = useT();
-  const rows = balanceByEmployee(list).filter((r) => r.borrow > 0);
-  if (rows.length === 0)
-    return <p className="text-center text-sm text-muted-foreground py-10">{tr("No balances.")}</p>;
-  return (
-    <ul className="space-y-2.5">
-      {rows.map((r) => {
-        const pct = r.borrow === 0 ? 0 : Math.round((r.repay / r.borrow) * 100);
-        return (
-          <li key={r.id} className="rounded-2xl border border-border bg-card p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-                  {r.initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{r.name}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-muted-foreground">{tr("Balance")}</p>
-                <p className="text-sm font-semibold text-primary">{fmtMYR(r.balance)}</p>
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
-                <span>
-                  {tr("Repaid {a} of {b}", { a: fmtMYR(r.repay), b: fmtMYR(r.borrow) })}
-                </span>
-                <span>{pct}%</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-                <div className="h-full bg-[--color-success]" style={{ width: `${pct}%` }} />
-              </div>
-            </div>
-            {onRepay && r.balance > 0 && (
-              <button
-                onClick={() => onRepay(r.id)}
-                className="mt-3 w-full rounded-lg bg-secondary px-2 py-2 text-xs font-semibold"
-              >
-                {tr("Record Repayment")}
-              </button>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 function RequestModal({ onClose }: { onClose: () => void }) {
-  const { tr } = useT();
+  const { workspaceId, profile } = useWorkspace();
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
-  const m = useRequestAdvance();
+  const m = useRequestAdvance(workspaceId, profile?.id ?? null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const a = Number(amount);
-    if (!a || a <= 0) return toast.error(tr("Enter a valid amount"));
+    if (!a || a <= 0) return toast.error("Enter a valid amount");
     try {
       await m.mutateAsync({ amount: a, reason });
-      toast.success(tr("Request submitted"));
+      toast.success("Request submitted");
       onClose();
     } catch (e: any) {
-      toast.error(e?.message ?? tr("Failed"));
+      toast.error(e?.message ?? "Failed");
     }
   };
 
@@ -310,9 +229,9 @@ function RequestModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
         className="w-full bg-background rounded-t-3xl p-5 space-y-3"
       >
-        <h2 className="text-lg font-semibold">{tr("Request Advance")}</h2>
+        <h2 className="text-lg font-semibold">Request Advance</h2>
         <label className="block">
-          <span className="text-xs text-muted-foreground">{tr("Amount (RM)")}</span>
+          <span className="text-xs text-muted-foreground">Amount (RM)</span>
           <input
             type="number"
             inputMode="decimal"
@@ -322,78 +241,25 @@ function RequestModal({ onClose }: { onClose: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="text-xs text-muted-foreground">{tr("Reason")}</span>
+          <span className="text-xs text-muted-foreground">Reason</span>
           <input
             type="text"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder={tr("Optional")}
+            placeholder="Optional"
             className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
           />
         </label>
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-border py-3 text-sm">
-            {tr("Cancel")}
+            Cancel
           </button>
           <button
             type="submit"
             disabled={m.isPending}
             className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
           >
-            {m.isPending ? tr("Submitting…") : tr("Submit")}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function RepayModal({ employeeId, onClose }: { employeeId: string; onClose: () => void }) {
-  const { tr } = useT();
-  const [amount, setAmount] = useState("");
-  const m = useRecordRepayment();
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const a = Number(amount);
-    if (!a || a <= 0) return toast.error(tr("Enter a valid amount"));
-    try {
-      await m.mutateAsync({ employee_id: employeeId, amount: a });
-      toast.success(tr("Repayment recorded"));
-      onClose();
-    } catch (e: any) {
-      toast.error(e?.message ?? tr("Failed"));
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={onClose}>
-      <form
-        onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full bg-background rounded-t-3xl p-5 space-y-3"
-      >
-        <h2 className="text-lg font-semibold">{tr("Record Repayment")}</h2>
-        <label className="block">
-          <span className="text-xs text-muted-foreground">{tr("Amount (RM)")}</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
-          />
-        </label>
-        <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-border py-3 text-sm">
-            {tr("Cancel")}
-          </button>
-          <button
-            type="submit"
-            disabled={m.isPending}
-            className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-          >
-            {m.isPending ? tr("Saving…") : tr("Save")}
+            {m.isPending ? "Submitting…" : "Submit"}
           </button>
         </div>
       </form>
