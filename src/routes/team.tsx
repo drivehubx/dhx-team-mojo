@@ -54,7 +54,7 @@ function TeamPage() {
         )}
         {!q.isLoading && list.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            No team members yet.
+            No crew yet.
           </div>
         )}
         {list.map((p) => (
@@ -91,9 +91,9 @@ function TeamPage() {
             className="fixed bottom-20 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
-            Add Member
+            Add Crew
           </button>
-          <AddMemberDialog
+          <AddCrewDialog
             open={open}
             onOpenChange={setOpen}
             onAdded={() => {
@@ -107,7 +107,10 @@ function TeamPage() {
   );
 }
 
-function AddMemberDialog({
+type CrewRole = "crew" | "manager";
+type CompType = "salary" | "task_based" | "commission";
+
+function AddCrewDialog({
   open,
   onOpenChange,
   onAdded,
@@ -116,17 +119,19 @@ function AddMemberDialog({
   onOpenChange: (o: boolean) => void;
   onAdded: () => void;
 }) {
-  const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<"worker" | "manager">("worker");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<CrewRole>("crew");
+  const [compensationType, setCompensationType] = useState<CompType>("salary");
   const [submitting, setSubmitting] = useState(false);
 
   const reset = () => {
-    setEmail("");
     setFullName("");
     setPhone("");
-    setRole("worker");
+    setEmail("");
+    setRole("crew");
+    setCompensationType("salary");
     setSubmitting(false);
   };
 
@@ -137,45 +142,38 @@ function AddMemberDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !fullName.trim()) return;
+    if (!fullName.trim() || !phone.trim()) return;
     setSubmitting(true);
-    const { error } = await sbCore().rpc("invite_member", {
-      p_email: email.trim(),
+    const { error } = await sbCore().rpc("invite_crew", {
       p_full_name: fullName.trim(),
-      p_phone: phone.trim() || null,
+      p_phone: phone.trim(),
+      p_email: email.trim() || null,
       p_role: role,
+      p_compensation_type: compensationType,
     });
     setSubmitting(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success("Member added");
+    toast.success("Crew added — send them the invite link");
     reset();
     onAdded();
   };
+
+  const compOptions: Array<{ value: CompType; label: string }> = [
+    { value: "salary", label: "Salary" },
+    { value: "task_based", label: "Task-based" },
+    { value: "commission", label: "Commission" },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Member</DialogTitle>
+          <DialogTitle>Add Crew</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="member@example.com"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Member must already have a signed-up account.
-            </p>
-          </div>
           <div className="space-y-1.5">
             <Label htmlFor="fullName">Full Name</Label>
             <Input
@@ -186,17 +184,30 @@ function AddMemberDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="phone">Phone (optional)</Label>
+            <Label htmlFor="phone">Phone</Label>
             <Input
               id="phone"
+              type="tel"
+              required
+              placeholder="+601X-XXXXXXX"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="email">Email (optional)</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="member@example.com"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label>Role</Label>
             <div className="grid grid-cols-2 gap-2 rounded-md bg-muted p-1">
-              {(["worker", "manager"] as const).map((r) => (
+              {(["crew", "manager"] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
@@ -212,6 +223,25 @@ function AddMemberDialog({
               ))}
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label>Compensation Type</Label>
+            <div className="grid grid-cols-3 gap-2 rounded-md bg-muted p-1">
+              {compOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setCompensationType(opt.value)}
+                  className={`rounded-sm px-2 py-1.5 text-xs font-medium transition-colors ${
+                    compensationType === opt.value
+                      ? "bg-background shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <DialogFooter className="gap-2">
             <Button
               type="button"
@@ -223,7 +253,7 @@ function AddMemberDialog({
             </Button>
             <Button type="submit" disabled={submitting}>
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Add to Team
+              Add Crew
             </Button>
           </DialogFooter>
         </form>
