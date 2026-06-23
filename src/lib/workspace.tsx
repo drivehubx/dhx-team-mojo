@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "./auth";
 import {
   sbCore,
@@ -135,11 +136,7 @@ export function WorkspaceGate({ children }: { children: ReactNode }) {
     );
   }
   if (status === "no-auth") {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">
-        Please sign in to continue.
-      </div>
-    );
+    return <Navigate to="/login" replace />;
   }
   if (status === "not-setup") {
     return (
