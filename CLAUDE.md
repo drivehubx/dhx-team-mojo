@@ -28,7 +28,7 @@ Guidance for AI coding assistants (Claude, Lovable, Cursor, etc.) working in thi
 1. **Separate repos, shared backend.** Do not merge repos, do not fork the database, do not create a new Supabase project.
 2. **No destructive DB ops** without explicit approval: no `DROP`, no `TRUNCATE`, no renaming shared tables, no altering shared columns.
 3. **Migrations are global.** Every migration in this repo lands on the shared backend and impacts `dhx-rental` and `dhx-driver`. Coordinate before adding/changing shared entities (see `shared-entities.md`).
-4. **Roles live in `user_roles`**, never on `profiles`. Use the `has_role()` security-definer function in RLS.
+4. **Roles live in `core.roles`** (column: `profile_id`). Never query the old `user_roles` table — it belongs to the legacy `public` schema.
 5. **Every new public table** must include `GRANT` statements + `ENABLE ROW LEVEL SECURITY` + policies in the same migration.
 6. **Server logic** uses `createServerFn` (TanStack Start). Webhooks/public APIs go under `src/routes/api/public/*` with signature verification. Do not add Supabase Edge Functions for app-internal logic.
 7. **Branding:** UI strings say "DHX Body & Paint". Do not reintroduce "DHX Team Ops".
