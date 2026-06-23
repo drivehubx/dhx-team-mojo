@@ -17,7 +17,9 @@ function LoginPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,9 +30,19 @@ function LoginPage() {
     }
   }, [loading, user, router]);
 
+  useEffect(() => {
+    if (mode === "signup") {
+      setLoginMethod("email");
+    }
+  }, [mode]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
+    const signInEmail = loginMethod === "phone"
+      ? `${phone.replace(/\D/g, "")}@dhx.local`
+      : email.trim();
+
+    if (!signInEmail || !password.trim()) {
       toast.error(tr("Enter email and password"));
       return;
     }
@@ -51,10 +63,20 @@ function LoginPage() {
         setMode("signin");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: signInEmail,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          if (
+            loginMethod === "phone" &&
+            error.message?.toLowerCase().includes("invalid login credentials")
+          ) {
+            toast.error(tr("Phone number or password is incorrect."));
+          } else {
+            throw error;
+          }
+          return;
+        }
         toast.success(tr("Signed in"));
         void router.navigate({ to: "/", replace: true });
       }
@@ -92,17 +114,57 @@ function LoginPage() {
             />
           </label>
         )}
-        <label className="block">
-          <span className="text-xs font-medium text-muted-foreground">{tr("Email")}</span>
-          <input
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
-          />
-        </label>
+        {mode === "signin" && (
+          <div className="flex gap-1 rounded-xl border border-border bg-muted p-1">
+            <button
+              type="button"
+              onClick={() => setLoginMethod("email")}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                loginMethod === "email"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tr("Email")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginMethod("phone")}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                loginMethod === "phone"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tr("Phone")}
+            </button>
+          </div>
+        )}
+        {mode === "signin" && loginMethod === "phone" ? (
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">{tr("Phone")}</span>
+            <input
+              type="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+601X-XXXXXXX"
+              className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
+            />
+          </label>
+        ) : (
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">{tr("Email")}</span>
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
+            />
+          </label>
+        )}
         <label className="block">
           <span className="text-xs font-medium text-muted-foreground">{tr("Password")}</span>
           <input
