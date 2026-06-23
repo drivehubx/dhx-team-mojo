@@ -1,11 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Play,
   FileText,
@@ -16,7 +24,12 @@ import {
   Youtube,
   Facebook,
   ImagePlus,
+  Plus,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import { sbWorkshop } from "@/integrations/supabase/shared-schema";
+import { useWorkspace } from "@/lib/workspace";
 
 export const Route = createFileRoute("/learning")({
   head: () => ({
@@ -28,95 +41,141 @@ export const Route = createFileRoute("/learning")({
   component: LearningPage,
 });
 
+type ItemType = "video" | "note" | "sop";
 type Source = "youtube" | "facebook" | "photo" | "doc";
 
-type Item = {
+type LearningItem = {
   id: string;
-  title: string;
-  by: string;
-  duration?: string;
+  workspace_id: string;
+  added_by_id: string | null;
+  item_type: ItemType;
   source: Source;
-  url?: string;
-  thumb?: string;
-  tag?: string;
+  title: string;
+  url: string | null;
+  storage_path: string | null;
+  tag: string | null;
+  thumbnail_url: string | null;
+  duration_label: string | null;
+  created_at: string;
 };
 
-const videos: Item[] = [
-  {
-    id: "v1",
-    title: "Dent Pulling Basics — Front Fender",
-    by: "Suresh K.",
-    duration: "8:42",
-    source: "youtube",
-    thumb: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=600&q=70",
-    tag: "Body",
-  },
-  {
-    id: "v2",
-    title: "Spray Gun Setup & Pressure Tuning",
-    by: "Hafiz R.",
-    duration: "12:05",
-    source: "youtube",
-    thumb: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=70",
-    tag: "Paint",
-  },
-  {
-    id: "v3",
-    title: "Live: Bumper Respray Walkthrough",
-    by: "Aiman Y.",
-    duration: "LIVE",
-    source: "facebook",
-    thumb: "https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&fit=crop&w=600&q=70",
-    tag: "Paint",
-  },
-];
-
-const notes: Item[] = [
-  {
-    id: "n1",
-    title: "Civic 2019 — Bumper Clip Locations",
-    by: "Workshop notes",
-    source: "photo",
-    thumb: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=70",
-    tag: "Reference",
-  },
-  {
-    id: "n2",
-    title: "Mixing Ratios — 2K Clear Coat",
-    by: "Hafiz R.",
-    source: "doc",
-    tag: "Paint",
-  },
-  {
-    id: "n3",
-    title: "Common BMW 3-series Realignment Tips",
-    by: "Suresh K.",
-    source: "doc",
-    tag: "Body",
-  },
-];
-
-const sops: Item[] = [
-  { id: "s1", title: "SOP-01 Vehicle Intake Checklist", by: "Owner", source: "doc", tag: "Intake" },
-  { id: "s2", title: "SOP-02 Panel Beating Safety", by: "Owner", source: "doc", tag: "Safety" },
-  { id: "s3", title: "SOP-03 Paint Booth Operation", by: "Owner", source: "doc", tag: "Paint" },
-  { id: "s4", title: "SOP-04 QC Final Inspection", by: "Owner", source: "doc", tag: "QC" },
-  { id: "s5", title: "SOP-05 Customer Handover", by: "Owner", source: "doc", tag: "Delivery" },
-];
+type ProgressEntry = { viewed: boolean; learned: boolean };
 
 function LearningPage() {
   const { tr } = useT();
-  const [viewed, setViewed] = useState<Record<string, boolean>>({ v2: true });
-  const [learned, setLearned] = useState<Record<string, boolean>>({ s1: true });
+  const { workspaceId, profile, isStaff } = useWorkspace();
 
-  const totalItems = videos.length + notes.length + sops.length;
-  const completed = Object.values(learned).filter(Boolean).length;
-  const progress = Math.round((completed / totalItems) * 100);
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<LearningItem[]>([]);
+  const [progress, setProgress] = useState<Map<string, ProgressEntry>>(new Map());
 
-  const toggle = (
-    setter: React.Dispatch<React.SetStateAction<Record<string, boolean>>>,
-    id: string,
-  ) => setter((s) => ({ ...s, [id]: !s[id] }));
+  const [addOpen, setAddOpen] = useState(false);
+  const [addTab, setAddTab] = useState<ItemType>("video");
+
+  const loadAll = async () => {
+    if (!workspaceId || !profile) return;
+    setLoading(true);
+    try {
+      const [itemsRes, progressRes] = await Promise.all([
+        sbWorkshop()
+          .from("learning_items")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .order("created_at", { ascending: false }),
+        sbWorkshop()
+          .from("learning_progress")
+          .select("item_id, viewed, learned")
+          .eq("workspace_id", workspaceId)
+          .eq("profile_id", profile.id),
+      ]);
+      setItems((itemsRes.data ?? []) as LearningItem[]);
+      const map = new Map<string, ProgressEntry>();
+      for (const p of (progressRes.data ?? []) as Array<{
+        item_id: string;
+        viewed: boolean;
+        learned: boolean;
+      }>) {
+        map.set(p.item_id, { viewed: p.viewed, learned: p.learned });
+      }
+      setProgress(map);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, profile?.id]);
+
+  const getProg = (id: string): ProgressEntry => progress.get(id) ?? { viewed: false, learned: false };
+
+  const toggleProgress = async (item: LearningItem, field: "viewed" | "learned") => {
+    const cur = getProg(item.id);
+    const next: ProgressEntry =
+      field === "viewed"
+        ? { viewed: !cur.viewed, learned: cur.learned }
+        : { viewed: cur.viewed, learned: !cur.learned };
+
+    // Optimistic
+    setProgress((m) => {
+      const nm = new Map(m);
+      nm.set(item.id, next);
+      return nm;
+    });
+
+    const payload =
+      field === "viewed"
+        ? { p_item_id: item.id, p_viewed: next.viewed, p_learned: null }
+        : { p_item_id: item.id, p_viewed: null, p_learned: next.learned };
+
+    const { error } = await sbWorkshop().rpc("upsert_learning_progress", payload);
+    if (error) {
+      toast.error(error.message);
+      setProgress((m) => {
+        const nm = new Map(m);
+        nm.set(item.id, cur);
+        return nm;
+      });
+    }
+  };
+
+  const openItem = (item: LearningItem) => {
+    if (item.url) {
+      window.open(item.url, "_blank", "noopener");
+    } else {
+      toast(tr("No link attached"));
+    }
+  };
+
+  const deleteItem = async (item: LearningItem) => {
+    if (!window.confirm(tr("Delete this item?"))) return;
+    const { error } = await sbWorkshop().from("learning_items").delete().eq("id", item.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(tr("Deleted"));
+    void loadAll();
+  };
+
+  const canDelete = (item: LearningItem) =>
+    isStaff || (profile && item.added_by_id === profile.id);
+
+  const videos = useMemo(() => items.filter((i) => i.item_type === "video"), [items]);
+  const notes = useMemo(() => items.filter((i) => i.item_type === "note"), [items]);
+  const sops = useMemo(() => items.filter((i) => i.item_type === "sop"), [items]);
+
+  const completed = [...progress.values()].filter((p) => p.learned).length;
+  const total = items.length;
+  const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+  const openAdd = (t: ItemType) => {
+    setAddTab(t);
+    setAddOpen(true);
+  };
 
   return (
     <div>
@@ -131,95 +190,282 @@ function LearningPage() {
             <div className="flex-1">
               <p className="text-sm font-semibold">{tr("My Learning Progress")}</p>
               <p className="text-xs text-muted-foreground">
-                {tr("{a} of {b} marked learned", { a: completed, b: totalItems })}
+                {tr("{a} of {b} marked learned", { a: completed, b: total })}
               </p>
             </div>
-            <p className="text-xl font-semibold text-primary">{progress}%</p>
+            <p className="text-xl font-semibold text-primary">{pct}%</p>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-primary/15">
-            <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+            <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
           </div>
         </Card>
 
-        <Tabs defaultValue="videos">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="videos">{tr("Videos")}</TabsTrigger>
-            <TabsTrigger value="notes">{tr("Repair Notes")}</TabsTrigger>
-            <TabsTrigger value="sop">{tr("SOP")}</TabsTrigger>
-          </TabsList>
+        {loading ? (
+          <div className="flex min-h-[30vh] items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <Tabs defaultValue="videos">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="videos">{tr("Videos")}</TabsTrigger>
+              <TabsTrigger value="notes">{tr("Repair Notes")}</TabsTrigger>
+              <TabsTrigger value="sop">{tr("SOP")}</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="videos" className="space-y-3">
-            <UploadRow
-              hint={tr("Paste YouTube or Facebook link")}
-              actions={[
-                { icon: Youtube, label: tr("YouTube") },
-                { icon: Facebook, label: tr("Facebook") },
-              ]}
-            />
-            {videos.map((v) => (
-              <VideoCard
-                key={v.id}
-                item={v}
-                viewed={!!viewed[v.id]}
-                learned={!!learned[v.id]}
-                onView={() => toggle(setViewed, v.id)}
-                onLearn={() => toggle(setLearned, v.id)}
-              />
-            ))}
-          </TabsContent>
+            <TabsContent value="videos" className="space-y-3">
+              <AddBar label={tr("+ Add Video")} onClick={() => openAdd("video")} />
+              {videos.length === 0 && <EmptyState />}
+              {videos.map((v) => (
+                <VideoCard
+                  key={v.id}
+                  item={v}
+                  viewed={getProg(v.id).viewed}
+                  learned={getProg(v.id).learned}
+                  onOpen={() => openItem(v)}
+                  onView={() => toggleProgress(v, "viewed")}
+                  onLearn={() => toggleProgress(v, "learned")}
+                  onDelete={canDelete(v) ? () => deleteItem(v) : undefined}
+                />
+              ))}
+            </TabsContent>
 
-          <TabsContent value="notes" className="space-y-3">
-            <UploadRow
-              hint={tr("Add repair note or photo")}
-              actions={[{ icon: ImagePlus, label: tr("Photo") }, { icon: FileText, label: tr("Note") }]}
-            />
-            {notes.map((n) => (
-              <DocCard
-                key={n.id}
-                item={n}
-                viewed={!!viewed[n.id]}
-                learned={!!learned[n.id]}
-                onView={() => toggle(setViewed, n.id)}
-                onLearn={() => toggle(setLearned, n.id)}
-              />
-            ))}
-          </TabsContent>
+            <TabsContent value="notes" className="space-y-3">
+              <AddBar label={tr("+ Add Note")} onClick={() => openAdd("note")} />
+              {notes.length === 0 && <EmptyState />}
+              {notes.map((n) => (
+                <DocCard
+                  key={n.id}
+                  item={n}
+                  viewed={getProg(n.id).viewed}
+                  learned={getProg(n.id).learned}
+                  onOpen={() => openItem(n)}
+                  onView={() => toggleProgress(n, "viewed")}
+                  onLearn={() => toggleProgress(n, "learned")}
+                  onDelete={canDelete(n) ? () => deleteItem(n) : undefined}
+                />
+              ))}
+            </TabsContent>
 
-          <TabsContent value="sop" className="space-y-3">
-            {sops.map((s) => (
-              <DocCard
-                key={s.id}
-                item={s}
-                viewed={!!viewed[s.id]}
-                learned={!!learned[s.id]}
-                onView={() => toggle(setViewed, s.id)}
-                onLearn={() => toggle(setLearned, s.id)}
-              />
-            ))}
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="sop" className="space-y-3">
+              <AddBar label={tr("+ Add SOP")} onClick={() => openAdd("sop")} />
+              {sops.length === 0 && <EmptyState />}
+              {sops.map((s) => (
+                <DocCard
+                  key={s.id}
+                  item={s}
+                  viewed={getProg(s.id).viewed}
+                  learned={getProg(s.id).learned}
+                  onOpen={() => openItem(s)}
+                  onView={() => toggleProgress(s, "viewed")}
+                  onLearn={() => toggleProgress(s, "learned")}
+                  onDelete={canDelete(s) ? () => deleteItem(s) : undefined}
+                />
+              ))}
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
+
+      <AddItemDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        type={addTab}
+        workspaceId={workspaceId}
+        profileId={profile?.id ?? null}
+        onAdded={() => {
+          setAddOpen(false);
+          void loadAll();
+        }}
+      />
     </div>
   );
 }
 
-function UploadRow({
-  hint,
-  actions,
-}: {
-  hint: string;
-  actions: { icon: React.ComponentType<{ className?: string }>; label: string }[];
-}) {
+function EmptyState() {
+  const { tr } = useT();
   return (
-    <Card className="flex items-center gap-2 p-2">
-      <p className="flex-1 truncate px-2 text-xs text-muted-foreground">{hint}</p>
-      {actions.map(({ icon: Icon, label }) => (
-        <Button key={label} size="sm" variant="secondary" className="h-8 gap-1 text-[11px]">
-          <Icon className="h-3.5 w-3.5" />
-          {label}
-        </Button>
-      ))}
+    <Card className="p-6 text-center text-xs text-muted-foreground">
+      {tr("No items yet — be the first to add one!")}
     </Card>
+  );
+}
+
+function AddBar({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button onClick={onClick} className="w-full h-9 gap-1 text-xs">
+      <Plus className="h-3.5 w-3.5" />
+      {label}
+    </Button>
+  );
+}
+
+function AddItemDialog({
+  open,
+  onOpenChange,
+  type,
+  workspaceId,
+  profileId,
+  onAdded,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  type: ItemType;
+  workspaceId: string | null;
+  profileId: string | null;
+  onAdded: () => void;
+}) {
+  const { tr } = useT();
+  const [source, setSource] = useState<Source>("youtube");
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [tag, setTag] = useState("");
+  const [duration, setDuration] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    // Reset + pick default source per type
+    setTitle("");
+    setUrl("");
+    setTag("");
+    setDuration("");
+    setSource(type === "video" ? "youtube" : type === "note" ? "photo" : "doc");
+  }, [open, type]);
+
+  const submit = async () => {
+    if (!workspaceId || !profileId) {
+      toast.error(tr("Workspace not ready"));
+      return;
+    }
+    if (!title.trim()) {
+      toast.error(tr("Title is required"));
+      return;
+    }
+    if (type === "video" && !url.trim()) {
+      toast.error(tr("URL is required"));
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await sbWorkshop()
+      .from("learning_items")
+      .insert({
+        workspace_id: workspaceId,
+        added_by_id: profileId,
+        item_type: type,
+        source,
+        title: title.trim(),
+        url: url.trim() || null,
+        tag: tag.trim() || null,
+        duration_label: duration.trim() || null,
+      });
+    setSubmitting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(tr("Added"));
+    onAdded();
+  };
+
+  const sourceOptions: { value: Source; label: string }[] =
+    type === "video"
+      ? [
+          { value: "youtube", label: "YouTube" },
+          { value: "facebook", label: "Facebook" },
+        ]
+      : type === "note"
+      ? [
+          { value: "photo", label: tr("Photo URL") },
+          { value: "doc", label: tr("Doc") },
+        ]
+      : [{ value: "doc", label: tr("Doc") }];
+
+  const titleText =
+    type === "video"
+      ? tr("Add Video")
+      : type === "note"
+      ? tr("Add Repair Note")
+      : tr("Add SOP");
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{titleText}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          {sourceOptions.length > 1 && (
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-1">{tr("Source")}</p>
+              <div className="flex gap-1 rounded-md border border-input p-1">
+                {sourceOptions.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setSource(o.value)}
+                    className={`flex-1 rounded px-2 py-1 text-xs font-medium ${
+                      source === o.value
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <p className="text-[11px] text-muted-foreground mb-1">{tr("Title")} *</p>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+
+          {type !== "sop" && (
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-1">
+                {tr("URL")} {type === "video" ? "*" : ""}
+              </p>
+              <Input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder={
+                  type === "video" ? "https://youtube.com/..." : tr("Optional link or photo URL")
+                }
+              />
+            </div>
+          )}
+
+          <div>
+            <p className="text-[11px] text-muted-foreground mb-1">{tr("Tag")}</p>
+            <Input
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              placeholder={tr("e.g. Paint, Body")}
+            />
+          </div>
+
+          {type === "video" && (
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-1">{tr("Duration")}</p>
+              <Input
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="8:42"
+              />
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            {tr("Cancel")}
+          </Button>
+          <Button onClick={submit} disabled={submitting}>
+            {submitting ? tr("Adding...") : tr("Add")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -276,18 +522,38 @@ function MarkButtons({
   );
 }
 
+function DeleteBtn({ onDelete }: { onDelete: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onDelete();
+      }}
+      className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+      aria-label="Delete"
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
 function VideoCard({
   item,
   viewed,
   learned,
+  onOpen,
   onView,
   onLearn,
+  onDelete,
 }: {
-  item: Item;
+  item: LearningItem;
   viewed: boolean;
   learned: boolean;
+  onOpen: () => void;
   onView: () => void;
   onLearn: () => void;
+  onDelete?: () => void;
 }) {
   const { tr } = useT();
   return (
@@ -295,30 +561,45 @@ function VideoCard({
       <button
         type="button"
         onClick={() => {
-          onView();
-          toast(tr("Opening: {a}", { a: tr(item.title) }));
+          if (!viewed) onView();
+          onOpen();
         }}
         className="relative block aspect-video w-full bg-muted active:opacity-90"
         aria-label={tr("Play")}
       >
-        {item.thumb && (
-          <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+        {item.thumbnail_url && (
+          <img
+            src={item.thumbnail_url}
+            alt={item.title}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
         )}
         <div className="absolute inset-0 grid place-items-center bg-black/30">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-primary">
             <Play className="h-5 w-5 fill-current" />
           </div>
         </div>
-        {item.duration && (
+        {item.duration_label && (
           <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-            {item.duration}
+            {item.duration_label}
           </span>
         )}
       </button>
       <div className="p-3">
-        <p className="text-sm font-semibold leading-snug">{tr(item.title)}</p>
+        <div className="flex items-start gap-2">
+          <p className="flex-1 text-sm font-semibold leading-snug">{item.title}</p>
+          {onDelete && <DeleteBtn onDelete={onDelete} />}
+        </div>
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>{tr("by {a}", { a: item.by })}</span>
+          {item.tag ? (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
+              {item.tag}
+            </span>
+          ) : (
+            <span />
+          )}
           <SourceBadge source={item.source} />
         </div>
         <MarkButtons viewed={viewed} learned={learned} onView={onView} onLearn={onLearn} />
@@ -331,57 +612,63 @@ function DocCard({
   item,
   viewed,
   learned,
+  onOpen,
   onView,
   onLearn,
+  onDelete,
 }: {
-  item: Item;
+  item: LearningItem;
   viewed: boolean;
   learned: boolean;
+  onOpen: () => void;
   onView: () => void;
   onLearn: () => void;
+  onDelete?: () => void;
 }) {
   const { tr } = useT();
-  const isPhoto = item.source === "photo" && item.thumb;
+  const isPhoto = item.source === "photo" && item.thumbnail_url;
   return (
     <Card className="p-3">
-      <button
-        type="button"
-        onClick={() => {
-          onView();
-          toast(tr("Opening: {a}", { a: tr(item.title) }));
-        }}
-        className="flex w-full gap-3 text-left active:opacity-90"
-      >
-        {isPhoto ? (
-          <img
-            src={item.thumb}
-            alt={item.title}
-            className="h-16 w-16 shrink-0 rounded-lg object-cover"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-            {item.source === "doc" ? (
-              <ClipboardList className="h-6 w-6" />
-            ) : (
-              <FileText className="h-6 w-6" />
-            )}
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (!viewed) onView();
+            onOpen();
+          }}
+          className="flex flex-1 gap-3 text-left active:opacity-90"
+        >
+          {isPhoto ? (
+            <img
+              src={item.thumbnail_url!}
+              alt={item.title}
+              className="h-16 w-16 shrink-0 rounded-lg object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              {item.source === "doc" ? (
+                <ClipboardList className="h-6 w-6" />
+              ) : (
+                <FileText className="h-6 w-6" />
+              )}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold leading-snug">{item.title}</p>
+            <div className="mt-1 flex items-center gap-2">
+              {item.tag && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
+                  {item.tag}
+                </span>
+              )}
+              <SourceBadge source={item.source} />
+            </div>
           </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-snug">{tr(item.title)}</p>
-          <p className="text-[11px] text-muted-foreground">{tr("by {a}", { a: item.by })}</p>
-          <div className="mt-1 flex items-center gap-2">
-            {item.tag && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
-                {tr(item.tag)}
-              </span>
-            )}
-            <SourceBadge source={item.source} />
-          </div>
-        </div>
-      </button>
+        </button>
+        {onDelete && <DeleteBtn onDelete={onDelete} />}
+      </div>
       <MarkButtons viewed={viewed} learned={learned} onView={onView} onLearn={onLearn} />
     </Card>
   );
