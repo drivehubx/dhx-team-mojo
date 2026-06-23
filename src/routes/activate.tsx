@@ -9,15 +9,13 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { sbCore } from "@/integrations/supabase/shared-schema";
 
-const searchSchema = z.object({
-  token: fallback(z.string(), "").default(""),
-});
-
 export const Route = createFileRoute("/activate")({
   head: () => ({
     meta: [{ title: "Activate account — DHX Body & Paint" }],
   }),
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (search: Record<string, unknown>) => ({
+    token: typeof search.token === "string" ? search.token : "",
+  }),
   component: ActivatePage,
 });
 
