@@ -95,7 +95,20 @@ function ActivatePage() {
         email: signupEmail,
         password,
       });
-      if (signUpError) throw signUpError;
+
+      if (signUpError) {
+        // If already registered, try signing in with the same password instead
+        const alreadyExists =
+          signUpError.message?.toLowerCase().includes("already registered") ||
+          signUpError.message?.toLowerCase().includes("user already registered");
+        if (!alreadyExists) throw signUpError;
+        // Fall through to sign in below
+        const { error: siErr } = await supabase.auth.signInWithPassword({
+          email: signupEmail,
+          password,
+        });
+        if (siErr) throw new Error("Account already exists. Try logging in, or use your original password.");
+      }
 
       // Ensure session exists (in case email confirmation isn't required, signUp gives session)
       const { data: sessionData } = await supabase.auth.getSession();
