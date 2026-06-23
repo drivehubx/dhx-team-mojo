@@ -38,7 +38,11 @@ function LoginPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
+    const signInEmail = loginMethod === "phone"
+      ? `${phone.replace(/\D/g, "")}@dhx.local`
+      : email.trim();
+
+    if (!signInEmail || !password.trim()) {
       toast.error(tr("Enter email and password"));
       return;
     }
@@ -59,10 +63,20 @@ function LoginPage() {
         setMode("signin");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: signInEmail,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          if (
+            loginMethod === "phone" &&
+            error.message?.toLowerCase().includes("invalid login credentials")
+          ) {
+            toast.error(tr("Phone number or password is incorrect."));
+          } else {
+            throw error;
+          }
+          return;
+        }
         toast.success(tr("Signed in"));
         void router.navigate({ to: "/", replace: true });
       }
