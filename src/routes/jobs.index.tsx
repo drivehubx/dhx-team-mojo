@@ -37,7 +37,7 @@ const statusChip: Record<JobStatus, { chip: string; label: string }> = {
 };
 
 function JobsPage() {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, profile } = useWorkspace();
   const q = useJobs(workspaceId);
   const jobs = q.data ?? [];
 
@@ -47,7 +47,11 @@ function JobsPage() {
   const list = useMemo(() => {
     const txt = query.trim().toLowerCase();
     return jobs.filter((j) => {
-      if (filter !== "All" && j.status !== statusOfFilter[filter as Exclude<FilterKey, "All">]) return false;
+      if (filter === "Mine") {
+        if (!j.workers.some((w) => w.profile_id === profile?.id)) return false;
+      } else if (filter !== "All" && j.status !== statusOfFilter[filter]) {
+        return false;
+      }
       if (!txt) return true;
       const plate = j.vehicle?.plate_number?.toLowerCase() ?? "";
       const make = j.vehicle?.make?.toLowerCase() ?? "";
@@ -55,9 +59,9 @@ function JobsPage() {
       const desc = j.description?.toLowerCase() ?? "";
       return plate.includes(txt) || make.includes(txt) || model.includes(txt) || desc.includes(txt);
     });
-  }, [jobs, filter, query]);
+  }, [jobs, filter, query, profile?.id]);
 
-  const filters: FilterKey[] = ["All", "Open", "In Progress", "Completed", "Cancelled"];
+  const filters: FilterKey[] = ["Mine", "All", "Open", "In Progress", "Completed", "Cancelled"];
 
   return (
     <div className="pb-8">
