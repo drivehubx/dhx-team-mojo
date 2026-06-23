@@ -91,40 +91,31 @@ function ActivatePage() {
         signupEmail = invitation.email;
       }
 
-      const { error: signUpError } = await supabase.auth.signUp({
+      // Call edge function — handles user creation + profile/role setup server-side
+      const res = await fetch(
+        "https://geykkgepjqelqbkbkuvk.supabase.co/functions/v1/activate-account",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, email: signupEmail, password }),
+        }
+      );
+      const result = await res.json();
+
+      if (!res.ok) {
+        if (result.error === "already_activated") {
+          // Account exists and is activated — just sign in
+        } else {
+          throw new Error(result.error ?? "Activation failed");
+        }
+      }
+
+      // Sign in to establish session
+      const { error: siErr } = await supabase.auth.signInWithPassword({
         email: signupEmail,
         password,
       });
-
-      if (signUpError) {
-        // If already registered, try signing in with the same password instead
-        const alreadyExists =
-          signUpError.message?.toLowerCase().includes("already registered") ||
-          signUpError.message?.toLowerCase().includes("user already registered");
-        if (!alreadyExists) throw signUpError;
-        // Fall through to sign in below
-        const { error: siErr } = await supabase.auth.signInWithPassword({
-          email: signupEmail,
-          password,
-        });
-        if (siErr) throw new Error("Account already exists. Try logging in, or use your original password.");
-      }
-
-      // Ensure session exists (in case email confirmation isn't required, signUp gives session)
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        // Try sign in
-        const { error: siErr } = await supabase.auth.signInWithPassword({
-          email: signupEmail,
-          password,
-        });
-        if (siErr) throw siErr;
-      }
-
-      const { error: rpcError } = await sbCore().rpc("activate_invitation", {
-        p_token: token,
-      });
-      if (rpcError) throw rpcError;
+      if (siErr) throw new Error("Account set up. Please go to login and sign in with your phone and password.");
 
       void router.navigate({ to: "/", replace: true });
     } catch (err) {
