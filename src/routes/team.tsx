@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { useWorkspaceProfiles } from "@/lib/jobs";
 import { sbCore } from "@/integrations/supabase/shared-schema";
-import { Loader2, Plus, UserCheck, UserX } from "lucide-react";
+import { Loader2, Plus, UserCheck, UserX, CheckCircle, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -96,8 +96,7 @@ function TeamPage() {
           <AddCrewDialog
             open={open}
             onOpenChange={setOpen}
-            onAdded={() => {
-              setOpen(false);
+            onSuccess={() => {
               void q.refetch();
             }}
           />
@@ -113,11 +112,11 @@ type CompType = "salary" | "task_based" | "commission";
 function AddCrewDialog({
   open,
   onOpenChange,
-  onAdded,
+  onSuccess,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onAdded: () => void;
+  onSuccess: () => void;
 }) {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -125,6 +124,9 @@ function AddCrewDialog({
   const [role, setRole] = useState<CrewRole>("crew");
   const [compensationType, setCompensationType] = useState<CompType>("salary");
   const [submitting, setSubmitting] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteStep, setInviteStep] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const reset = () => {
     setFullName("");
@@ -133,6 +135,9 @@ function AddCrewDialog({
     setRole("crew");
     setCompensationType("salary");
     setSubmitting(false);
+    setInviteToken(null);
+    setInviteStep(false);
+    setCopied(false);
   };
 
   const handleOpenChange = (o: boolean) => {
@@ -144,7 +149,7 @@ function AddCrewDialog({
     e.preventDefault();
     if (!fullName.trim() || !phone.trim()) return;
     setSubmitting(true);
-    const { error } = await sbCore().rpc("invite_crew", {
+    const { data: token, error } = await sbCore().rpc("invite_crew", {
       p_full_name: fullName.trim(),
       p_phone: phone.trim(),
       p_email: email.trim() || null,
@@ -157,8 +162,30 @@ function AddCrewDialog({
       return;
     }
     toast.success("Crew added — send them the invite link");
+    setInviteToken((token as string | null) ?? null);
+    setInviteStep(true);
+    onSuccess();
+  };
+
+  const handleAddAnother = () => {
     reset();
-    onAdded();
+  };
+
+  const handleCopyLink = async () => {
+    if (!inviteToken) return;
+    const link = `https://preview--dhx-team-mojo.lovable.app/activate?token=${inviteToken}`;
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleWhatsApp = () => {
+    if (!inviteToken || !phone.trim()) return;
+    const digits = phone.replace(/\D/g, "");
+    const link = `https://preview--dhx-team-mojo.lovable.app/activate?token=${inviteToken}`;
+    const message = `Hi ${fullName}, you've been invited to join DHX Body & Paint. Tap here to activate your account: ${link}`;
+    const url = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
   };
 
   const compOptions: Array<{ value: CompType; label: string }> = [
@@ -170,93 +197,138 @@ function AddCrewDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Crew</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="fullName">Full Name</Label>
-            <Input
-              id="fullName"
-              required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              type="tel"
-              required
-              placeholder="+601X-XXXXXXX"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email (optional)</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="member@example.com"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Role</Label>
-            <div className="grid grid-cols-2 gap-2 rounded-md bg-muted p-1">
-              {(["crew", "manager"] as const).map((r) => (
-                <button
-                  key={r}
+        {inviteStep ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-center">Crew Added!</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-4 py-2 text-center">
+              <div className="rounded-full bg-[--color-success]/15 p-3">
+                <CheckCircle className="h-8 w-8 text-[--color-success]" />
+              </div>
+              <div>
+                <p className="text-base font-semibold">{fullName}</p>
+                <p className="text-sm text-muted-foreground">Ready to invite</p>
+              </div>
+              <div className="grid w-full gap-2">
+                <Button
                   type="button"
-                  onClick={() => setRole(r)}
-                  className={`rounded-sm px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-                    role === r
-                      ? "bg-background shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  className="w-full gap-2 bg-[--color-success] text-[--color-success-foreground] hover:bg-[--color-success]/90"
+                  onClick={handleWhatsApp}
                 >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Compensation Type</Label>
-            <div className="grid grid-cols-3 gap-2 rounded-md bg-muted p-1">
-              {compOptions.map((opt) => (
-                <button
-                  key={opt.value}
+                  <MessageCircle className="h-4 w-4" />
+                  Send WhatsApp Invite
+                </Button>
+                <Button
                   type="button"
-                  onClick={() => setCompensationType(opt.value)}
-                  className={`rounded-sm px-2 py-1.5 text-xs font-medium transition-colors ${
-                    compensationType === opt.value
-                      ? "bg-background shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleCopyLink}
                 >
-                  {opt.label}
-                </button>
-              ))}
+                  {copied ? "Copied!" : "Copy Invite Link"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={handleAddAnother}
+                >
+                  Add Another
+                </Button>
+              </div>
             </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Add Crew
-            </Button>
-          </DialogFooter>
-        </form>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Add Crew</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  required
+                  placeholder="+601X-XXXXXXX"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email (optional)</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="member@example.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Role</Label>
+                <div className="grid grid-cols-2 gap-2 rounded-md bg-muted p-1">
+                  {(["crew", "manager"] as const).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRole(r)}
+                      className={`rounded-sm px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
+                        role === r
+                          ? "bg-background shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Compensation Type</Label>
+                <div className="grid grid-cols-3 gap-2 rounded-md bg-muted p-1">
+                  {compOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setCompensationType(opt.value)}
+                      className={`rounded-sm px-2 py-1.5 text-xs font-medium transition-colors ${
+                        compensationType === opt.value
+                          ? "bg-background shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleOpenChange(false)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Add Crew
+                </Button>
+              </DialogFooter>
+            </form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
