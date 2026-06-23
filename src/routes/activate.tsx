@@ -49,15 +49,13 @@ function ActivatePage() {
         return;
       }
       const { data, error } = await sbCore()
-        .from("invitations")
-        .select("full_name, phone, email, status")
-        .eq("token", token)
-        .maybeSingle();
+        .rpc("get_invitation_by_token", { p_token: token });
       if (cancelled) return;
-      if (error || !data) {
+      const row = Array.isArray(data) ? data[0] : null;
+      if (error || !row) {
         setLoadError("Invalid or expired link");
       } else {
-        const inv = data as Invitation;
+        const inv = row as Invitation;
         setInvitation(inv);
         setMethod(inv.phone ? "phone" : "email");
       }
