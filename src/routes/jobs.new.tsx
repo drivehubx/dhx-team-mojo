@@ -1,9 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
-import { useVehicles, useWorkspaceProfiles, useCreateJob } from "@/lib/jobs";
+import {
+  useCreateJob,
+  useVehicles,
+  useWorkspaceProfiles,
+} from "@/lib/jobs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/jobs/new")({
   head: () => ({
@@ -20,143 +27,161 @@ export const Route = createFileRoute("/jobs/new")({
 });
 
 function NewJobPage() {
-  const { workspaceId } = useWorkspace();
-  const navigate = useNavigate();
+  const { workspaceId, isStaff } = useWorkspace();
+  const navigate = useNavigate({ from: "/jobs/new" });
+
   const vehiclesQ = useVehicles(workspaceId);
   const profilesQ = useWorkspaceProfiles(workspaceId);
-  const create = useCreateJob(workspaceId);
+  const createJob = useCreateJob(workspaceId);
 
   const [vehicleId, setVehicleId] = useState("");
-  const [description, setDescription] = useState("");
   const [workerIds, setWorkerIds] = useState<string[]>([]);
-
-  const toggle = (id: string) =>
-    setWorkerIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
-  const canSave = vehicleId.length > 0;
-
-  const onSave = async () => {
-    if (!canSave) return;
-    try {
-      const job = await create.mutateAsync({
-        vehicle_id: vehicleId,
-        description: description.trim(),
-        worker_ids: workerIds,
-      });
-      toast.success("Job created");
-      navigate({ to: "/jobs/$id", params: { id: job.id } });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed");
-    }
-  };
+  const [description, setDescription] = useState("");
 
   const vehicles = vehiclesQ.data ?? [];
-  const profiles = (profilesQ.data ?? []).filter((p) => p.is_active);
+  const profiles = profilesQ.data ?? [];
+
+  const isLoading = vehiclesQ.isLoading || profilesQ.isLoading;
+  const canSubmit =
+    isStaff && !!vehicleId && !createJob.isPending && !isLoading;
+
+  const toggleWorker = (id: string) => {
+    setWorkerIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+
+    createJob.mutate(
+      {
+        vehicle_id: vehicleId,
+        description,
+        worker_ids: workerIds,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Job created");
+          navigate({ to: "/jobs" });
+        },
+        onError: (err) => {
+          toast.error(err instanceof Error ? err.message : "Failed to create job");
+        },
+      }
+    );
+  };
 
   return (
-    <div className="pb-32">
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
-        <div className="flex items-center gap-3 px-5 py-4">
+    <div className="pb-8">
+      <header className="sticky top-0 z-40 mb-4 bg-[--color-navy] text-[--color-navy-foreground] pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
+        <div className="flex items-center gap-3">
           <Link
             to="/jobs"
-            className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-foreground active:scale-95"
+            aria-label="Back"
+            className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </Link>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-base font-semibold tracking-tight">New Job</h1>
-            <p className="text-[11px] text-muted-foreground">Pick a vehicle, assign workers.</p>
+          <div>
+            <p className="text-xs uppercase tracking-widest text-white/60">
+              DHX Body & Paint
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">New Job</h1>
           </div>
         </div>
       </header>
 
-      <div className="px-5 mt-4 space-y-3">
-        <Field label="Vehicle *">
-          {vehiclesQ.isLoading ? (
-            <div className="py-3 text-center text-sm text-muted-foreground">
-              <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-            </div>
-          ) : vehicles.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No vehicles in this workspace. Add one in the main vehicle registry first.
-            </p>
-          ) : (
-            <select
-              value={vehicleId}
-              onChange={(e) => setVehicleId(e.target.value)}
-              className="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
-            >
-              <option value="">— Select a vehicle —</option>
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.plate_number}
-                  {v.make || v.model ? ` · ${[v.make, v.model].filter(Boolean).join(" ")}` : ""}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-
-        <Field label="Description">
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Damage description, customer requests..."
-            rows={4}
-            className="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary resize-none"
-          />
-        </Field>
-
-        <Field label="Assigned Workers">
-          <div className="flex flex-wrap gap-1.5">
-            {profiles.length === 0 && (
-              <p className="text-xs text-muted-foreground">No active workers.</p>
-            )}
-            {profiles.map((p) => {
-              const on = workerIds.includes(p.id);
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => toggle(p.id)}
-                  className={`rounded-full px-3 py-1.5 text-xs ${
-                    on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-                  }`}
-                >
-                  {p.full_name}
-                </button>
-              );
-            })}
+      <div className="px-5">
+        {!isStaff ? (
+          <div className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            Only owners and managers can create jobs.
           </div>
-        </Field>
-      </div>
+        ) : isLoading ? (
+          <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <label className="block text-sm font-medium" htmlFor="vehicle">
+                Vehicle <span className="text-destructive">*</span>
+              </label>
+              <select
+                id="vehicle"
+                required
+                value={vehicleId}
+                onChange={(e) => setVehicleId(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="" disabled>
+                  Select a vehicle
+                </option>
+                {vehicles.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.plate_number} — {v.make} {v.model}
+                  </option>
+                ))}
+              </select>
+              {vehicles.length === 0 && !vehiclesQ.isLoading && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  No vehicles in this workspace.
+                </p>
+              )}
+            </section>
 
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto max-w-md flex gap-2">
-          <Link
-            to="/jobs"
-            className="flex-1 rounded-xl border border-border bg-card py-3 text-center text-sm font-medium"
-          >
-            Cancel
-          </Link>
-          <button
-            disabled={!canSave || create.isPending}
-            onClick={onSave}
-            className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
-          >
-            {create.isPending ? "Saving…" : "Save Job"}
-          </button>
-        </div>
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <h2 className="text-sm font-medium">Assigned Workers</h2>
+              <p className="text-xs text-muted-foreground">Optional — select one or more.</p>
+              <div className="mt-3 space-y-3">
+                {profiles.map((p) => (
+                  <label
+                    key={p.id}
+                    className="flex items-center gap-3 rounded-xl border border-border p-3 hover:bg-secondary/50 cursor-pointer"
+                  >
+                    <Checkbox
+                      id={`worker-${p.id}`}
+                      checked={workerIds.includes(p.id)}
+                      onCheckedChange={() => toggleWorker(p.id)}
+                    />
+                    <span className="text-sm font-medium">{p.full_name}</span>
+                  </label>
+                ))}
+                {profiles.length === 0 && !profilesQ.isLoading && (
+                  <p className="text-sm text-muted-foreground">No team members found.</p>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <label className="block text-sm font-medium" htmlFor="description">
+                Description
+              </label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Notes about the job…"
+                className="mt-2 min-h-[120px] resize-none"
+              />
+            </section>
+
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {createJob.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Create Job
+            </button>
+          </form>
+        )}
       </div>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      {children}
-    </label>
   );
 }
