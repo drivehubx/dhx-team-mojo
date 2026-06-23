@@ -114,17 +114,57 @@ function LoginPage() {
             />
           </label>
         )}
-        <label className="block">
-          <span className="text-xs font-medium text-muted-foreground">{tr("Email")}</span>
-          <input
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
-          />
-        </label>
+        {mode === "signin" && (
+          <div className="flex gap-1 rounded-xl border border-border bg-muted p-1">
+            <button
+              type="button"
+              onClick={() => setLoginMethod("email")}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                loginMethod === "email"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tr("Email")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginMethod("phone")}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                loginMethod === "phone"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tr("Phone")}
+            </button>
+          </div>
+        )}
+        {mode === "signin" && loginMethod === "phone" ? (
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">{tr("Phone")}</span>
+            <input
+              type="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+601X-XXXXXXX"
+              className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
+            />
+          </label>
+        ) : (
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">{tr("Email")}</span>
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-sm outline-none focus:border-primary"
+            />
+          </label>
+        )}
         <label className="block">
           <span className="text-xs font-medium text-muted-foreground">{tr("Password")}</span>
           <input
