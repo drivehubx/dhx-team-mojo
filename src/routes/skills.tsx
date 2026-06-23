@@ -178,7 +178,7 @@ function SkillsPage() {
   const [noteMap, setNoteMap] = useState<Record<string, string>>({});
 
   const canEdit = isOwner;
-  const isCrew = role === "crew";
+  const isCrew = (role as string) === "crew" || role === "worker";
 
   const skillFor = (pid: string, cat: SkillCat): SkillCell => {
     return skills.get(pid)?.get(cat) ?? { current_level: 0, required_level: 3 };
