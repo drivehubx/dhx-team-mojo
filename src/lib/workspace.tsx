@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "./auth";
 import {
   sbCore,
