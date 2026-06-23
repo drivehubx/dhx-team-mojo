@@ -173,7 +173,7 @@ function AddCrewDialog({
 
   const handleCopyLink = async () => {
     if (!inviteToken) return;
-    const link = `https://preview--dhx-team-mojo.lovable.app/activate?token=${inviteToken}`;
+    const link = `https://dhx-workshop.lovable.app/activate?token=${inviteToken}`;
     await navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -182,7 +182,7 @@ function AddCrewDialog({
   const handleWhatsApp = () => {
     if (!inviteToken || !phone.trim()) return;
     const digits = phone.replace(/\D/g, "");
-    const link = `https://preview--dhx-team-mojo.lovable.app/activate?token=${inviteToken}`;
+    const link = `https://dhx-workshop.lovable.app/activate?token=${inviteToken}`;
     const message = `Hi ${fullName}, you've been invited to join DHX Body & Paint. Tap here to activate your account: ${link}`;
     const url = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
