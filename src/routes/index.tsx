@@ -62,12 +62,34 @@ function Dashboard() {
       />
 
       <div className="px-5">
-        <div className="grid grid-cols-2 gap-3">
-          <KpiCard label="Active Jobs" value={String(open.length)} icon={Wrench} accent="bg-primary/10 text-primary" />
-          <KpiCard label="Pending Advances" value={String(pending.length)} icon={HandCoins} accent="bg-[--color-warning]/15 text-[--color-warning]" />
-          <KpiCard label="Approved Advances" value={fmtMYR(approvedTotal)} icon={Wallet} accent="bg-[--color-success]/15 text-[--color-success]" />
-          <KpiCard label="Team" value="—" icon={Users} accent="bg-secondary text-foreground" linkTo="/team" />
-        </div>
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Operations</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <KpiCard label="Active Jobs" value={String(open.length)} icon={Wrench} accent="bg-primary/10 text-primary" />
+            <KpiCard label="Ready for QC" value={String(readyForQc)} icon={ClipboardCheck} accent="bg-purple-500/10 text-purple-500" />
+            <KpiCard label="Delayed Jobs" value={String(delayed)} icon={AlertCircle} accent="bg-[--color-warning]/15 text-[--color-warning]" />
+            <KpiCard label="Released Today" value={String(releasedToday)} icon={CheckCircle} accent="bg-[--color-success]/15 text-[--color-success]" />
+          </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Performance</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <KpiCard label="Avg Repair Days" value={avgRepairDays ?? "—"} icon={CalendarClock} accent="bg-blue-500/10 text-blue-500" />
+            <KpiCard label="Rework Rate" value={reworkRate !== null ? `${reworkRate}%` : "—"} icon={RotateCcw} accent="bg-orange-500/10 text-orange-500" />
+            <KpiCard label="Pending Advances" value={String(pending.length)} icon={HandCoins} accent="bg-[--color-warning]/15 text-[--color-warning]" />
+            <KpiCard label="Approved Advances" value={fmtMYR(approvedTotal)} icon={Wallet} accent="bg-[--color-success]/15 text-[--color-success]" />
+          </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Fleet Impact</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <KpiCard label="Downtime Hrs" value={String(downtimeHrs)} icon={Gauge} accent="bg-destructive/10 text-destructive" />
+            <KpiCard label="Vehicles In Repair" value={String(vehiclesInRepair)} icon={Car} accent="bg-primary/10 text-primary" />
+            <KpiCard label="Capacity" value={capacity} icon={Users} accent="bg-secondary text-foreground" />
+          </div>
+        </section>
       </div>
 
       <section className="mt-6 px-5">
