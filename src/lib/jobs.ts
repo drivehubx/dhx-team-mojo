@@ -405,3 +405,277 @@ export function useUpdateWorkOrder(workspaceId: string | null) {
     },
   });
 }
+
+// ---- Parts ----
+
+export type RepairPartStatus = "required" | "ordered" | "received" | "installed";
+export const PART_STATUS_ORDER: RepairPartStatus[] = [
+  "required",
+  "ordered",
+  "received",
+  "installed",
+];
+
+export type RepairPart = {
+  id: string;
+  workspace_id: string;
+  job_id: string;
+  part_name: string;
+  quantity: number;
+  unit_cost: number | null;
+  status: RepairPartStatus;
+  supplier: string | null;
+  notes: string | null;
+  ordered_at: string | null;
+  received_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export function useRepairParts(workspaceId: string | null, jobId: string) {
+  return useQuery({
+    queryKey: ["repair-parts", workspaceId, jobId],
+    enabled: !!workspaceId && !!jobId,
+    queryFn: async () => {
+      const { data, error } = await sbWorkshop()
+        .from("repair_parts")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("job_id", jobId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as RepairPart[];
+    },
+  });
+}
+
+export type AddPartInput = {
+  job_id: string;
+  part_name: string;
+  quantity: number;
+  unit_cost: number | null;
+  supplier: string | null;
+};
+
+export function useAddPart(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: AddPartInput) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { data: userRes } = await supabase.auth.getUser();
+      const { data, error } = await sbWorkshop()
+        .from("repair_parts")
+        .insert({
+          workspace_id: workspaceId,
+          job_id: input.job_id,
+          part_name: input.part_name,
+          quantity: input.quantity,
+          unit_cost: input.unit_cost,
+          supplier: input.supplier,
+          status: "required" as RepairPartStatus,
+          created_by: userRes.user?.id ?? null,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as RepairPart;
+    },
+    onSuccess: (d) =>
+      qc.invalidateQueries({ queryKey: ["repair-parts", workspaceId, d.job_id] }),
+  });
+}
+
+export function useUpdatePartStatus(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      jobId,
+      status,
+    }: {
+      id: string;
+      jobId: string;
+      status: RepairPartStatus;
+    }) => {
+      const patch: Record<string, unknown> = { status };
+      if (status === "ordered") patch.ordered_at = new Date().toISOString();
+      if (status === "received") patch.received_at = new Date().toISOString();
+      const { data, error } = await sbWorkshop()
+        .from("repair_parts")
+        .update(patch)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return { part: data as RepairPart, jobId };
+    },
+    onSuccess: (res) =>
+      qc.invalidateQueries({ queryKey: ["repair-parts", workspaceId, res.jobId] }),
+  });
+}
+
+// ---- QC ----
+
+export type QcRecord = {
+  id: string;
+  workspace_id: string;
+  job_id: string;
+  inspected_by: string | null;
+  passed: boolean | null;
+  notes: string | null;
+  rework_required: boolean;
+  rework_notes: string | null;
+  created_at: string;
+};
+
+export type QcPhoto = {
+  id: string;
+  kind: "qc_before" | "qc_after";
+  path: string;
+  signedUrl: string | null;
+};
+
+export function useQcRecord(workspaceId: string | null, jobId: string) {
+  return useQuery({
+    queryKey: ["qc-record", workspaceId, jobId],
+    enabled: !!workspaceId && !!jobId,
+    queryFn: async () => {
+      const [recRes, filesRes] = await Promise.all([
+        sbWorkshop()
+          .from("qc_records")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .eq("job_id", jobId)
+          .order("created_at", { ascending: false })
+          .limit(1),
+        sbCore()
+          .from("files")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .eq("owner_type", "workshop.jobs")
+          .eq("owner_id", jobId)
+          .in("file_type", ["qc_before", "qc_after"])
+          .order("created_at", { ascending: true }),
+      ]);
+      if (recRes.error) throw recRes.error;
+      if (filesRes.error) throw filesRes.error;
+      const fileRows = (filesRes.data ?? []) as CoreFile[];
+      const paths = fileRows.map((r) => r.url);
+      const signed = await signPaths(paths);
+      const photos: QcPhoto[] = fileRows.map((r) => ({
+        id: r.id,
+        kind: r.file_type as "qc_before" | "qc_after",
+        path: r.url,
+        signedUrl: signed[r.url] ?? null,
+      }));
+      return {
+        record: ((recRes.data ?? [])[0] ?? null) as QcRecord | null,
+        photos,
+      };
+    },
+  });
+}
+
+export type SubmitQcInput = {
+  jobId: string;
+  inspectedBy: string;
+  passed: boolean;
+  notes: string;
+  reworkRequired: boolean;
+  reworkNotes: string;
+  beforePhoto: File | null;
+  afterPhoto: File | null;
+  currentReworkCount: number;
+};
+
+export function useSubmitQc(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: SubmitQcInput) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { data: userRes } = await supabase.auth.getUser();
+      const uploadedBy = userRes.user?.id ?? null;
+
+      const uploadOne = async (file: File, kind: "qc_before" | "qc_after") => {
+        const uuid =
+          (globalThis.crypto as any)?.randomUUID?.() ??
+          Math.random().toString(36).slice(2);
+        const path = `${workspaceId}/${input.jobId}/${kind}-${uuid}.${extOf(file.name)}`;
+        const { error: upErr } = await supabase.storage
+          .from(JOB_PHOTOS_BUCKET)
+          .upload(path, file, { contentType: file.type || undefined });
+        if (upErr) throw upErr;
+        const { error: fErr } = await sbCore().from("files").insert({
+          workspace_id: workspaceId,
+          owner_type: "workshop.jobs",
+          owner_id: input.jobId,
+          file_type: kind,
+          url: path,
+          status: "pending",
+          uploaded_by: uploadedBy,
+        });
+        if (fErr) throw fErr;
+      };
+
+      if (input.beforePhoto) await uploadOne(input.beforePhoto, "qc_before");
+      if (input.afterPhoto) await uploadOne(input.afterPhoto, "qc_after");
+
+      const { data, error } = await sbWorkshop()
+        .from("qc_records")
+        .insert({
+          workspace_id: workspaceId,
+          job_id: input.jobId,
+          inspected_by: input.inspectedBy,
+          passed: input.passed,
+          notes: input.notes || null,
+          rework_required: input.reworkRequired,
+          rework_notes: input.reworkRequired ? input.reworkNotes || null : null,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+
+      if (input.reworkRequired) {
+        const { error: jErr } = await sbWorkshop()
+          .from("jobs")
+          .update({ rework_count: (input.currentReworkCount ?? 0) + 1 })
+          .eq("id", input.jobId);
+        if (jErr) throw jErr;
+      }
+
+      return data as QcRecord;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["qc-record", workspaceId, vars.jobId] });
+      qc.invalidateQueries({ queryKey: ["job", workspaceId, vars.jobId] });
+    },
+  });
+}
+
+// ---- Release ----
+
+export function useReleaseJob(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ jobId, profileId }: { jobId: string; profileId: string }) => {
+      const { data, error } = await sbWorkshop()
+        .from("jobs")
+        .update({
+          released_at: new Date().toISOString(),
+          released_by: profileId,
+          repair_stage: "completed" as RepairStage,
+          status: "completed" as JobStatus,
+        })
+        .eq("id", jobId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as WorkshopJob;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["job", workspaceId, vars.jobId] });
+    },
+  });
+}
