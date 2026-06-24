@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Loader2, Plus, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import {
@@ -13,6 +13,15 @@ import {
   useUpdateWorkOrder,
   useWorkspaceProfiles,
   REPAIR_STAGES,
+  useRepairParts,
+  useAddPart,
+  useUpdatePartStatus,
+  useQcRecord,
+  useSubmitQc,
+  useReleaseJob,
+  PART_STATUS_ORDER,
+  type RepairPartStatus,
+  type RepairPart,
 } from "@/lib/jobs";
 import type {
   JobStatus,
@@ -398,6 +407,28 @@ function JobDetailPage() {
         </ul>
       </section>
 
+      {/* Parts Tracking */}
+      <PartsSection jobId={job.id} isStaff={isStaff} />
+
+      {/* Quality Control */}
+      <QcSection
+        jobId={job.id}
+        stage={stage}
+        isStaff={isStaff}
+        profileId={profile?.id ?? null}
+        reworkCount={job.rework_count ?? 0}
+      />
+
+      {/* Release */}
+      <ReleaseSection
+        jobId={job.id}
+        stage={stage}
+        isStaff={isStaff}
+        profileId={profile?.id ?? null}
+        releasedAt={job.released_at ?? null}
+        releasedBy={job.released_by ?? null}
+      />
+
       {/* Team assignment */}
       <section className="px-5 mt-4">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">Team Assignment</h2>
@@ -474,5 +505,486 @@ function JobDetailPage() {
         </section>
       )}
     </div>
+  );
+}
+
+// ============ Parts Tracking ============
+
+const partStatusStyle: Record<RepairPartStatus, string> = {
+  required: "bg-gray-200 text-gray-800",
+  ordered: "bg-yellow-200 text-yellow-900",
+  received: "bg-blue-200 text-blue-900",
+  installed: "bg-green-200 text-green-900",
+};
+
+function nextPartStatus(s: RepairPartStatus): RepairPartStatus {
+  const i = PART_STATUS_ORDER.indexOf(s);
+  return PART_STATUS_ORDER[(i + 1) % PART_STATUS_ORDER.length];
+}
+
+function PartsSection({ jobId, isStaff }: { jobId: string; isStaff: boolean }) {
+  const { workspaceId } = useWorkspace();
+  const partsQ = useRepairParts(workspaceId, jobId);
+  const add = useAddPart(workspaceId);
+  const upd = useUpdatePartStatus(workspaceId);
+
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [qty, setQty] = useState("1");
+  const [cost, setCost] = useState("");
+  const [supplier, setSupplier] = useState("");
+
+  const submit = async () => {
+    if (!name.trim()) {
+      toast.error("Part name required");
+      return;
+    }
+    try {
+      await add.mutateAsync({
+        job_id: jobId,
+        part_name: name.trim(),
+        quantity: Math.max(1, Number(qty) || 1),
+        unit_cost: cost.trim() === "" ? null : Number(cost),
+        supplier: supplier.trim() || null,
+      });
+      toast.success("Part added");
+      setName("");
+      setQty("1");
+      setCost("");
+      setSupplier("");
+      setShowForm(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  const cycle = async (p: RepairPart) => {
+    try {
+      await upd.mutateAsync({ id: p.id, jobId, status: nextPartStatus(p.status) });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  const parts = partsQ.data ?? [];
+
+  return (
+    <section className="px-5 mt-4">
+      <div className="flex items-center justify-between mb-2.5">
+        <h2 className="text-sm font-semibold tracking-tight">Parts</h2>
+        {isStaff && !showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add
+          </button>
+        )}
+      </div>
+
+      {showForm && (
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3 mb-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">New Part</p>
+            <button onClick={() => setShowForm(false)} className="text-muted-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Part name *"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              placeholder="Qty"
+              className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+            />
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              placeholder="Unit cost (RM)"
+              className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+            />
+          </div>
+          <input
+            value={supplier}
+            onChange={(e) => setSupplier(e.target.value)}
+            placeholder="Supplier (optional)"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+          />
+          <button
+            onClick={submit}
+            disabled={add.isPending}
+            className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {add.isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Save Part"}
+          </button>
+        </div>
+      )}
+
+      {partsQ.isLoading ? (
+        <div className="rounded-2xl border border-border bg-card p-4 text-center">
+          <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+        </div>
+      ) : parts.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
+          No parts yet.
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {parts.map((p) => (
+            <li key={p.id} className="rounded-2xl border border-border bg-card p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">{p.part_name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {p.quantity}x
+                    {p.unit_cost != null
+                      ? ` @ RM ${Number(p.unit_cost).toFixed(2)}`
+                      : ""}
+                  </p>
+                  {p.supplier && (
+                    <p className="text-[11px] text-muted-foreground mt-1">Supplier: {p.supplier}</p>
+                  )}
+                  {p.notes && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{p.notes}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => cycle(p)}
+                  disabled={upd.isPending}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${partStatusStyle[p.status]} disabled:opacity-60`}
+                >
+                  {p.status}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// ============ Quality Control ============
+
+function QcSection({
+  jobId,
+  stage,
+  isStaff,
+  profileId,
+  reworkCount,
+}: {
+  jobId: string;
+  stage: RepairStage;
+  isStaff: boolean;
+  profileId: string | null;
+  reworkCount: number;
+}) {
+  const { workspaceId } = useWorkspace();
+  const qcQ = useQcRecord(workspaceId, jobId);
+  const submit = useSubmitQc(workspaceId);
+
+  const [passed, setPassed] = useState(true);
+  const [notes, setNotes] = useState("");
+  const [reworkRequired, setReworkRequired] = useState(false);
+  const [reworkNotes, setReworkNotes] = useState("");
+  const [beforePhoto, setBeforePhoto] = useState<File | null>(null);
+  const [afterPhoto, setAfterPhoto] = useState<File | null>(null);
+
+  const available = stage === "qc" || stage === "completed";
+
+  if (!available) {
+    return (
+      <section className="px-5 mt-4">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Quality Control</h2>
+        <div className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
+          QC available when job reaches QC stage.
+        </div>
+      </section>
+    );
+  }
+
+  const handleSubmit = async () => {
+    if (!profileId) {
+      toast.error("Profile not loaded");
+      return;
+    }
+    try {
+      await submit.mutateAsync({
+        jobId,
+        inspectedBy: profileId,
+        passed,
+        notes,
+        reworkRequired,
+        reworkNotes,
+        beforePhoto,
+        afterPhoto,
+        currentReworkCount: reworkCount,
+      });
+      toast.success("QC submitted");
+      setNotes("");
+      setReworkNotes("");
+      setBeforePhoto(null);
+      setAfterPhoto(null);
+      setReworkRequired(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  const rec = qcQ.data?.record ?? null;
+  const photos = qcQ.data?.photos ?? [];
+  const before = photos.filter((p) => p.kind === "qc_before");
+  const after = photos.filter((p) => p.kind === "qc_after");
+
+  return (
+    <section className="px-5 mt-4">
+      <h2 className="text-sm font-semibold tracking-tight mb-2.5">Quality Control</h2>
+
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+        {qcQ.isLoading ? (
+          <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+        ) : rec ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  rec.passed
+                    ? "bg-[--color-success]/15 text-[--color-success]"
+                    : "bg-destructive/15 text-destructive"
+                }`}
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {rec.passed ? "Passed" : "Failed"}
+              </span>
+              {rec.rework_required && (
+                <span className="rounded-full bg-yellow-200 text-yellow-900 px-2.5 py-1 text-xs font-semibold">
+                  Rework required
+                </span>
+              )}
+            </div>
+            {rec.notes && <p className="text-sm whitespace-pre-wrap">{rec.notes}</p>}
+            {rec.rework_required && rec.rework_notes && (
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                Rework: {rec.rework_notes}
+              </p>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              {new Date(rec.created_at).toLocaleString()}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center">No QC record yet.</p>
+        )}
+
+        {(before.length > 0 || after.length > 0) && (
+          <div className="space-y-2 border-t border-border pt-3">
+            {before.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Before</p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {before.map((p) => (
+                    <a key={p.id} href={p.signedUrl ?? "#"} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                      <img src={p.signedUrl ?? ""} alt="QC before" className="h-20 w-20 rounded-xl object-cover border border-border bg-secondary" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            {after.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">After</p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {after.map((p) => (
+                    <a key={p.id} href={p.signedUrl ?? "#"} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                      <img src={p.signedUrl ?? ""} alt="QC after" className="h-20 w-20 rounded-xl object-cover border border-border bg-secondary" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isStaff && (
+        <div className="rounded-2xl border border-border bg-card p-4 mt-3 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            New QC Inspection
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs font-medium text-muted-foreground">
+              Before photo
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setBeforePhoto(e.target.files?.[0] ?? null)}
+                className="mt-1 block w-full text-xs"
+              />
+            </label>
+            <label className="text-xs font-medium text-muted-foreground">
+              After photo
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setAfterPhoto(e.target.files?.[0] ?? null)}
+                className="mt-1 block w-full text-xs"
+              />
+            </label>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                checked={passed}
+                onChange={() => setPassed(true)}
+              />
+              Passed
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                checked={!passed}
+                onChange={() => setPassed(false)}
+              />
+              Failed
+            </label>
+          </div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Notes"
+            rows={3}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+          />
+          <label className="inline-flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={reworkRequired}
+              onChange={(e) => setReworkRequired(e.target.checked)}
+            />
+            Rework required
+          </label>
+          {reworkRequired && (
+            <textarea
+              value={reworkNotes}
+              onChange={(e) => setReworkNotes(e.target.value)}
+              placeholder="Rework notes"
+              rows={2}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+            />
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={submit.isPending}
+            className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {submit.isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Submit QC"}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ============ Release ============
+
+function ReleaseSection({
+  jobId,
+  stage,
+  isStaff,
+  profileId,
+  releasedAt,
+  releasedBy,
+}: {
+  jobId: string;
+  stage: RepairStage;
+  isStaff: boolean;
+  profileId: string | null;
+  releasedAt: string | null;
+  releasedBy: string | null;
+}) {
+  const { workspaceId } = useWorkspace();
+  const qcQ = useQcRecord(workspaceId, jobId);
+  const release = useReleaseJob(workspaceId);
+  const releaserQ = useProfileById(releasedBy);
+
+  if (releasedAt) {
+    return (
+      <section className="px-5 mt-4">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Release</h2>
+        <div className="rounded-2xl border border-[--color-success]/40 bg-[--color-success]/10 p-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-[--color-success]" />
+            <p className="text-sm font-semibold text-[--color-success]">Released</p>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1.5">
+            {new Date(releasedAt).toLocaleString()}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Released by {releaserQ.data?.full_name ?? "…"}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const rec = qcQ.data?.record ?? null;
+  const ready = stage === "qc" && rec?.passed === true;
+
+  const handleRelease = async () => {
+    if (!profileId) {
+      toast.error("Profile not loaded");
+      return;
+    }
+    try {
+      await release.mutateAsync({ jobId, profileId });
+      toast.success("Vehicle released");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  return (
+    <section className="px-5 mt-4">
+      <h2 className="text-sm font-semibold tracking-tight mb-2.5">Release</h2>
+      {!ready ? (
+        <div className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
+          Job not ready for release.
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-border bg-card p-4">
+          {isStaff ? (
+            <button
+              onClick={handleRelease}
+              disabled={release.isPending}
+              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              {release.isPending ? (
+                <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+              ) : (
+                "Release Vehicle"
+              )}
+            </button>
+          ) : (
+            <p className="text-sm text-center text-muted-foreground">
+              Awaiting staff release.
+            </p>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
