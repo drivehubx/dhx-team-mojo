@@ -238,7 +238,7 @@ function SalaryEditor({
         <span className="text-lg font-semibold text-primary">{fmtMYR(net)}</span>
       </div>
 
-      {isStaff && (
+      {isOwner && (
         <button
           onClick={save}
           disabled={saving}
