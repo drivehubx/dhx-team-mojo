@@ -5,7 +5,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { useWorkspaceProfiles } from "@/lib/jobs";
 import { sbWorkshop, type WorkshopSalary, type CoreProfile } from "@/integrations/supabase/shared-schema";
-import { Wallet, Loader2, Save } from "lucide-react";
+import { useAdvances, useRequestAdvance, type AdvanceWithProfile } from "@/lib/advances";
+import { Wallet, Loader2, Save, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/salary")({
   head: () => ({
