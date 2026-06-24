@@ -1,10 +1,19 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
-import { useJob, useUpdateJobStatus } from "@/lib/jobs";
-import type { JobStatus } from "@/integrations/supabase/shared-schema";
+import {
+  useJob,
+  useUpdateJobStatus,
+  useJobPhotos,
+  useApproveEstimate,
+  useProfileById,
+} from "@/lib/jobs";
+import type {
+  JobStatus,
+  RepairStage,
+  IntakeChecklist,
+} from "@/integrations/supabase/shared-schema";
 
 export const Route = createFileRoute("/jobs/$id")({
   head: ({ params }) => ({
@@ -31,11 +40,44 @@ const statusLabel: Record<JobStatus, string> = {
   cancelled: "Cancelled",
 };
 
+const stageStyle: Record<RepairStage, { bg: string; label: string }> = {
+  queued: { bg: "bg-gray-200 text-gray-800", label: "Queued" },
+  disassembly: { bg: "bg-orange-200 text-orange-900", label: "Disassembly" },
+  panel_repair: { bg: "bg-yellow-200 text-yellow-900", label: "Panel Repair" },
+  putty: { bg: "bg-yellow-200 text-yellow-900", label: "Putty" },
+  primer: { bg: "bg-blue-200 text-blue-900", label: "Primer" },
+  paint: { bg: "bg-blue-200 text-blue-900", label: "Paint" },
+  polish: { bg: "bg-teal-200 text-teal-900", label: "Polish" },
+  qc: { bg: "bg-purple-200 text-purple-900", label: "QC" },
+  completed: { bg: "bg-green-200 text-green-900", label: "Completed" },
+};
+
+const AREA_LABELS: Record<string, string> = {
+  front: "Front",
+  rear: "Rear",
+  left: "Left Side",
+  right: "Right Side",
+  roof: "Roof",
+  interior: "Interior",
+};
+
+function formatMyr(n: number | null | undefined): string {
+  if (n == null) return "—";
+  return new Intl.NumberFormat("en-MY", {
+    style: "currency",
+    currency: "MYR",
+  }).format(Number(n));
+}
+
 function JobDetailPage() {
   const { id } = Route.useParams();
-  const { workspaceId, isStaff } = useWorkspace();
+  const { workspaceId, profile, isStaff } = useWorkspace();
   const q = useJob(workspaceId, id);
+  const photosQ = useJobPhotos(workspaceId, id);
   const update = useUpdateJobStatus(workspaceId);
+  const approve = useApproveEstimate(workspaceId);
+
+  const approverQ = useProfileById(q.data?.estimate_approved_by ?? null);
 
   if (q.isLoading) {
     return (
@@ -46,6 +88,9 @@ function JobDetailPage() {
   }
   if (!q.data) throw notFound();
   const job = q.data;
+  const stage = (job.repair_stage ?? "queued") as RepairStage;
+  const stageMeta = stageStyle[stage];
+  const checklist = (job.intake_checklist ?? {}) as IntakeChecklist;
 
   const setStatus = async (s: JobStatus) => {
     try {
@@ -55,6 +100,18 @@ function JobDetailPage() {
       toast.error(e?.message ?? "Failed");
     }
   };
+
+  const handleApprove = async () => {
+    if (!profile?.id) return;
+    try {
+      await approve.mutateAsync({ jobId: job.id, profileId: profile.id });
+      toast.success("Estimate approved");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  const photos = photosQ.data ?? [];
 
   return (
     <div className="pb-12">
@@ -74,21 +131,121 @@ function JobDetailPage() {
               {[job.vehicle?.make, job.vehicle?.model].filter(Boolean).join(" ") || "Vehicle"}
             </h1>
           </div>
-          <span className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider">
-            {statusLabel[job.status]}
+          <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${stageMeta.bg}`}>
+            {stageMeta.label}
           </span>
         </div>
       </header>
 
+      {/* Intake Photos */}
+      <section className="px-5 mt-4">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Intake Photos</h2>
+        {photosQ.isLoading ? (
+          <div className="rounded-2xl border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+          </div>
+        ) : photos.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
+            No photos uploaded.
+          </div>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+            {photos.map((p) => (
+              <a
+                key={p.id}
+                href={p.signedUrl ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0"
+              >
+                <img
+                  src={p.signedUrl ?? ""}
+                  alt="Intake"
+                  className="h-24 w-24 rounded-xl object-cover border border-border bg-secondary"
+                />
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Damage Info */}
       <section className="px-5 mt-4">
         <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Description</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Damage</p>
           <p className="mt-2 text-sm whitespace-pre-wrap">
-            {job.description || <span className="text-muted-foreground">No description.</span>}
+            {job.damage_description || (
+              <span className="text-muted-foreground">No description.</span>
+            )}
           </p>
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+            <span className="text-xs text-muted-foreground">Estimate</span>
+            <span className="text-sm font-semibold">{formatMyr(job.estimate_amount)}</span>
+          </div>
         </div>
       </section>
 
+      {/* Assessment (staff only) */}
+      {isStaff && (
+        <section className="px-5 mt-4">
+          <h2 className="text-sm font-semibold tracking-tight mb-2.5">Assessment</h2>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            {job.estimate_approved ? (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[--color-success]/15 text-[--color-success] px-2.5 py-1 text-xs font-semibold">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Estimate Approved
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  by {approverQ.data?.full_name ?? "…"}
+                </span>
+              </div>
+            ) : (
+              <button
+                onClick={handleApprove}
+                disabled={approve.isPending}
+                className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                {approve.isPending ? (
+                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                ) : (
+                  "Approve Estimate"
+                )}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Intake checklist */}
+      <section className="px-5 mt-4">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Intake Checklist</h2>
+        <ul className="space-y-2">
+          {Object.entries(AREA_LABELS).map(([key, label]) => {
+            const v = checklist[key as keyof IntakeChecklist];
+            return (
+              <li key={key} className="rounded-2xl border border-border bg-card p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{label}</span>
+                  <span
+                    className={`text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 ${
+                      v?.checked
+                        ? "bg-[--color-success]/15 text-[--color-success]"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {v?.checked ? "Checked" : "Not checked"}
+                  </span>
+                </div>
+                {v?.note && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">{v.note}</p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {/* Team assignment */}
       <section className="px-5 mt-4">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">Team Assignment</h2>
         {job.workers.length === 0 ? (
@@ -166,6 +323,3 @@ function JobDetailPage() {
     </div>
   );
 }
-
-// keep AppHeader import alive (used elsewhere in tree)
-export const _h = AppHeader;
