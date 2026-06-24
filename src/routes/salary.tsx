@@ -5,7 +5,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { useWorkspaceProfiles } from "@/lib/jobs";
 import { sbWorkshop, type WorkshopSalary, type CoreProfile } from "@/integrations/supabase/shared-schema";
-import { Wallet, Loader2, Save } from "lucide-react";
+import { useAdvances, useRequestAdvance, type AdvanceWithProfile } from "@/lib/advances";
+import { Wallet, Loader2, Save, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/salary")({
   head: () => ({
@@ -30,7 +31,7 @@ const thisPeriod = () => {
 };
 
 function SalaryPage() {
-  const { profile, workspaceId, isStaff, isOwner, isManager } = useWorkspace();
+  const { profile, workspaceId, isStaff, isOwner, isManager, isWorker } = useWorkspace();
   const profilesQ = useWorkspaceProfiles(workspaceId);
 
   const [period, setPeriod] = useState(thisPeriod());
@@ -125,6 +126,10 @@ function SalaryPage() {
             onSaved={(s) => setSalary(s)}
           />
         )}
+
+        {isWorker && profile && workspaceId && (
+          <CrewAdvanceSection workspaceId={workspaceId} userId={profile.id} />
+        )}
       </div>
     </div>
   );
@@ -147,8 +152,7 @@ function SalaryEditor({
   isManager: boolean;
   onSaved: (s: WorkshopSalary) => void;
 }) {
-  const isStaff = isOwner || isManager;
-  const readOnly = !isStaff;
+  const readOnly = !isOwner;
 
   const [basic, setBasic] = useState(initial?.basic ?? 0);
   const [allowances, setAllowances] = useState(initial?.allowances ?? 0);
@@ -198,11 +202,18 @@ function SalaryEditor({
           <h2 className="text-sm font-semibold">{employee?.full_name ?? "—"}</h2>
           <p className="text-[11px] text-muted-foreground">{period}</p>
         </div>
-        {initial?.paid && (
-          <span className="rounded-full bg-[--color-success]/15 px-2 py-0.5 text-[10px] font-semibold text-[--color-success]">
-            PAID
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isManager && !isOwner && (
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              VIEW ONLY
+            </span>
+          )}
+          {initial?.paid && (
+            <span className="rounded-full bg-[--color-success]/15 px-2 py-0.5 text-[10px] font-semibold text-[--color-success]">
+              PAID
+            </span>
+          )}
+        </div>
       </header>
 
       <Field label="Basic" value={basic} onChange={setBasic} disabled={readOnly} />
@@ -221,7 +232,7 @@ function SalaryEditor({
         />
       </label>
 
-      {isStaff && (
+      {isOwner && (
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -238,7 +249,7 @@ function SalaryEditor({
         <span className="text-lg font-semibold text-primary">{fmtMYR(net)}</span>
       </div>
 
-      {isStaff && (
+      {isOwner && (
         <button
           onClick={save}
           disabled={saving}
@@ -276,5 +287,142 @@ function Field({
         className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm disabled:opacity-60"
       />
     </label>
+  );
+}
+
+function CrewAdvanceSection({ workspaceId, userId }: { workspaceId: string; userId: string }) {
+  const [amount, setAmount] = useState<string>("");
+  const [reason, setReason] = useState("");
+  const req = useRequestAdvance(workspaceId, userId);
+  const histQ = useAdvances(workspaceId, { mineOnly: true, userId });
+
+  const presets = [300, 500, 1000];
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const a = Number(amount);
+    if (!a || a <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+    try {
+      await req.mutateAsync({ amount: a, reason });
+      toast.success("Request submitted");
+      setAmount("");
+      setReason("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
+  };
+
+  return (
+    <>
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
+        <div className="flex items-center gap-2">
+          <Plus className="h-4 w-4 text-primary" />
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Request Advance
+          </h2>
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            {presets.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setAmount(String(p))}
+                className={`rounded-lg border px-2 py-2 text-sm font-semibold transition-colors ${
+                  Number(amount) === p
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-background text-foreground"
+                }`}
+              >
+                RM {p.toLocaleString()}
+              </button>
+            ))}
+          </div>
+
+          <label className="block">
+            <span className="text-[11px] text-muted-foreground">Or enter amount</span>
+            <div className="mt-1 flex items-center rounded-lg border border-border bg-background px-3">
+              <span className="text-sm text-muted-foreground">RM</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                className="w-full bg-transparent px-2 py-2 text-sm outline-none"
+              />
+            </div>
+          </label>
+
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={2}
+            placeholder="Reason (optional)"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          />
+
+          <button
+            type="submit"
+            disabled={req.isPending}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {req.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Submit Request
+          </button>
+        </form>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          My Advance History
+        </h2>
+        {histQ.isLoading ? (
+          <Loader2 className="mx-auto h-4 w-4 animate-spin text-muted-foreground" />
+        ) : (histQ.data ?? []).length === 0 ? (
+          <p className="text-center text-sm text-muted-foreground py-4">No requests yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {(histQ.data ?? []).map((a: AdvanceWithProfile) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between rounded-lg border border-border bg-background p-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{fmtMYR(Number(a.amount))}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {new Date(a.created_at).toLocaleDateString()}
+                    {a.reason ? ` · ${a.reason}` : ""}
+                  </p>
+                </div>
+                <StatusBadge status={a.status} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    pending: "bg-amber-500/15 text-amber-600",
+    approved: "bg-[--color-success]/15 text-[--color-success]",
+    rejected: "bg-destructive/15 text-destructive",
+  };
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+        map[status] ?? "bg-secondary text-muted-foreground"
+      }`}
+    >
+      {status}
+    </span>
   );
 }
