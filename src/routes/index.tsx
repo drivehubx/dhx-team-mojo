@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Wrench, Wallet, HandCoins, Users, ArrowRight } from "lucide-react";
+import { Wrench, Wallet, HandCoins, Users, ArrowRight, ClipboardCheck, AlertCircle, CheckCircle, CalendarClock, RotateCcw, Car, Gauge } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { useJobs } from "@/lib/jobs";
@@ -30,11 +30,29 @@ function Dashboard() {
 
   const jobs = jobsQ.data ?? [];
   const open = jobs.filter((j) => j.status === "open" || j.status === "in_progress");
+  const completed = jobs.filter((j) => j.status === "completed");
   const advances = advancesQ.data ?? [];
   const pending = advances.filter((a) => a.status === "pending");
   const approvedTotal = advances
     .filter((a) => a.status === "approved")
     .reduce((s, a) => s + Number(a.amount), 0);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const readyForQc = jobs.filter((j) => j.repair_stage === "qc" && j.status !== "completed").length;
+  const delayed = jobs.filter((j) => j.due_date && j.due_date < today && !j.released_at && j.status !== "completed").length;
+  const releasedToday = jobs.filter((j) => j.released_at && j.released_at.slice(0, 10) === today).length;
+
+  const completedReleased = completed.filter((j) => j.released_at);
+  const avgRepairDays = completedReleased.length
+    ? (completedReleased.reduce((s, j) => s + (new Date(j.released_at!).getTime() - new Date(j.created_at).getTime()) / 86400000, 0) / completedReleased.length).toFixed(1)
+    : null;
+  const reworkRate = completed.length > 0 ? Math.round(completed.reduce((s, j) => s + (j.rework_count || 0), 0) / completed.length * 100) : null;
+
+  const activeHours = open.reduce((s, j) => s + (Date.now() - new Date(j.created_at).getTime()) / 3600000, 0);
+  const downtimeHrs = Math.round(activeHours);
+  const vehiclesInRepair = new Set(open.map((j) => j.vehicle_id)).size;
+  const totalJobs = jobs.length;
+  const capacity = totalJobs > 0 ? `${open.length}/${totalJobs}` : `${open.length}`;
 
   return (
     <div>
@@ -44,12 +62,34 @@ function Dashboard() {
       />
 
       <div className="px-5">
-        <div className="grid grid-cols-2 gap-3">
-          <KpiCard label="Active Jobs" value={String(open.length)} icon={Wrench} accent="bg-primary/10 text-primary" />
-          <KpiCard label="Pending Advances" value={String(pending.length)} icon={HandCoins} accent="bg-[--color-warning]/15 text-[--color-warning]" />
-          <KpiCard label="Approved Advances" value={fmtMYR(approvedTotal)} icon={Wallet} accent="bg-[--color-success]/15 text-[--color-success]" />
-          <KpiCard label="Team" value="—" icon={Users} accent="bg-secondary text-foreground" linkTo="/team" />
-        </div>
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Operations</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <KpiCard label="Active Jobs" value={String(open.length)} icon={Wrench} accent="bg-primary/10 text-primary" />
+            <KpiCard label="Ready for QC" value={String(readyForQc)} icon={ClipboardCheck} accent="bg-purple-500/10 text-purple-500" />
+            <KpiCard label="Delayed Jobs" value={String(delayed)} icon={AlertCircle} accent="bg-[--color-warning]/15 text-[--color-warning]" />
+            <KpiCard label="Released Today" value={String(releasedToday)} icon={CheckCircle} accent="bg-[--color-success]/15 text-[--color-success]" />
+          </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Performance</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <KpiCard label="Avg Repair Days" value={avgRepairDays ?? "—"} icon={CalendarClock} accent="bg-blue-500/10 text-blue-500" />
+            <KpiCard label="Rework Rate" value={reworkRate !== null ? `${reworkRate}%` : "—"} icon={RotateCcw} accent="bg-orange-500/10 text-orange-500" />
+            <KpiCard label="Pending Advances" value={String(pending.length)} icon={HandCoins} accent="bg-[--color-warning]/15 text-[--color-warning]" />
+            <KpiCard label="Approved Advances" value={fmtMYR(approvedTotal)} icon={Wallet} accent="bg-[--color-success]/15 text-[--color-success]" />
+          </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Fleet Impact</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <KpiCard label="Downtime Hrs" value={String(downtimeHrs)} icon={Gauge} accent="bg-destructive/10 text-destructive" />
+            <KpiCard label="Vehicles In Repair" value={String(vehiclesInRepair)} icon={Car} accent="bg-primary/10 text-primary" />
+            <KpiCard label="Capacity" value={capacity} icon={Users} accent="bg-secondary text-foreground" />
+          </div>
+        </section>
       </div>
 
       <section className="mt-6 px-5">
