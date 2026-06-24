@@ -198,11 +198,18 @@ function SalaryEditor({
           <h2 className="text-sm font-semibold">{employee?.full_name ?? "—"}</h2>
           <p className="text-[11px] text-muted-foreground">{period}</p>
         </div>
-        {initial?.paid && (
-          <span className="rounded-full bg-[--color-success]/15 px-2 py-0.5 text-[10px] font-semibold text-[--color-success]">
-            PAID
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isManager && !isOwner && (
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              VIEW ONLY
+            </span>
+          )}
+          {initial?.paid && (
+            <span className="rounded-full bg-[--color-success]/15 px-2 py-0.5 text-[10px] font-semibold text-[--color-success]">
+              PAID
+            </span>
+          )}
+        </div>
       </header>
 
       <Field label="Basic" value={basic} onChange={setBasic} disabled={readOnly} />
