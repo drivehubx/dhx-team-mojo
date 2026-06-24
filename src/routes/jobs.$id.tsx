@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Check, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import {
@@ -8,6 +9,10 @@ import {
   useJobPhotos,
   useApproveEstimate,
   useProfileById,
+  useAdvanceStage,
+  useUpdateWorkOrder,
+  useWorkspaceProfiles,
+  REPAIR_STAGES,
 } from "@/lib/jobs";
 import type {
   JobStatus,
@@ -76,8 +81,27 @@ function JobDetailPage() {
   const photosQ = useJobPhotos(workspaceId, id);
   const update = useUpdateJobStatus(workspaceId);
   const approve = useApproveEstimate(workspaceId);
+  const advance = useAdvanceStage(workspaceId);
+  const updateWO = useUpdateWorkOrder(workspaceId);
+  const profilesQ = useWorkspaceProfiles(workspaceId);
 
   const approverQ = useProfileById(q.data?.estimate_approved_by ?? null);
+
+  // Work order local state
+  const [leadId, setLeadId] = useState<string>("");
+  const [laborHours, setLaborHours] = useState<string>("");
+  const [dueDate, setDueDate] = useState<string>("");
+
+  useEffect(() => {
+    if (q.data) {
+      setLeadId(q.data.assigned_lead_id ?? "");
+      setLaborHours(
+        q.data.labor_hours_estimate != null ? String(q.data.labor_hours_estimate) : "",
+      );
+      setDueDate(q.data.due_date ?? "");
+    }
+  }, [q.data?.id, q.data?.assigned_lead_id, q.data?.labor_hours_estimate, q.data?.due_date]);
+
 
   if (q.isLoading) {
     return (
@@ -111,7 +135,37 @@ function JobDetailPage() {
     }
   };
 
+  const handleAdvance = async () => {
+    try {
+      const res = await advance.mutateAsync({
+        jobId: job.id,
+        currentStage: stage,
+        startedAt: job.started_at ?? null,
+      });
+      toast.success(`Stage: ${stageStyle[res.next].label}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  const handleSaveWO = async () => {
+    try {
+      await updateWO.mutateAsync({
+        jobId: job.id,
+        assigned_lead_id: leadId || null,
+        labor_hours_estimate: laborHours.trim() === "" ? null : Number(laborHours),
+        due_date: dueDate || null,
+      });
+      toast.success("Work order saved");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  const stageIndex = REPAIR_STAGES.indexOf(stage);
+  const isFinalStage = stage === "completed";
   const photos = photosQ.data ?? [];
+
 
   return (
     <div className="pb-12">
@@ -185,7 +239,48 @@ function JobDetailPage() {
         </div>
       </section>
 
+      {/* Repair Stage Tracker */}
+      <section className="px-5 mt-4">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Repair Stage</h2>
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+          {REPAIR_STAGES.map((s, i) => {
+            const meta = stageStyle[s];
+            const isCurrent = i === stageIndex;
+            const isDone = i < stageIndex;
+            return (
+              <span
+                key={s}
+                className={`shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider border ${
+                  isCurrent
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : isDone
+                      ? "bg-muted text-muted-foreground border-border opacity-70"
+                      : "bg-card text-muted-foreground border-border"
+                }`}
+              >
+                {isDone && <Check className="h-3 w-3" />}
+                {meta.label}
+              </span>
+            );
+          })}
+        </div>
+        {isStaff && !isFinalStage && (
+          <button
+            onClick={handleAdvance}
+            disabled={advance.isPending}
+            className="mt-3 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {advance.isPending ? (
+              <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+            ) : (
+              "Advance Stage"
+            )}
+          </button>
+        )}
+      </section>
+
       {/* Assessment (staff only) */}
+
       {isStaff && (
         <section className="px-5 mt-4">
           <h2 className="text-sm font-semibold tracking-tight mb-2.5">Assessment</h2>
@@ -216,7 +311,65 @@ function JobDetailPage() {
         </section>
       )}
 
+      {/* Work Order (staff only) */}
+      {isStaff && (
+        <section className="px-5 mt-4">
+          <h2 className="text-sm font-semibold tracking-tight mb-2.5">Work Order</h2>
+          <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Crew Lead</label>
+              <select
+                value={leadId}
+                onChange={(e) => setLeadId(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+              >
+                <option value="">— Unassigned —</option>
+                {(profilesQ.data ?? []).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Labor Estimate (hours)</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                min="0"
+                value={laborHours}
+                onChange={(e) => setLaborHours(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+                placeholder="e.g. 8"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Due Date</label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+              />
+            </div>
+            <button
+              onClick={handleSaveWO}
+              disabled={updateWO.isPending}
+              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              {updateWO.isPending ? (
+                <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+              ) : (
+                "Save Work Order"
+              )}
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* Intake checklist */}
+
       <section className="px-5 mt-4">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">Intake Checklist</h2>
         <ul className="space-y-2">

@@ -326,3 +326,82 @@ export function useApproveEstimate(workspaceId: string | null) {
     },
   });
 }
+
+export const REPAIR_STAGES: RepairStage[] = [
+  "queued",
+  "disassembly",
+  "panel_repair",
+  "putty",
+  "primer",
+  "paint",
+  "polish",
+  "qc",
+  "completed",
+];
+
+export function useAdvanceStage(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      jobId,
+      currentStage,
+      startedAt,
+    }: {
+      jobId: string;
+      currentStage: RepairStage;
+      startedAt: string | null;
+    }) => {
+      const idx = REPAIR_STAGES.indexOf(currentStage);
+      if (idx < 0 || idx >= REPAIR_STAGES.length - 1) {
+        throw new Error("Already at final stage");
+      }
+      const next = REPAIR_STAGES[idx + 1];
+      const patch: Record<string, unknown> = { repair_stage: next };
+      if (next === "disassembly" && !startedAt) patch.started_at = new Date().toISOString();
+      if (next === "completed") patch.completed_at = new Date().toISOString();
+      const { data, error } = await sbWorkshop()
+        .from("jobs")
+        .update(patch)
+        .eq("id", jobId)
+        .select()
+        .single();
+      if (error) throw error;
+      return { job: data as WorkshopJob, next };
+    },
+    onSuccess: (res, vars) => {
+      qc.invalidateQueries({ queryKey: ["jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["job", workspaceId, vars.jobId] });
+    },
+  });
+}
+
+export type WorkOrderInput = {
+  jobId: string;
+  assigned_lead_id: string | null;
+  labor_hours_estimate: number | null;
+  due_date: string | null;
+};
+
+export function useUpdateWorkOrder(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: WorkOrderInput) => {
+      const { data, error } = await sbWorkshop()
+        .from("jobs")
+        .update({
+          assigned_lead_id: input.assigned_lead_id,
+          labor_hours_estimate: input.labor_hours_estimate,
+          due_date: input.due_date,
+        })
+        .eq("id", input.jobId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as WorkshopJob;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["job", workspaceId, vars.jobId] });
+    },
+  });
+}
