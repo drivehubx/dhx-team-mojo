@@ -179,7 +179,7 @@ function SalaryEditor({
     };
     const { data, error } = await sbWorkshop()
       .from("salaries")
-      .upsert(payload, { onConflict: "workspace_id,profile_id,period" })
+      .upsert(payload, { onConflict: "profile_id,period" })
       .select()
       .single();
     setSaving(false);
