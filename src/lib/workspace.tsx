@@ -25,6 +25,7 @@ export type WorkspaceState = {
   isOwner: boolean;
   isManager: boolean;
   isWorker: boolean;
+  isCrew: boolean;
   isStaff: boolean;
   refresh: () => Promise<void>;
 };
@@ -91,7 +92,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const value = useMemo<WorkspaceState>(() => {
     const isOwner = role === "owner";
     const isManager = role === "manager";
-    const isWorker = role === "worker";
+    const isWorker = role === "worker" || role === "crew";
+    const isCrew = role === "crew" || role === "worker";
     return {
       status,
       error,
@@ -101,6 +103,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       isOwner,
       isManager,
       isWorker,
+      isCrew,
       isStaff: isOwner || isManager,
       refresh: async () => {
         if (user) await load(user.id);
