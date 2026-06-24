@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, User, Languages, KeyRound, LogOut, FlaskConical, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, User, KeyRound, LogOut, FlaskConical, Check } from "lucide-react";
 import { toast } from "sonner";
-import { useT, LanguagePicker } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,7 +34,6 @@ function SettingsPage() {
   const { t, tr } = useT();
   const router = useRouter();
   const { signOut } = useAuth();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [devRole, setDevRole] = useState<DevRole | null>(null);
   const isDev = import.meta.env.DEV;
@@ -82,9 +81,6 @@ function SettingsPage() {
           <Link to="/profile">
             <Row icon={User} label={tr("Profile")} />
           </Link>
-          <button onClick={() => setPickerOpen(true)} className="w-full text-left">
-            <Row icon={Languages} label={tr("Change Language")} />
-          </button>
           <button onClick={() => toast.info(tr("Password change coming soon"))} className="w-full text-left">
             <Row icon={KeyRound} label={tr("Change Password")} />
           </button>
@@ -135,8 +131,6 @@ function SettingsPage() {
       )}
 
       <p className="mt-6 mb-4 text-center text-[11px] text-muted-foreground">{t("common.brand")} · v1.0</p>
-
-      {pickerOpen && <LanguagePicker onClose={() => setPickerOpen(false)} />}
 
       <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>
         <AlertDialogContent>
