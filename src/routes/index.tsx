@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Wrench, Wallet, HandCoins, Users, ArrowRight } from "lucide-react";
+import { Wrench, Wallet, HandCoins, Users, ArrowRight, ClipboardCheck, AlertCircle, CheckCircle, CalendarClock, RotateCcw, Car, Gauge } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { useJobs } from "@/lib/jobs";
