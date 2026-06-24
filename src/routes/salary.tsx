@@ -126,6 +126,10 @@ function SalaryPage() {
             onSaved={(s) => setSalary(s)}
           />
         )}
+
+        {isWorker && profile && workspaceId && (
+          <CrewAdvanceSection workspaceId={workspaceId} userId={profile.id} />
+        )}
       </div>
     </div>
   );
