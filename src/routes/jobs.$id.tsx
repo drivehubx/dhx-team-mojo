@@ -239,7 +239,48 @@ function JobDetailPage() {
         </div>
       </section>
 
+      {/* Repair Stage Tracker */}
+      <section className="px-5 mt-4">
+        <h2 className="text-sm font-semibold tracking-tight mb-2.5">Repair Stage</h2>
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+          {REPAIR_STAGES.map((s, i) => {
+            const meta = stageStyle[s];
+            const isCurrent = i === stageIndex;
+            const isDone = i < stageIndex;
+            return (
+              <span
+                key={s}
+                className={`shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider border ${
+                  isCurrent
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : isDone
+                      ? "bg-muted text-muted-foreground border-border opacity-70"
+                      : "bg-card text-muted-foreground border-border"
+                }`}
+              >
+                {isDone && <Check className="h-3 w-3" />}
+                {meta.label}
+              </span>
+            );
+          })}
+        </div>
+        {isStaff && !isFinalStage && (
+          <button
+            onClick={handleAdvance}
+            disabled={advance.isPending}
+            className="mt-3 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {advance.isPending ? (
+              <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+            ) : (
+              "Advance Stage"
+            )}
+          </button>
+        )}
+      </section>
+
       {/* Assessment (staff only) */}
+
       {isStaff && (
         <section className="px-5 mt-4">
           <h2 className="text-sm font-semibold tracking-tight mb-2.5">Assessment</h2>
