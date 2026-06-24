@@ -407,6 +407,28 @@ function JobDetailPage() {
         </ul>
       </section>
 
+      {/* Parts Tracking */}
+      <PartsSection jobId={job.id} isStaff={isStaff} />
+
+      {/* Quality Control */}
+      <QcSection
+        jobId={job.id}
+        stage={stage}
+        isStaff={isStaff}
+        profileId={profile?.id ?? null}
+        reworkCount={job.rework_count ?? 0}
+      />
+
+      {/* Release */}
+      <ReleaseSection
+        jobId={job.id}
+        stage={stage}
+        isStaff={isStaff}
+        profileId={profile?.id ?? null}
+        releasedAt={job.released_at ?? null}
+        releasedBy={job.released_by ?? null}
+      />
+
       {/* Team assignment */}
       <section className="px-5 mt-4">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">Team Assignment</h2>
