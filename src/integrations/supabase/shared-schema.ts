@@ -6,7 +6,7 @@ import { supabase } from "./client";
 
 export type UUID = string;
 
-export type AppRole = "owner" | "manager" | "worker";
+export type AppRole = "owner" | "manager" | "worker" | "crew";
 export type FileStatus = "pending" | "approved" | "rejected";
 export type AdvanceStatus = "pending" | "approved" | "rejected";
 export type JobStatus = "open" | "in_progress" | "completed" | "cancelled";
