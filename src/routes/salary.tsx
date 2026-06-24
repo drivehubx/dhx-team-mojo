@@ -148,8 +148,7 @@ function SalaryEditor({
   isManager: boolean;
   onSaved: (s: WorkshopSalary) => void;
 }) {
-  const isStaff = isOwner || isManager;
-  const readOnly = !isStaff;
+  const readOnly = !isOwner;
 
   const [basic, setBasic] = useState(initial?.basic ?? 0);
   const [allowances, setAllowances] = useState(initial?.allowances ?? 0);
