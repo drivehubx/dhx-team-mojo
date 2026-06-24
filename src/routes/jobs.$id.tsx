@@ -81,8 +81,27 @@ function JobDetailPage() {
   const photosQ = useJobPhotos(workspaceId, id);
   const update = useUpdateJobStatus(workspaceId);
   const approve = useApproveEstimate(workspaceId);
+  const advance = useAdvanceStage(workspaceId);
+  const updateWO = useUpdateWorkOrder(workspaceId);
+  const profilesQ = useWorkspaceProfiles(workspaceId);
 
   const approverQ = useProfileById(q.data?.estimate_approved_by ?? null);
+
+  // Work order local state
+  const [leadId, setLeadId] = useState<string>("");
+  const [laborHours, setLaborHours] = useState<string>("");
+  const [dueDate, setDueDate] = useState<string>("");
+
+  useEffect(() => {
+    if (q.data) {
+      setLeadId(q.data.assigned_lead_id ?? "");
+      setLaborHours(
+        q.data.labor_hours_estimate != null ? String(q.data.labor_hours_estimate) : "",
+      );
+      setDueDate(q.data.due_date ?? "");
+    }
+  }, [q.data?.id, q.data?.assigned_lead_id, q.data?.labor_hours_estimate, q.data?.due_date]);
+
 
   if (q.isLoading) {
     return (
