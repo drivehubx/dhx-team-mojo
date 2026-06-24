@@ -135,7 +135,37 @@ function JobDetailPage() {
     }
   };
 
+  const handleAdvance = async () => {
+    try {
+      const res = await advance.mutateAsync({
+        jobId: job.id,
+        currentStage: stage,
+        startedAt: job.started_at ?? null,
+      });
+      toast.success(`Stage: ${stageStyle[res.next].label}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  const handleSaveWO = async () => {
+    try {
+      await updateWO.mutateAsync({
+        jobId: job.id,
+        assigned_lead_id: leadId || null,
+        labor_hours_estimate: laborHours.trim() === "" ? null : Number(laborHours),
+        due_date: dueDate || null,
+      });
+      toast.success("Work order saved");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  const stageIndex = REPAIR_STAGES.indexOf(stage);
+  const isFinalStage = stage === "completed";
   const photos = photosQ.data ?? [];
+
 
   return (
     <div className="pb-12">
