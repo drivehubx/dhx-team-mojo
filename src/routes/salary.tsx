@@ -31,7 +31,7 @@ const thisPeriod = () => {
 };
 
 function SalaryPage() {
-  const { profile, workspaceId, isStaff, isOwner, isManager } = useWorkspace();
+  const { profile, workspaceId, isStaff, isOwner, isManager, isWorker } = useWorkspace();
   const profilesQ = useWorkspaceProfiles(workspaceId);
 
   const [period, setPeriod] = useState(thisPeriod());
