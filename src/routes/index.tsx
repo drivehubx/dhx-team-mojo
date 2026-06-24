@@ -30,11 +30,29 @@ function Dashboard() {
 
   const jobs = jobsQ.data ?? [];
   const open = jobs.filter((j) => j.status === "open" || j.status === "in_progress");
+  const completed = jobs.filter((j) => j.status === "completed");
   const advances = advancesQ.data ?? [];
   const pending = advances.filter((a) => a.status === "pending");
   const approvedTotal = advances
     .filter((a) => a.status === "approved")
     .reduce((s, a) => s + Number(a.amount), 0);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const readyForQc = jobs.filter((j) => j.repair_stage === "qc" && j.status !== "completed").length;
+  const delayed = jobs.filter((j) => j.due_date && j.due_date < today && !j.released_at && j.status !== "completed").length;
+  const releasedToday = jobs.filter((j) => j.released_at && j.released_at.slice(0, 10) === today).length;
+
+  const completedReleased = completed.filter((j) => j.released_at);
+  const avgRepairDays = completedReleased.length
+    ? (completedReleased.reduce((s, j) => s + (new Date(j.released_at!).getTime() - new Date(j.created_at).getTime()) / 86400000, 0) / completedReleased.length).toFixed(1)
+    : null;
+  const reworkRate = completed.length > 0 ? Math.round(completed.reduce((s, j) => s + (j.rework_count || 0), 0) / completed.length * 100) : null;
+
+  const activeHours = open.reduce((s, j) => s + (Date.now() - new Date(j.created_at).getTime()) / 3600000, 0);
+  const downtimeHrs = Math.round(activeHours);
+  const vehiclesInRepair = new Set(open.map((j) => j.vehicle_id)).size;
+  const totalJobs = jobs.length;
+  const capacity = totalJobs > 0 ? `${open.length}/${totalJobs}` : `${open.length}`;
 
   return (
     <div>
