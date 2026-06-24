@@ -6,7 +6,6 @@ import {
   IdCard,
   Settings,
   ChevronRight,
-  Languages,
   X,
   User as UserIcon,
   Camera,
@@ -14,7 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useT, LANGS, LanguagePicker } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,15 +44,13 @@ function initialsOf(name: string) {
 }
 
 function ProfilePage() {
-  const { t, tr, lang } = useT();
+  const { t, tr } = useT();
   const { user, signOut } = useAuth();
   const { profile, workspaceId, refresh, role, isStaff } = useWorkspace();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   if (!profile || !workspaceId || !user) return null;
 
-  const activeLang = LANGS.find((l) => l.code === lang)!;
   const displayName = profile.full_name || "Unnamed";
 
   return (
@@ -99,13 +96,6 @@ function ProfilePage() {
             <Row icon={UserIcon} label={tr("Edit Profile")} value={displayName} />
           </button>
           <Row icon={Phone} label={t("page.profile.phone")} value={profile.phone || tr("Not set")} />
-          <button onClick={() => setPickerOpen(true)} className="w-full text-left">
-            <Row
-              icon={Languages}
-              label={t("page.profile.preferredLanguage")}
-              value={`${activeLang.flag} ${activeLang.native}`}
-            />
-          </button>
           <Link to="/settings">
             <Row icon={Settings} label={t("page.profile.settings")} value="" />
           </Link>
@@ -123,7 +113,6 @@ function ProfilePage() {
 
       <p className="mt-6 mb-4 text-center text-[11px] text-muted-foreground">DHX Body & Paint · v1.0</p>
 
-      {pickerOpen && <LanguagePicker onClose={() => setPickerOpen(false)} />}
       {editOpen && (
         <EditProfileModal
           profileId={profile.id}
