@@ -77,6 +77,26 @@ export type CoreIdentification = {
   updated_at: string;
 };
 
+export type RepairStage =
+  | "queued"
+  | "disassembly"
+  | "panel_repair"
+  | "putty"
+  | "primer"
+  | "paint"
+  | "polish"
+  | "qc"
+  | "completed";
+
+export type IntakeChecklistArea = {
+  checked: boolean;
+  note: string;
+};
+export type IntakeChecklist = Partial<Record<
+  "front" | "rear" | "left" | "right" | "roof" | "interior",
+  IntakeChecklistArea
+>>;
+
 export type WorkshopJob = {
   id: UUID;
   workspace_id: UUID;
@@ -85,6 +105,20 @@ export type WorkshopJob = {
   status: JobStatus;
   created_at: string;
   updated_at: string;
+  repair_stage: RepairStage | null;
+  damage_description: string | null;
+  estimate_amount: number | null;
+  estimate_approved: boolean | null;
+  estimate_approved_by: UUID | null;
+  assigned_lead_id: UUID | null;
+  labor_hours_estimate: number | null;
+  due_date: string | null;
+  intake_checklist: IntakeChecklist | null;
+  rework_count: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  released_at: string | null;
+  released_by: UUID | null;
 };
 
 export type WorkshopJobWorker = {
