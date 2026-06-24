@@ -169,3 +169,160 @@ export function useUpdateJobStatus(workspaceId: string | null) {
     },
   });
 }
+
+// ---- Intake / photos / estimate ----
+
+import { supabase } from "@/integrations/supabase/client";
+import type {
+  CoreFile,
+  IntakeChecklist,
+  RepairStage,
+} from "@/integrations/supabase/shared-schema";
+
+export type IntakePhoto = {
+  id: string;
+  path: string; // storage path stored in core.files.url
+  signedUrl: string | null;
+};
+
+const JOB_PHOTOS_BUCKET = "job-photos";
+
+async function signPaths(paths: string[]): Promise<Record<string, string>> {
+  if (paths.length === 0) return {};
+  const { data, error } = await supabase.storage
+    .from(JOB_PHOTOS_BUCKET)
+    .createSignedUrls(paths, 60 * 60);
+  if (error) return {};
+  const out: Record<string, string> = {};
+  for (const item of data ?? []) {
+    if (item.path && item.signedUrl) out[item.path] = item.signedUrl;
+  }
+  return out;
+}
+
+export function useJobPhotos(workspaceId: string | null, jobId: string) {
+  return useQuery({
+    queryKey: ["job-photos", workspaceId, jobId],
+    enabled: !!workspaceId && !!jobId,
+    queryFn: async (): Promise<IntakePhoto[]> => {
+      const { data, error } = await sbCore()
+        .from("files")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("owner_type", "workshop.jobs")
+        .eq("owner_id", jobId)
+        .eq("file_type", "intake_photo")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const rows = (data ?? []) as CoreFile[];
+      const paths = rows.map((r) => r.url);
+      const signed = await signPaths(paths);
+      return rows.map((r) => ({
+        id: r.id,
+        path: r.url,
+        signedUrl: signed[r.url] ?? null,
+      }));
+    },
+  });
+}
+
+export function useProfileById(profileId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["profile-by-id", profileId],
+    enabled: !!profileId,
+    queryFn: async () => {
+      const { data, error } = await sbCore()
+        .from("profiles")
+        .select("id, full_name")
+        .eq("id", profileId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; full_name: string } | null;
+    },
+  });
+}
+
+export type IntakeInput = {
+  vehicle_id: string;
+  damage_description: string;
+  estimate_amount: number | null;
+  intake_checklist: IntakeChecklist;
+  photos: File[];
+};
+
+function extOf(name: string): string {
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i + 1).toLowerCase() : "jpg";
+}
+
+export function useCreateJobIntake(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: IntakeInput) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { data: job, error } = await sbWorkshop()
+        .from("jobs")
+        .insert({
+          workspace_id: workspaceId,
+          vehicle_id: input.vehicle_id,
+          description: input.damage_description || null,
+          damage_description: input.damage_description || null,
+          estimate_amount: input.estimate_amount,
+          intake_checklist: input.intake_checklist,
+          repair_stage: "queued" as RepairStage,
+          status: "open",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      const jobRow = job as WorkshopJob;
+
+      // Upload photos
+      const { data: userRes } = await supabase.auth.getUser();
+      const uploadedBy = userRes.user?.id ?? null;
+
+      for (const file of input.photos) {
+        const uuid =
+          (globalThis.crypto as any)?.randomUUID?.() ??
+          Math.random().toString(36).slice(2);
+        const path = `${workspaceId}/${jobRow.id}/${uuid}.${extOf(file.name)}`;
+        const { error: upErr } = await supabase.storage
+          .from(JOB_PHOTOS_BUCKET)
+          .upload(path, file, { contentType: file.type || undefined });
+        if (upErr) throw upErr;
+        const { error: fErr } = await sbCore().from("files").insert({
+          workspace_id: workspaceId,
+          owner_type: "workshop.jobs",
+          owner_id: jobRow.id,
+          file_type: "intake_photo",
+          url: path,
+          status: "pending",
+          uploaded_by: uploadedBy,
+        });
+        if (fErr) throw fErr;
+      }
+      return jobRow;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs", workspaceId] }),
+  });
+}
+
+export function useApproveEstimate(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ jobId, profileId }: { jobId: string; profileId: string }) => {
+      const { data, error } = await sbWorkshop()
+        .from("jobs")
+        .update({ estimate_approved: true, estimate_approved_by: profileId })
+        .eq("id", jobId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as WorkshopJob;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["job", workspaceId, vars.jobId] });
+    },
+  });
+}
