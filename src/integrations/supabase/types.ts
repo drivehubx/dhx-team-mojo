@@ -14,84 +14,26 @@ export type Database = {
   }
   public: {
     Tables: {
-      dhx_dodge_scores: {
-        Row: {
-          best_combo: number
-          coins: number
-          created_at: string
-          distance: number
-          id: number
-          level: number
-          player_name: string
-          score: number
-        }
-        Insert: {
-          best_combo?: number
-          coins?: number
-          created_at?: string
-          distance?: number
-          id?: number
-          level?: number
-          player_name: string
-          score?: number
-        }
-        Update: {
-          best_combo?: number
-          coins?: number
-          created_at?: string
-          distance?: number
-          id?: number
-          level?: number
-          player_name?: string
-          score?: number
-        }
-        Relationships: []
-      }
-      mc_parkour_scores: {
-        Row: {
-          coins: number
-          created_at: string
-          distance: number
-          id: number
-          player_name: string
-          score: number
-        }
-        Insert: {
-          coins?: number
-          created_at?: string
-          distance?: number
-          id?: number
-          player_name: string
-          score?: number
-        }
-        Update: {
-          coins?: number
-          created_at?: string
-          distance?: number
-          id?: number
-          player_name?: string
-          score?: number
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
-      dhx_dodge_top100: {
-        Row: {
-          best_combo: number | null
-          coins: number | null
-          created_at: string | null
-          distance: number | null
-          level: number | null
-          player_name: string | null
-          rank: number | null
-          score: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      bp_public_status: {
+        Args: { p_token: string }
+        Returns: {
+          car_make: string
+          car_model: string
+          job_ref: string
+          plate_number: string
+          ready_date: string
+          repair_stage: string
+          status: string
+          updated_at: string
+        }[]
+      }
+      get_secret: { Args: { secret_name: string }; Returns: string }
     }
     Enums: {
       advance_status: "pending" | "approved" | "rejected"
