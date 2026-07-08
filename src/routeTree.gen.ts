@@ -20,8 +20,11 @@ import { Route as AdvanceRouteImport } from './routes/advance'
 import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
+import { Route as BpIndexRouteImport } from './routes/bp.index'
 import { Route as JobsNewRouteImport } from './routes/jobs.new'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
+import { Route as BpNewRouteImport } from './routes/bp.new'
+import { Route as BpIdRouteImport } from './routes/bp.$id'
 
 const TeamRoute = TeamRouteImport.update({
   id: '/team',
@@ -78,6 +81,11 @@ const JobsIndexRoute = JobsIndexRouteImport.update({
   path: '/jobs/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BpIndexRoute = BpIndexRouteImport.update({
+  id: '/bp/',
+  path: '/bp/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobsNewRoute = JobsNewRouteImport.update({
   id: '/jobs/new',
   path: '/jobs/new',
@@ -86,6 +94,16 @@ const JobsNewRoute = JobsNewRouteImport.update({
 const JobsIdRoute = JobsIdRouteImport.update({
   id: '/jobs/$id',
   path: '/jobs/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BpNewRoute = BpNewRouteImport.update({
+  id: '/bp/new',
+  path: '/bp/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BpIdRoute = BpIdRouteImport.update({
+  id: '/bp/$id',
+  path: '/bp/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -100,8 +118,11 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
+  '/bp/$id': typeof BpIdRoute
+  '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -115,8 +136,11 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
+  '/bp/$id': typeof BpIdRoute
+  '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/bp': typeof BpIndexRoute
   '/jobs': typeof JobsIndexRoute
 }
 export interface FileRoutesById {
@@ -131,8 +155,11 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/team': typeof TeamRoute
+  '/bp/$id': typeof BpIdRoute
+  '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRouteTypes {
@@ -148,8 +175,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/team'
+    | '/bp/$id'
+    | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/bp/'
     | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -163,8 +193,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/team'
+    | '/bp/$id'
+    | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/bp'
     | '/jobs'
   id:
     | '__root__'
@@ -178,8 +211,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/team'
+    | '/bp/$id'
+    | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/bp/'
     | '/jobs/'
   fileRoutesById: FileRoutesById
 }
@@ -194,8 +230,11 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SkillsRoute: typeof SkillsRoute
   TeamRoute: typeof TeamRoute
+  BpIdRoute: typeof BpIdRoute
+  BpNewRoute: typeof BpNewRoute
   JobsIdRoute: typeof JobsIdRoute
   JobsNewRoute: typeof JobsNewRoute
+  BpIndexRoute: typeof BpIndexRoute
   JobsIndexRoute: typeof JobsIndexRoute
 }
 
@@ -278,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JobsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bp/': {
+      id: '/bp/'
+      path: '/bp'
+      fullPath: '/bp/'
+      preLoaderRoute: typeof BpIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs/new': {
       id: '/jobs/new'
       path: '/jobs/new'
@@ -290,6 +336,20 @@ declare module '@tanstack/react-router' {
       path: '/jobs/$id'
       fullPath: '/jobs/$id'
       preLoaderRoute: typeof JobsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bp/new': {
+      id: '/bp/new'
+      path: '/bp/new'
+      fullPath: '/bp/new'
+      preLoaderRoute: typeof BpNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bp/$id': {
+      id: '/bp/$id'
+      path: '/bp/$id'
+      fullPath: '/bp/$id'
+      preLoaderRoute: typeof BpIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -306,8 +366,11 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SkillsRoute: SkillsRoute,
   TeamRoute: TeamRoute,
+  BpIdRoute: BpIdRoute,
+  BpNewRoute: BpNewRoute,
   JobsIdRoute: JobsIdRoute,
   JobsNewRoute: JobsNewRoute,
+  BpIndexRoute: BpIndexRoute,
   JobsIndexRoute: JobsIndexRoute,
 }
 export const routeTree = rootRouteImport

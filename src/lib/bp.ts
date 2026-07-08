@@ -1,0 +1,374 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { dhxCore, dhxWorkshop, dhxStorage, DHX_DOCS_BUCKET } from "@/lib/dhx";
+import { supabase } from "@/integrations/supabase/client";
+
+export type BPSource =
+  | "walk_in"
+  | "internal_fleet"
+  | "insurance"
+  | "dealer"
+  | "referral"
+  | "rental_damage"
+  | "classics"
+  | "my_garage";
+
+export const BP_SOURCE_OPTIONS: { value: BPSource; label: string }[] = [
+  { value: "walk_in", label: "Walk-in" },
+  { value: "internal_fleet", label: "Internal Fleet" },
+  { value: "insurance", label: "Insurance" },
+  { value: "dealer", label: "Dealer" },
+  { value: "referral", label: "Referral" },
+  { value: "rental_damage", label: "Rental Damage" },
+  { value: "classics", label: "Classics" },
+  { value: "my_garage", label: "My Garage" },
+];
+
+export type BPRepairStage =
+  | "queued"
+  | "disassembly"
+  | "panel_repair"
+  | "putty"
+  | "primer"
+  | "paint"
+  | "polish"
+  | "qc"
+  | "completed";
+
+export const BP_STAGES: BPRepairStage[] = [
+  "queued",
+  "disassembly",
+  "panel_repair",
+  "putty",
+  "primer",
+  "paint",
+  "polish",
+  "qc",
+  "completed",
+];
+
+export const BP_STAGE_LABEL: Record<BPRepairStage, string> = {
+  queued: "Queued",
+  disassembly: "Disassembly",
+  panel_repair: "Panel Repair",
+  putty: "Putty",
+  primer: "Primer",
+  paint: "Paint",
+  polish: "Polish",
+  qc: "QC",
+  completed: "Completed",
+};
+
+export type BPJob = {
+  id: string;
+  workspace_id: string;
+  vehicle_id: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  plate_number: string | null;
+  car_make: string | null;
+  car_model: string | null;
+  damage_description: string | null;
+  estimate_amount: number | null;
+  estimate_approved: boolean;
+  sell_price: number | null;
+  paint_cost: number | null;
+  labour_cost: number | null;
+  parts_cost: number | null;
+  other_cost: number | null;
+  total_cost: number | null;
+  profit: number | null;
+  invoice_no: string | null;
+  invoiced_at: string | null;
+  ready_date: string | null;
+  job_type: string | null;
+  source: string | null;
+  repair_stage: BPRepairStage;
+  status: string;
+  created_at: string;
+};
+
+export type BPDocType = "before" | "after";
+
+export type BPPhoto = {
+  id: string;
+  doc_type: BPDocType;
+  storage_path: string;
+  signedUrl: string | null;
+  created_at: string;
+};
+
+async function signPaths(paths: string[]): Promise<Record<string, string>> {
+  if (!paths.length) return {};
+  const { data, error } = await dhxStorage
+    .from(DHX_DOCS_BUCKET)
+    .createSignedUrls(paths, 60 * 60);
+  if (error) return {};
+  const out: Record<string, string> = {};
+  for (const item of data ?? []) {
+    if (item.path && item.signedUrl) out[item.path] = item.signedUrl;
+  }
+  return out;
+}
+
+function extOf(name: string): string {
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i + 1).toLowerCase() : "jpg";
+}
+
+// ---- Queries ----
+
+export function useBPJobs(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ["bp-jobs", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await dhxWorkshop()
+        .from("jobs")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("job_type", "body_paint")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as BPJob[];
+    },
+  });
+}
+
+export function useBPJob(workspaceId: string | null, id: string) {
+  return useQuery({
+    queryKey: ["bp-job", workspaceId, id],
+    enabled: !!workspaceId && !!id,
+    queryFn: async () => {
+      const { data, error } = await dhxWorkshop()
+        .from("jobs")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as BPJob | null;
+    },
+  });
+}
+
+export function useBPPhotos(workspaceId: string | null, jobId: string) {
+  return useQuery({
+    queryKey: ["bp-photos", workspaceId, jobId],
+    enabled: !!workspaceId && !!jobId,
+    queryFn: async (): Promise<BPPhoto[]> => {
+      const { data, error } = await dhxCore()
+        .from("files")
+        .select("id, doc_type, storage_path, url, created_at")
+        .eq("workspace_id", workspaceId)
+        .eq("owner_type", "workshop_job")
+        .eq("owner_id", jobId)
+        .in("doc_type", ["before", "after"])
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const rows = (data ?? []) as any[];
+      const paths = rows.map((r) => r.storage_path).filter(Boolean);
+      const signed = await signPaths(paths);
+      return rows.map((r) => ({
+        id: r.id,
+        doc_type: r.doc_type as BPDocType,
+        storage_path: r.storage_path,
+        signedUrl: r.storage_path ? signed[r.storage_path] ?? null : null,
+        created_at: r.created_at,
+      }));
+    },
+  });
+}
+
+// ---- Mutations ----
+
+export type CreateBPJobInput = {
+  customer_name: string;
+  customer_phone: string;
+  plate_number: string;
+  car_make: string;
+  car_model: string;
+  source: BPSource;
+  damage_description: string;
+  estimate_amount: number | null;
+  before_photos: File[];
+};
+
+async function uploadPhotos(
+  workspaceId: string,
+  jobId: string,
+  docType: BPDocType,
+  files: File[],
+) {
+  const { data: userRes } = await supabase.auth.getUser();
+  const uploadedBy = userRes.user?.id ?? null;
+
+  for (const file of files) {
+    const uuid =
+      (globalThis.crypto as any)?.randomUUID?.() ??
+      Math.random().toString(36).slice(2);
+    const path = `${workspaceId}/workshop_jobs/${jobId}/${docType}/${uuid}.${extOf(file.name)}`;
+    const { error: upErr } = await dhxStorage
+      .from(DHX_DOCS_BUCKET)
+      .upload(path, file, { contentType: file.type || undefined });
+    if (upErr) throw upErr;
+    const { error: fErr } = await dhxCore().from("files").insert({
+      workspace_id: workspaceId,
+      owner_type: "workshop_job",
+      owner_id: jobId,
+      file_type: file.type || "image/jpeg",
+      doc_type: docType,
+      url: path,
+      storage_path: path,
+      status: "approved",
+      uploaded_by: uploadedBy,
+    });
+    if (fErr) throw fErr;
+  }
+}
+
+export function useCreateBPJob(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateBPJobInput) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { data: job, error } = await dhxWorkshop()
+        .from("jobs")
+        .insert({
+          workspace_id: workspaceId,
+          customer_name: input.customer_name || null,
+          customer_phone: input.customer_phone || null,
+          plate_number: input.plate_number || null,
+          car_make: input.car_make || null,
+          car_model: input.car_model || null,
+          source: input.source,
+          damage_description: input.damage_description || null,
+          estimate_amount: input.estimate_amount,
+          repair_stage: "queued",
+          status: "open",
+          job_type: "body_paint",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      const jobRow = job as BPJob;
+      if (input.before_photos.length) {
+        await uploadPhotos(workspaceId, jobRow.id, "before", input.before_photos);
+      }
+      return jobRow;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] }),
+  });
+}
+
+export function useUploadBPPhotos(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { jobId: string; docType: BPDocType; files: File[] }) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      await uploadPhotos(workspaceId, input.jobId, input.docType, input.files);
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["bp-photos", workspaceId, vars.jobId] });
+    },
+  });
+}
+
+export type BPCosts = {
+  paint_cost: number | null;
+  labour_cost: number | null;
+  parts_cost: number | null;
+  other_cost: number | null;
+  sell_price: number | null;
+};
+
+export function useUpdateBPCosts(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { jobId: string } & BPCosts) => {
+      const { jobId, ...costs } = input;
+      const { data, error } = await dhxWorkshop()
+        .from("jobs")
+        .update(costs)
+        .eq("id", jobId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as BPJob;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["bp-job", workspaceId, vars.jobId] });
+    },
+  });
+}
+
+export function useApproveBPQuote(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (jobId: string) => {
+      const { data: userRes } = await supabase.auth.getUser();
+      const { data, error } = await dhxWorkshop()
+        .from("jobs")
+        .update({
+          estimate_approved: true,
+          estimate_approved_by: userRes.user?.id ?? null,
+        })
+        .eq("id", jobId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as BPJob;
+    },
+    onSuccess: (_d, jobId) => {
+      qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["bp-job", workspaceId, jobId] });
+    },
+  });
+}
+
+export function useAdvanceBPStage(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { jobId: string; nextStage: BPRepairStage }) => {
+      const patch: Record<string, unknown> = { repair_stage: input.nextStage };
+      if (input.nextStage === "completed") patch.completed_at = new Date().toISOString();
+      const { data, error } = await dhxWorkshop()
+        .from("jobs")
+        .update(patch)
+        .eq("id", input.jobId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as BPJob;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["bp-job", workspaceId, vars.jobId] });
+    },
+  });
+}
+
+export function useCreateBPInvoice(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { jobId: string; ready_date: string | null }) => {
+      const invoiceNo = "INV-" + input.jobId.slice(0, 8).toUpperCase();
+      const { data, error } = await dhxWorkshop()
+        .from("jobs")
+        .update({
+          invoice_no: invoiceNo,
+          invoiced_at: new Date().toISOString(),
+          ready_date: input.ready_date,
+        })
+        .eq("id", input.jobId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as BPJob;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["bp-job", workspaceId, vars.jobId] });
+    },
+  });
+}
