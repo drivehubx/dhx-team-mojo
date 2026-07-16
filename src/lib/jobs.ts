@@ -416,6 +416,11 @@ export const PART_STATUS_ORDER: RepairPartStatus[] = [
   "installed",
 ];
 
+export type PartProvenance = "initial_assessment" | "found_during_repair";
+export type PartDiscoveryStage = "dismantling" | "repair" | "qc";
+export type PartRecommendedAction = "replace" | "repair";
+export type PartRevisionStatus = "approved" | "draft_revision";
+
 export type RepairPart = {
   id: string;
   workspace_id: string;
@@ -431,6 +436,14 @@ export type RepairPart = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  provenance: PartProvenance;
+  discovery_stage: PartDiscoveryStage | null;
+  reason_required: string | null;
+  recommended_action: PartRecommendedAction | null;
+  related_damage: string | null;
+  photo_file_id: string | null;
+  ai_suggestion: unknown | null;
+  revision_status: PartRevisionStatus;
 };
 
 export function useRepairParts(workspaceId: string | null, jobId: string) {
