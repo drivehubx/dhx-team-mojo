@@ -692,3 +692,104 @@ export function useReleaseJob(workspaceId: string | null) {
     },
   });
 }
+
+// ---- Additional part found during repair (Phase 2 AI flow) ----
+
+export type FoundPartInput = {
+  jobId: string;
+  photoFile: File;
+  partName: string;
+  reasonRequired: string;
+  discoveryStage: PartDiscoveryStage;
+  quantity: number;
+  recommendedAction: PartRecommendedAction;
+  relatedDamage: string;
+  aiSuggestion: unknown | null;
+};
+
+export function useAddFoundPart(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: FoundPartInput) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { data: userRes } = await supabase.auth.getUser();
+      const uploadedBy = userRes.user?.id ?? null;
+
+      // 1. Upload the discovery photo (universal media pattern).
+      const ext =
+        input.photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const uuid =
+        (globalThis.crypto as any)?.randomUUID?.() ??
+        Math.random().toString(36).slice(2);
+      const path = `${workspaceId}/${input.jobId}/found/${uuid}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("job-photos")
+        .upload(path, input.photoFile, {
+          contentType: input.photoFile.type || undefined,
+        });
+      if (upErr) throw upErr;
+
+      // 2. Register file in core.files. owner_id=jobId keeps the photo
+      // discoverable from the job even before the part row exists.
+      const { data: fileRow, error: fErr } = await sbCore()
+        .from("files")
+        .insert({
+          workspace_id: workspaceId,
+          owner_type: "workshop.repair_parts",
+          owner_id: input.jobId,
+          file_type: "found_part_photo",
+          url: path,
+          status: "approved",
+          uploaded_by: uploadedBy,
+        })
+        .select("id")
+        .single();
+      if (fErr) throw fErr;
+
+      // 3. Create the part row, marked as a draft quotation revision.
+      const { data: part, error: pErr } = await sbWorkshop()
+        .from("repair_parts")
+        .insert({
+          workspace_id: workspaceId,
+          job_id: input.jobId,
+          part_name: input.partName,
+          quantity: input.quantity,
+          unit_cost: null,
+          status: "required" as RepairPartStatus,
+          created_by: uploadedBy,
+          provenance: "found_during_repair" as PartProvenance,
+          discovery_stage: input.discoveryStage,
+          reason_required: input.reasonRequired || null,
+          recommended_action: input.recommendedAction,
+          related_damage: input.relatedDamage || null,
+          photo_file_id: (fileRow as { id: string }).id,
+          ai_suggestion: input.aiSuggestion ?? null,
+          revision_status: "draft_revision" as PartRevisionStatus,
+        })
+        .select()
+        .single();
+      if (pErr) throw pErr;
+      return part as RepairPart;
+    },
+    onSuccess: (p) =>
+      qc.invalidateQueries({ queryKey: ["repair-parts", workspaceId, p.job_id] }),
+  });
+}
+
+export function useApprovePartRevision(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, jobId }: { id: string; jobId: string }) => {
+      const { data, error } = await sbWorkshop()
+        .from("repair_parts")
+        .update({ revision_status: "approved" as PartRevisionStatus })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return { part: data as RepairPart, jobId };
+    },
+    onSuccess: (res) =>
+      qc.invalidateQueries({ queryKey: ["repair-parts", workspaceId, res.jobId] }),
+  });
+}
