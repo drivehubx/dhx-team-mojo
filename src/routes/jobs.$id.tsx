@@ -424,7 +424,7 @@ function JobDetailPage() {
       </section>
 
       {/* Parts Tracking */}
-      <PartsSection jobId={job.id} isStaff={isStaff} />
+      <PartsSection jobId={job.id} isStaff={isStaff} repairStage={stage} />
 
       {/* Quality Control */}
       <QcSection
