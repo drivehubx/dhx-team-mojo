@@ -1,6 +1,17 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, CheckCircle2, Loader2, Plus, ShieldCheck, X } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  ArrowLeft,
+  Camera,
+  Check,
+  CheckCircle2,
+  Loader2,
+  Plus,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import {
@@ -16,13 +27,18 @@ import {
   useRepairParts,
   useAddPart,
   useUpdatePartStatus,
+  useAddFoundPart,
+  useApprovePartRevision,
   useQcRecord,
   useSubmitQc,
   useReleaseJob,
   PART_STATUS_ORDER,
   type RepairPartStatus,
   type RepairPart,
+  type PartDiscoveryStage,
+  type PartRecommendedAction,
 } from "@/lib/jobs";
+import { analyzeRepairPart } from "@/lib/ai-damage.functions";
 import type {
   JobStatus,
   RepairStage,
