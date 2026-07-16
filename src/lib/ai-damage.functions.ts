@@ -23,7 +23,7 @@ export type AnalyzeRepairPartResult = {
   recommendedAction: (typeof ACTIONS)[number];
   relatedOriginalDamage: string;
   confidence: number;
-  raw: Record<string, unknown> | null;
+  rawJson: string; // serialized AI response for the learning loop
 };
 
 const JOB_PHOTOS_BUCKET = "job-photos";
