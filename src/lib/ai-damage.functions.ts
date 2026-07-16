@@ -23,7 +23,7 @@ export type AnalyzeRepairPartResult = {
   recommendedAction: (typeof ACTIONS)[number];
   relatedOriginalDamage: string;
   confidence: number;
-  raw: unknown;
+  raw: Record<string, unknown> | null;
 };
 
 const JOB_PHOTOS_BUCKET = "job-photos";
