@@ -46,7 +46,7 @@ function fallback(
     recommendedAction: "replace",
     relatedOriginalDamage: "",
     confidence: 0,
-    raw: { fallback: true, photoPath },
+    rawJson: JSON.stringify({ fallback: true, photoPath }),
   };
 }
 
@@ -222,6 +222,6 @@ Respond with ONLY a JSON object matching this exact shape (no prose, no code fen
         300,
       ),
       confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
-      raw: parsed,
+      rawJson: JSON.stringify(parsed),
     };
   });
