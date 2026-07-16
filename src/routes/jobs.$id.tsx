@@ -538,13 +538,39 @@ function nextPartStatus(s: RepairPartStatus): RepairPartStatus {
   return PART_STATUS_ORDER[(i + 1) % PART_STATUS_ORDER.length];
 }
 
-function PartsSection({ jobId, isStaff }: { jobId: string; isStaff: boolean }) {
+const ACTIVE_STAGES_FOR_ADD: RepairStage[] = [
+  "disassembly",
+  "panel_repair",
+  "putty",
+  "primer",
+  "paint",
+  "polish",
+  "qc",
+];
+
+function stageToDiscovery(s: RepairStage): PartDiscoveryStage {
+  if (s === "disassembly") return "dismantling";
+  if (s === "qc") return "qc";
+  return "repair";
+}
+
+function PartsSection({
+  jobId,
+  isStaff,
+  repairStage,
+}: {
+  jobId: string;
+  isStaff: boolean;
+  repairStage: RepairStage;
+}) {
   const { workspaceId } = useWorkspace();
   const partsQ = useRepairParts(workspaceId, jobId);
   const add = useAddPart(workspaceId);
   const upd = useUpdatePartStatus(workspaceId);
+  const approveRev = useApprovePartRevision(workspaceId);
 
   const [showForm, setShowForm] = useState(false);
+  const [showFoundSheet, setShowFoundSheet] = useState(false);
   const [name, setName] = useState("");
   const [qty, setQty] = useState("1");
   const [cost, setCost] = useState("");
@@ -583,6 +609,8 @@ function PartsSection({ jobId, isStaff }: { jobId: string; isStaff: boolean }) {
   };
 
   const parts = partsQ.data ?? [];
+  const pendingRevisions = parts.filter((p) => p.revision_status === "draft_revision");
+  const canAddFound = isStaff && ACTIVE_STAGES_FOR_ADD.includes(repairStage);
 
   return (
     <section className="px-5 mt-4">
@@ -593,15 +621,37 @@ function PartsSection({ jobId, isStaff }: { jobId: string; isStaff: boolean }) {
             onClick={() => setShowForm(true)}
             className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground"
           >
-            <Plus className="h-3.5 w-3.5" /> Add
+            <Plus className="h-3.5 w-3.5" /> Manual
           </button>
         )}
       </div>
 
+      {canAddFound && (
+        <button
+          onClick={() => setShowFoundSheet(true)}
+          className="w-full mb-3 inline-flex items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-semibold text-primary-foreground shadow-sm active:scale-[.98]"
+        >
+          <Camera className="h-5 w-5" />
+          Add Part (photo · AI-assisted)
+        </button>
+      )}
+
+      {pendingRevisions.length > 0 && (
+        <div className="mb-3 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+          <p className="font-semibold">
+            Quotation revision pending — {pendingRevisions.length} additional part
+            {pendingRevisions.length === 1 ? "" : "s"}
+          </p>
+          <p className="mt-0.5 text-amber-800">
+            Original approved quotation is unchanged until management approves.
+          </p>
+        </div>
+      )}
+
       {showForm && (
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3 mb-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">New Part</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">New Part (manual)</p>
             <button onClick={() => setShowForm(false)} className="text-muted-foreground">
               <X className="h-4 w-4" />
             </button>
@@ -664,17 +714,55 @@ function PartsSection({ jobId, isStaff }: { jobId: string; isStaff: boolean }) {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate">{p.part_name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {p.provenance === "found_during_repair" ? (
+                      <span className="rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                        Found during {p.discovery_stage ?? "repair"}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                        Initial
+                      </span>
+                    )}
+                    {p.revision_status === "draft_revision" && (
+                      <span className="rounded-full bg-amber-500/20 text-amber-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                        Revision draft
+                      </span>
+                    )}
+                    {p.recommended_action && (
+                      <span className="rounded-full bg-secondary text-foreground px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                        {p.recommended_action}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
                     {p.quantity}x
-                    {p.unit_cost != null
-                      ? ` @ RM ${Number(p.unit_cost).toFixed(2)}`
-                      : ""}
+                    {p.unit_cost != null ? ` @ RM ${Number(p.unit_cost).toFixed(2)}` : ""}
                   </p>
+                  {p.reason_required && (
+                    <p className="text-[11px] text-muted-foreground mt-1">{p.reason_required}</p>
+                  )}
+                  {p.related_damage && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      ↳ Related: {p.related_damage}
+                    </p>
+                  )}
                   {p.supplier && (
                     <p className="text-[11px] text-muted-foreground mt-1">Supplier: {p.supplier}</p>
                   )}
-                  {p.notes && (
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{p.notes}</p>
+                  {isStaff && p.revision_status === "draft_revision" && (
+                    <button
+                      onClick={() =>
+                        approveRev
+                          .mutateAsync({ id: p.id, jobId })
+                          .then(() => toast.success("Revision approved"))
+                          .catch((e) => toast.error(e?.message ?? "Failed"))
+                      }
+                      disabled={approveRev.isPending}
+                      className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[--color-success] px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
+                    >
+                      <Check className="h-3 w-3" /> Approve revision
+                    </button>
                   )}
                 </div>
                 <button
@@ -689,9 +777,285 @@ function PartsSection({ jobId, isStaff }: { jobId: string; isStaff: boolean }) {
           ))}
         </ul>
       )}
+
+      {showFoundSheet && (
+        <FoundPartSheet
+          jobId={jobId}
+          repairStage={repairStage}
+          onClose={() => setShowFoundSheet(false)}
+        />
+      )}
     </section>
   );
 }
+
+function FoundPartSheet({
+  jobId,
+  repairStage,
+  onClose,
+}: {
+  jobId: string;
+  repairStage: RepairStage;
+  onClose: () => void;
+}) {
+  const { workspaceId } = useWorkspace();
+  const addFound = useAddFoundPart(workspaceId);
+  const analyze = useServerFn(analyzeRepairPart);
+
+  const [step, setStep] = useState<"capture" | "analyzing" | "review">("capture");
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [aiRaw, setAiRaw] = useState<unknown>(null);
+  const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  const [partName, setPartName] = useState("");
+  const [reason, setReason] = useState("");
+  const [stage, setStage] = useState<PartDiscoveryStage>(stageToDiscovery(repairStage));
+  const [qty, setQty] = useState("1");
+  const [action, setAction] = useState<PartRecommendedAction>("replace");
+  const [related, setRelated] = useState("");
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const onPick = async (fl: FileList | null) => {
+    const f = fl?.[0];
+    if (!f) return;
+    setFile(f);
+    setPreviewUrl(URL.createObjectURL(f));
+    setStep("analyzing");
+
+    // Upload photo to a temp path first so AI can see it, THEN save.
+    // Simpler: upload to a scratch path, analyze, then reuse on confirm.
+    try {
+      const ext = f.name.split(".").pop()?.toLowerCase() || "jpg";
+      const uuid =
+        (globalThis.crypto as any)?.randomUUID?.() ??
+        Math.random().toString(36).slice(2);
+      const scratchPath = `${workspaceId}/${jobId}/found-scratch/${uuid}.${ext}`;
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { error: upErr } = await supabase.storage
+        .from("job-photos")
+        .upload(scratchPath, f, { contentType: f.type || undefined });
+      if (upErr) throw upErr;
+
+      const result = await analyze({
+        data: { jobId, photoPath: scratchPath, currentRepairStage: repairStage },
+      });
+      setPartName(result.detectedPart);
+      setReason(result.reasonRequired);
+      setStage(result.discoveryStage);
+      setQty(String(result.quantity));
+      setAction(result.recommendedAction);
+      setRelated(result.relatedOriginalDamage);
+      setAiConfidence(result.confidence);
+      try {
+        setAiRaw(JSON.parse(result.rawJson));
+      } catch {
+        setAiRaw(null);
+      }
+      setStep("review");
+    } catch (e: any) {
+      toast.error(e?.message ?? "AI analysis failed — you can still fill manually");
+      setStep("review");
+    }
+  };
+
+  const confirm = async () => {
+    if (!file) {
+      toast.error("Photo required");
+      return;
+    }
+    if (!partName.trim()) {
+      toast.error("Part name required");
+      return;
+    }
+    try {
+      await addFound.mutateAsync({
+        jobId,
+        photoFile: file,
+        partName: partName.trim(),
+        reasonRequired: reason.trim(),
+        discoveryStage: stage,
+        quantity: Math.max(1, Number(qty) || 1),
+        recommendedAction: action,
+        relatedDamage: related.trim(),
+        aiSuggestion: aiRaw,
+      });
+      toast.success("Part request added — pending revision approval");
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4">
+      <div className="w-full max-w-lg bg-card rounded-t-3xl sm:rounded-3xl max-h-[92vh] overflow-y-auto">
+        <div className="sticky top-0 flex items-center justify-between bg-card px-5 py-4 border-b border-border">
+          <h3 className="text-base font-semibold">Add Part Found During Repair</h3>
+          <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-secondary">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {step === "capture" && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Take a photo of the damaged part. AI will pre-fill the request using this job's context.
+              </p>
+              <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-background py-10 cursor-pointer active:bg-secondary/40">
+                <Camera className="h-8 w-8 text-muted-foreground" />
+                <span className="text-sm font-semibold">Open camera</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => onPick(e.target.files)}
+                />
+              </label>
+              <label className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-background py-3 cursor-pointer">
+                <Plus className="h-4 w-4" />
+                <span className="text-sm">Choose from gallery</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => onPick(e.target.files)}
+                />
+              </label>
+            </>
+          )}
+
+          {step === "analyzing" && (
+            <div className="py-10 flex flex-col items-center gap-3">
+              {previewUrl && (
+                <img src={previewUrl} alt="" className="h-40 w-40 rounded-2xl object-cover" />
+              )}
+              <div className="flex items-center gap-2 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>AI is analyzing with case context…</span>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Vehicle, original damage and existing parts are loaded automatically.
+              </p>
+            </div>
+          )}
+
+          {step === "review" && (
+            <>
+              {previewUrl && (
+                <img src={previewUrl} alt="" className="w-full max-h-56 rounded-2xl object-cover" />
+              )}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI draft — review and confirm
+                {aiConfidence > 0 && ` · confidence ${(aiConfidence * 100).toFixed(0)}%`}
+              </div>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-muted-foreground">Detected Part *</span>
+                <input
+                  value={partName}
+                  onChange={(e) => setPartName(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-3 text-sm"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-muted-foreground">Reason Required</span>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={2}
+                  className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-xs font-semibold text-muted-foreground">Discovery Stage</span>
+                  <select
+                    value={stage}
+                    onChange={(e) => setStage(e.target.value as PartDiscoveryStage)}
+                    className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-3 text-sm"
+                  >
+                    <option value="dismantling">Dismantling</option>
+                    <option value="repair">Repair</option>
+                    <option value="qc">QC</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-muted-foreground">Quantity</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-3 text-sm"
+                  />
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-muted-foreground">Recommended Action</span>
+                <div className="mt-1 grid grid-cols-2 gap-2">
+                  {(["replace", "repair"] as PartRecommendedAction[]).map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => setAction(a)}
+                      className={`rounded-xl border py-3 text-sm font-semibold capitalize ${
+                        action === a
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border text-foreground"
+                      }`}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-muted-foreground">Related Original Damage</span>
+                <input
+                  value={related}
+                  onChange={(e) => setRelated(e.target.value)}
+                  placeholder="e.g. Left front bumper impact"
+                  className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-3 text-sm"
+                />
+              </label>
+
+              <button
+                onClick={confirm}
+                disabled={addFound.isPending}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                {addFound.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                Confirm Part Request
+              </button>
+              <p className="text-[11px] text-muted-foreground text-center">
+                Saved to this repair order as a quotation revision — original quotation unchanged.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 // ============ Quality Control ============
 
