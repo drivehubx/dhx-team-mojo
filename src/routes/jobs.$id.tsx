@@ -1381,7 +1381,9 @@ function AIAssessmentCard({
   isStaff: boolean;
   workspaceId: string | null;
 }) {
-  const a = job.ai_corrected_assessment ?? job.ai_initial_assessment;
+  const rawA = job.ai_corrected_assessment ?? job.ai_initial_assessment;
+  const isFallback = !!rawA && rawA.fallback === true;
+  const a = isFallback ? null : rawA;
   const analyzeInit = useServerFn(analyzeInitialDamage);
   const saveDraft = useSaveAIAssessmentDraft(workspaceId);
   const [running, setRunning] = useState(false);
@@ -1395,6 +1397,11 @@ function AIAssessmentCard({
           This job has intake photos but the AI assessment was never completed. Run it now — the
           existing photos will be reused.
         </p>
+        {isFallback && (
+          <p className="mt-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+            Last attempt failed: {String(rawA.reason ?? "unknown reason")}
+          </p>
+        )}
         <button
           type="button"
           disabled={running}
@@ -1411,7 +1418,12 @@ function AIAssessmentCard({
                 estimatedCost: r.estimatedCost ?? null,
                 summary: r.summary ?? "",
               });
-              toast.success("AI assessment saved as draft — review the estimate");
+              const savedFallback = (() => { try { return JSON.parse(r.rawJson)?.fallback === true; } catch { return false; } })();
+              if (savedFallback) {
+                toast.error("AI could not analyze — see the reason shown on this job");
+              } else {
+                toast.success("AI assessment saved as draft — review the estimate");
+              }
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "AI assessment failed");
             } finally {

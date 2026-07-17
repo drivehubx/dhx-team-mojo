@@ -269,7 +269,8 @@ export type AnalyzeInitialDamageResult = {
   rawJson: string;
 };
 
-function initialFallback(): AnalyzeInitialDamageResult {
+function initialFallback(reason = "unknown"): AnalyzeInitialDamageResult {
+  console.error("[analyzeInitialDamage] fallback:", reason);
   return {
     findings: [],
     parts: [],
@@ -279,7 +280,7 @@ function initialFallback(): AnalyzeInitialDamageResult {
     estimatedCost: null,
     overallConfidence: 0,
     summary: "",
-    rawJson: JSON.stringify({ fallback: true }),
+    rawJson: JSON.stringify({ fallback: true, reason }),
   };
 }
 
@@ -315,7 +316,7 @@ export const analyzeInitialDamage = createServerFn({ method: "POST" })
     ]);
 
     const paths = ((intakeFiles ?? []) as { url: string }[]).map((f) => f.url);
-    if (paths.length === 0) return initialFallback();
+    if (paths.length === 0) return initialFallback("no_intake_photos");
 
     const { data: signed } = await sb.storage
       .from(JOB_PHOTOS_BUCKET)
@@ -323,10 +324,10 @@ export const analyzeInitialDamage = createServerFn({ method: "POST" })
     const photoUrls = (signed ?? [])
       .map((s: any) => s?.signedUrl)
       .filter(Boolean) as string[];
-    if (photoUrls.length === 0) return initialFallback();
+    if (photoUrls.length === 0) return initialFallback("storage_signed_urls_failed");
 
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return initialFallback();
+    if (!apiKey) return initialFallback("missing_LOVABLE_API_KEY");
 
     const veh = vehicle ?? {};
     const systemPrompt = `You are the DHX Body & Paint AI damage-assessment engine (Phase 1: accident intake).
@@ -391,10 +392,13 @@ Respond with ONLY a JSON object of this exact shape (no prose, no code fence):
           }),
         },
       );
-      if (!res.ok) return initialFallback();
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        return initialFallback(`gateway_${res.status}: ${t.slice(0, 160)}`);
+      }
       raw = await res.json();
-    } catch {
-      return initialFallback();
+    } catch (e) {
+      return initialFallback(`network: ${e instanceof Error ? e.message : "error"}`);
     }
 
     const text: string = raw?.choices?.[0]?.message?.content ?? "";
@@ -411,7 +415,7 @@ Respond with ONLY a JSON object of this exact shape (no prose, no code fence):
         }
       }
     }
-    if (!parsed) return initialFallback();
+    if (!parsed) return initialFallback("ai_response_not_json");
 
     const findings: InitialFinding[] = Array.isArray(parsed.findings)
       ? parsed.findings.slice(0, 20).map((f: any) => ({
