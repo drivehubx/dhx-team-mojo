@@ -1387,12 +1387,20 @@ function AIAssessmentCard({
   const analyzeInit = useServerFn(analyzeInitialDamage);
   const saveDraft = useSaveAIAssessmentDraft(workspaceId);
   const [running, setRunning] = useState(false);
+  const failed = !!a?.fallback;
 
-  if (!a) {
+  if (!a || failed) {
     if (!isStaff) return null;
     return (
       <section className="mx-5 mt-4 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-5 text-center">
-        <h2 className="text-sm font-semibold">No AI assessment yet</h2>
+        <h2 className="text-sm font-semibold">
+          {failed ? "AI assessment failed — try again" : "No AI assessment yet"}
+        </h2>
+        {failed && (
+          <p className="mt-1 text-xs font-medium text-red-500">
+            Last attempt: {String(a.reason ?? "unknown reason")}
+          </p>
+        )}
         <p className="mt-1 text-xs text-muted-foreground">
           This job has intake photos but the AI assessment was never completed. Run it now — the
           existing photos will be reused.

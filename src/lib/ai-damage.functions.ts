@@ -110,9 +110,7 @@ export const analyzeRepairPart = createServerFn({ method: "POST" })
 
     if (!newPhotoUrl) return fallback(data.photoPath, data.currentRepairStage);
 
-    // --- Call Lovable AI Gateway (OpenAI-compatible) ---
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return fallback(data.photoPath, data.currentRepairStage);
+    // --- Call the shared DHX ai-vision edge function (own Gemini key) ---
 
     const veh = vehicle ?? {};
     const partsList =
@@ -147,46 +145,27 @@ Respond with ONLY a JSON object matching this exact shape (no prose, no code fen
   "confidence": number between 0 and 1
 }`;
 
-    const userContent: any[] = [
-      {
-        type: "text",
-        text: "New photo taken now (the part in question). Additional reference photos of the original damage follow.",
-      },
-      { type: "image_url", image_url: { url: newPhotoUrl } },
-    ];
-    for (const url of contextPhotoUrls) {
-      userContent.push({ type: "image_url", image_url: { url } });
-    }
+    const imageUrls = [newPhotoUrl, ...contextPhotoUrls];
 
-    let raw: any = null;
+    let text = "";
     try {
-      const res = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Lovable-API-Key": apiKey,
-          },
-          body: JSON.stringify({
-            model: "openai/gpt-5.5",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userContent },
-            ],
-            response_format: { type: "json_object" },
-          }),
+      const { data: aiRes, error: aiErr } = await sb.functions.invoke("ai-vision", {
+        body: {
+          system: systemPrompt,
+          user_text:
+            "New photo taken now (the part in question). Additional reference photos of the original damage follow.",
+          image_urls: imageUrls,
         },
-      );
-      if (!res.ok) {
+      });
+      if (aiErr || aiRes?.error) {
+        console.error("[analyzeRepairPart] ai-vision:", aiErr?.message ?? aiRes?.error, aiRes?.detail ?? "");
         return fallback(data.photoPath, data.currentRepairStage);
       }
-      raw = await res.json();
-    } catch {
+      text = String(aiRes?.text ?? "");
+    } catch (e) {
+      console.error("[analyzeRepairPart] network:", String(e));
       return fallback(data.photoPath, data.currentRepairStage);
     }
-
-    const text: string = raw?.choices?.[0]?.message?.content ?? "";
     let parsed: any = null;
     try {
       parsed = JSON.parse(text);
@@ -326,8 +305,7 @@ export const analyzeInitialDamage = createServerFn({ method: "POST" })
       .filter(Boolean) as string[];
     if (photoUrls.length === 0) return initialFallback("storage_signed_urls_failed");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return initialFallback("missing_LOVABLE_API_KEY");
+
 
     const veh = vehicle ?? {};
     const systemPrompt = `You are the DHX Body & Paint AI damage-assessment engine (Phase 1: accident intake).
@@ -367,41 +345,25 @@ Respond with ONLY a JSON object of this exact shape (no prose, no code fence):
   "overallConfidence": 0.0-1.0
 }`;
 
-    const userContent: any[] = [
-      { type: "text", text: "Damage photos of the incoming vehicle:" },
-      ...photoUrls.map((url) => ({ type: "image_url", image_url: { url } })),
-    ];
-
-    let raw: any = null;
+    let text = "";
     try {
-      const res = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Lovable-API-Key": apiKey,
-          },
-          body: JSON.stringify({
-            model: "openai/gpt-5.5",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userContent },
-            ],
-            response_format: { type: "json_object" },
-          }),
+      const { data: aiRes, error: aiErr } = await sb.functions.invoke("ai-vision", {
+        body: {
+          system: systemPrompt,
+          user_text: "Damage photos of the incoming vehicle:",
+          image_urls: photoUrls,
         },
-      );
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        return initialFallback(`gateway_${res.status}: ${t.slice(0, 160)}`);
+      });
+      if (aiErr) return initialFallback(`ai_vision_invoke: ${aiErr.message ?? "error"}`);
+      if (aiRes?.error) {
+        return initialFallback(
+          `${aiRes.error}${aiRes.detail ? ": " + String(aiRes.detail).slice(0, 140) : ""}`,
+        );
       }
-      raw = await res.json();
+      text = String(aiRes?.text ?? "");
     } catch (e) {
       return initialFallback(`network: ${e instanceof Error ? e.message : "error"}`);
     }
-
-    const text: string = raw?.choices?.[0]?.message?.content ?? "";
     let parsed: any = null;
     try {
       parsed = JSON.parse(text);
