@@ -815,11 +815,12 @@ export function useSearchVehiclesByPlate(
     queryKey: ["vehicle-search", workspaceId, q.toUpperCase()],
     enabled: !!workspaceId && q.length >= 2,
     queryFn: async () => {
+      // Search by plate OR make OR model — "prius", "alza", "myvi" all work.
       const { data, error } = await sbCore()
         .from("vehicles")
         .select("id, plate_number, make, model, year")
         .eq("workspace_id", workspaceId)
-        .ilike("plate_number", `%${q}%`)
+        .or(`plate_number.ilike.%${q}%,make.ilike.%${q}%,model.ilike.%${q}%`)
         .order("plate_number")
         .limit(10);
       if (error) throw error;

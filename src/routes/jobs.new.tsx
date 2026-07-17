@@ -406,7 +406,7 @@ function StepVehicle({
                 onChange={(e) =>
                   setPlateQuery(e.target.value.toUpperCase())
                 }
-                placeholder="Search by plate (min 2 chars)"
+                placeholder="Search plate or model — e.g. QAL21, Myvi, Alza"
                 className="w-full rounded-xl border border-border bg-background pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
