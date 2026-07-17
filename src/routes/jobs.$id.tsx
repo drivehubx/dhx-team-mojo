@@ -37,8 +37,9 @@ import {
   type RepairPart,
   type PartDiscoveryStage,
   type PartRecommendedAction,
+  useSaveAIAssessmentDraft,
 } from "@/lib/jobs";
-import { analyzeRepairPart } from "@/lib/ai-damage.functions";
+import { analyzeInitialDamage, analyzeRepairPart } from "@/lib/ai-damage.functions";
 import type {
   JobStatus,
   RepairStage,
@@ -424,7 +425,7 @@ function JobDetailPage() {
       </section>
 
       {/* Parts Tracking */}
-      <AIAssessmentCard job={job} />
+      <AIAssessmentCard job={job} isStaff={isStaff} workspaceId={workspaceId} />
 
       <PartsSection jobId={job.id} isStaff={isStaff} repairStage={stage} />
 
@@ -1371,9 +1372,59 @@ function ReleaseSection({
   );
 }
 
-function AIAssessmentCard({ job }: { job: any }) {
+function AIAssessmentCard({
+  job,
+  isStaff,
+  workspaceId,
+}: {
+  job: any;
+  isStaff: boolean;
+  workspaceId: string | null;
+}) {
   const a = job.ai_corrected_assessment ?? job.ai_initial_assessment;
-  if (!a) return null;
+  const analyzeInit = useServerFn(analyzeInitialDamage);
+  const saveDraft = useSaveAIAssessmentDraft(workspaceId);
+  const [running, setRunning] = useState(false);
+
+  if (!a) {
+    if (!isStaff) return null;
+    return (
+      <section className="mx-5 mt-4 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-5 text-center">
+        <h2 className="text-sm font-semibold">No AI assessment yet</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          This job has intake photos but the AI assessment was never completed. Run it now — the
+          existing photos will be reused.
+        </p>
+        <button
+          type="button"
+          disabled={running}
+          onClick={async () => {
+            setRunning(true);
+            try {
+              const r = await analyzeInit({ data: { jobId: job.id } });
+              await saveDraft.mutateAsync({
+                jobId: job.id,
+                rawJson: r.rawJson,
+                estimatedLabourHours: r.estimatedLabourHours,
+                estimatedPaintPanels: r.estimatedPaintPanels,
+                estimatedDays: r.estimatedDays,
+                estimatedCost: r.estimatedCost ?? null,
+                summary: r.summary ?? "",
+              });
+              toast.success("AI assessment saved as draft — review the estimate");
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "AI assessment failed");
+            } finally {
+              setRunning(false);
+            }
+          }}
+          className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+        >
+          {running ? "AI analyzing…" : "Run AI assessment"}
+        </button>
+      </section>
+    );
+  }
   const findings: any[] = Array.isArray(a.findings) ? a.findings : [];
   const stats: { label: string; value: string }[] = [
     { label: "Labour", value: `${a.estimatedLabourHours ?? job.estimated_labour_hours ?? "—"} h` },

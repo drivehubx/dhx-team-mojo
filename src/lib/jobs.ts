@@ -869,6 +869,47 @@ export function useQuickAddVehicle(workspaceId: string | null) {
  * `open` / `queued` and is upgraded on approval (or left as-is if the user
  * bails out — it still flows into the normal jobs board).
  */
+/** Save an AI assessment draft onto an existing job (run from the job page). */
+export function useSaveAIAssessmentDraft(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      jobId: string;
+      rawJson: string;
+      estimatedLabourHours: number;
+      estimatedPaintPanels: number;
+      estimatedDays: number;
+      estimatedCost: number | null;
+      summary: string;
+    }) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      let aiRaw: unknown;
+      try {
+        aiRaw = JSON.parse(input.rawJson);
+      } catch {
+        aiRaw = { raw: input.rawJson };
+      }
+      const { error } = await sbWorkshop()
+        .from("jobs")
+        .update({
+          ai_initial_assessment: aiRaw,
+          estimated_labour_hours: input.estimatedLabourHours,
+          estimated_paint_panels: input.estimatedPaintPanels,
+          estimated_days: input.estimatedDays,
+          estimate_amount: input.estimatedCost,
+          damage_description: input.summary || null,
+        })
+        .eq("id", input.jobId)
+        .eq("workspace_id", workspaceId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["job", workspaceId, v.jobId] });
+      qc.invalidateQueries({ queryKey: ["jobs", workspaceId] });
+    },
+  });
+}
+
 /** Fill in missing make/model/year on an existing vehicle (quick-added cars). */
 export function useUpdateVehicleBasics(workspaceId: string | null) {
   const qc = useQueryClient();
