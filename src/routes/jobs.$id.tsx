@@ -424,6 +424,8 @@ function JobDetailPage() {
       </section>
 
       {/* Parts Tracking */}
+      <AIAssessmentCard job={job} />
+
       <PartsSection jobId={job.id} isStaff={isStaff} repairStage={stage} />
 
       {/* Quality Control */}
@@ -1363,6 +1365,69 @@ function ReleaseSection({
               Awaiting staff release.
             </p>
           )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AIAssessmentCard({ job }: { job: any }) {
+  const a = job.ai_corrected_assessment ?? job.ai_initial_assessment;
+  if (!a) return null;
+  const findings: any[] = Array.isArray(a.findings) ? a.findings : [];
+  const stats: { label: string; value: string }[] = [
+    { label: "Labour", value: `${a.estimatedLabourHours ?? job.estimated_labour_hours ?? "—"} h` },
+    { label: "Paint", value: `${a.estimatedPaintPanels ?? job.estimated_paint_panels ?? "—"} panels` },
+    { label: "Days", value: String(a.estimatedDays ?? job.estimated_days ?? "—") },
+    {
+      label: "Estimate",
+      value:
+        a.estimateAmount != null || job.estimate_amount != null
+          ? `RM ${Number(a.estimateAmount ?? job.estimate_amount).toFixed(2)}`
+          : "—",
+    },
+  ];
+  const sevClass = (sev: string) =>
+    sev === "major"
+      ? "bg-red-500/15 text-red-500"
+      : sev === "moderate"
+        ? "bg-amber-500/15 text-amber-600"
+        : "bg-emerald-500/15 text-emerald-600";
+  return (
+    <section className="mx-5 mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">AI Assessment</h2>
+        <span className="text-[11px] text-muted-foreground">
+          {job.ai_corrected_assessment ? "Human-approved" : "AI draft"}
+        </span>
+      </div>
+      {a.summary && <p className="mt-2 text-sm text-muted-foreground">{a.summary}</p>}
+      <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+        {stats.map((st) => (
+          <div key={st.label} className="rounded-lg border border-border/60 bg-background/40 p-2">
+            <p className="text-[10px] text-muted-foreground">{st.label}</p>
+            <p className="text-xs font-semibold">{st.value}</p>
+          </div>
+        ))}
+      </div>
+      {findings.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {findings.map((f, i) => (
+            <div key={i} className="flex items-start justify-between gap-2 rounded-lg border border-border/60 p-2 text-sm">
+              <div className="min-w-0">
+                <p className="font-medium truncate">{f.component}</p>
+                {f.notes && <p className="text-xs text-muted-foreground">{f.notes}</p>}
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${sevClass(String(f.severity))}`}>
+                  {f.severity}
+                </span>
+                <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-semibold uppercase">
+                  {f.recommendedAction}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </section>

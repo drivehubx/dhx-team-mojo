@@ -28,6 +28,8 @@ import {
   type CorrectedPart,
   BUDGET_STRATEGY_LABELS,
   budgetStrategyFor,
+  uploadIntakePhotos,
+  useUpdateVehicleBasics,
 } from "@/lib/jobs";
 import { analyzeInitialDamage } from "@/lib/ai-damage.functions";
 import { Textarea } from "@/components/ui/textarea";
@@ -91,6 +93,7 @@ function NewWorkRequestPage() {
   // ---- Step 3/4 state ----
   const [jobId, setJobId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [uploadedCount, setUploadedCount] = useState(0);
   const [ai, setAI] = useState<AIResult | null>(null);
   const [findings, setFindings] = useState<CorrectedFinding[]>([]);
   const [parts, setParts] = useState<CorrectedPart[]>([]);
@@ -131,14 +134,24 @@ function NewWorkRequestPage() {
     setStep(3);
     setAnalyzing(true);
     try {
-      const draft = await createDraft.mutateAsync({
-        vehicle_id: vehicle.id,
-        work_request_source: source,
-        damage_description: notes.trim(),
-        photos,
-      });
-      setJobId(draft.id);
-      const result = await analyzeFn({ data: { jobId: draft.id } });
+      let activeJobId = jobId;
+      if (!activeJobId) {
+        // First run: create ONE draft job with all photos.
+        const draft = await createDraft.mutateAsync({
+          vehicle_id: vehicle.id,
+          work_request_source: source,
+          damage_description: notes.trim(),
+          photos,
+        });
+        activeJobId = draft.id;
+        setJobId(draft.id);
+        setUploadedCount(photos.length);
+      } else if (photos.length > uploadedCount && workspaceId) {
+        // Re-run: same job, upload only the newly added photos.
+        await uploadIntakePhotos(workspaceId, activeJobId, photos.slice(uploadedCount));
+        setUploadedCount(photos.length);
+      }
+      const result = await analyzeFn({ data: { jobId: activeJobId } });
       setAI(result);
       setFindings(
         result.findings.map((f) => ({
@@ -223,6 +236,7 @@ function NewWorkRequestPage() {
             onRemove={removePhoto}
             notes={notes}
             setNotes={setNotes}
+            autoEnabled={!ai}
             onBack={() => setStep(1)}
             onNext={goToAI}
           />
@@ -394,6 +408,13 @@ function StepVehicle({
                 Change
               </button>
             </div>
+            {(!vehicle.make || !vehicle.model) && (
+              <VehicleModelFixer
+                workspaceId={workspaceId}
+                vehicle={vehicle}
+                onSaved={(v) => setVehicle(v)}
+              />
+            )}
           </div>
         ) : (
           <>
@@ -469,20 +490,18 @@ function StepVehicle({
                   placeholder="Plate number *"
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    value={qaMake}
-                    onChange={(e) => setQaMake(e.target.value)}
-                    placeholder="Make"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  />
-                  <input
-                    value={qaModel}
-                    onChange={(e) => setQaModel(e.target.value)}
-                    placeholder="Model"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  />
-                </div>
+                <input
+                  value={qaMake}
+                  onChange={(e) => setQaMake(e.target.value)}
+                  placeholder="Make — e.g. Perodua, Toyota"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+                <input
+                  value={qaModel}
+                  onChange={(e) => setQaModel(e.target.value)}
+                  placeholder="Model — e.g. Alza, Myvi (needed for AI matching)"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
                 <input
                   value={qaYear}
                   onChange={(e) => setQaYear(e.target.value)}
@@ -550,6 +569,7 @@ function StepPhotos({
   onRemove,
   notes,
   setNotes,
+  autoEnabled,
   onBack,
   onNext,
 }: {
@@ -559,6 +579,7 @@ function StepPhotos({
   onRemove: (i: number) => void;
   notes: string;
   setNotes: (v: string) => void;
+  autoEnabled: boolean;
   onBack: () => void;
   onNext: () => void;
 }) {
@@ -568,13 +589,13 @@ function StepPhotos({
   const autoRef = useRef<number | null>(null);
   useEffect(() => {
     if (autoRef.current) window.clearTimeout(autoRef.current);
-    if (photos.length === 0 || notesFocused) return;
+    if (photos.length === 0 || notesFocused || !autoEnabled) return;
     autoRef.current = window.setTimeout(() => onNext(), 3500);
     return () => {
       if (autoRef.current) window.clearTimeout(autoRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photos.length, notesFocused]);
+  }, [photos.length, notesFocused, autoEnabled]);
 
   return (
     <div className="space-y-5">
@@ -1063,6 +1084,69 @@ function StepReview({
           Approve & Create Job
         </button>
       </div>
+    </div>
+  );
+}
+
+function VehicleModelFixer({
+  workspaceId,
+  vehicle,
+  onSaved,
+}: {
+  workspaceId: string | null;
+  vehicle: { id: string; plate_number: string; make: string | null; model: string | null; year: number | null };
+  onSaved: (v: any) => void;
+}) {
+  const [make, setMake] = useState(vehicle.make ?? "");
+  const [model, setModel] = useState(vehicle.model ?? "");
+  const [year, setYear] = useState(vehicle.year ? String(vehicle.year) : "");
+  const update = useUpdateVehicleBasics(workspaceId);
+
+  return (
+    <div className="mt-3 space-y-2 rounded-lg border border-amber-400/40 bg-amber-500/5 p-3">
+      <p className="text-xs font-medium text-amber-600">
+        This car has no model yet — add it so AI matching works.
+      </p>
+      <input
+        value={make}
+        onChange={(e) => setMake(e.target.value)}
+        placeholder="Make — e.g. Perodua, Toyota"
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+      />
+      <input
+        value={model}
+        onChange={(e) => setModel(e.target.value)}
+        placeholder="Model — e.g. Alza, Myvi, Prius"
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+      />
+      <input
+        value={year}
+        onChange={(e) => setYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+        inputMode="numeric"
+        placeholder="Year"
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+      />
+      <button
+        type="button"
+        disabled={update.isPending || !model.trim()}
+        onClick={async () => {
+          try {
+            const v = await update.mutateAsync({
+              vehicleId: vehicle.id,
+              make,
+              model,
+              year: year ? Number(year) : null,
+            });
+            toast.success("Vehicle updated");
+            onSaved(v);
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to update vehicle");
+          }
+        }}
+        className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+      >
+        {update.isPending ? "Saving…" : "Save vehicle details"}
+      </button>
     </div>
   );
 }

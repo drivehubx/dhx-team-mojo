@@ -869,6 +869,68 @@ export function useQuickAddVehicle(workspaceId: string | null) {
  * `open` / `queued` and is upgraded on approval (or left as-is if the user
  * bails out — it still flows into the normal jobs board).
  */
+/** Fill in missing make/model/year on an existing vehicle (quick-added cars). */
+export function useUpdateVehicleBasics(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      vehicleId: string;
+      make: string;
+      model: string;
+      year: number | null;
+    }) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { data, error } = await sbCore()
+        .from("vehicles")
+        .update({
+          make: input.make.trim() || null,
+          model: input.model.trim() || null,
+          year: input.year,
+        })
+        .eq("id", input.vehicleId)
+        .eq("workspace_id", workspaceId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as CoreVehicle;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["vehicle-search", workspaceId] });
+    },
+  });
+}
+
+/** Upload intake photos to an existing job via the universal core.files pattern. */
+export async function uploadIntakePhotos(
+  workspaceId: string,
+  jobId: string,
+  photos: File[],
+): Promise<void> {
+  const { data: userRes } = await supabase.auth.getUser();
+  const uploadedBy = userRes.user?.id ?? null;
+  for (const file of photos) {
+    const uuid =
+      (globalThis.crypto as any)?.randomUUID?.() ??
+      Math.random().toString(36).slice(2);
+    const path = `${workspaceId}/${jobId}/${uuid}.${extOf(file.name)}`;
+    const { error: upErr } = await supabase.storage
+      .from(JOB_PHOTOS_BUCKET)
+      .upload(path, file, { contentType: file.type || undefined });
+    if (upErr) throw upErr;
+    const { error: fErr } = await sbCore().from("files").insert({
+      workspace_id: workspaceId,
+      owner_type: "workshop.jobs",
+      owner_id: jobId,
+      file_type: "intake_photo",
+      url: path,
+      status: "approved",
+      uploaded_by: uploadedBy,
+    });
+    if (fErr) throw fErr;
+  }
+}
+
 export function useCreateDraftJobForAI(workspaceId: string | null) {
   const qc = useQueryClient();
   return useMutation({
@@ -895,29 +957,7 @@ export function useCreateDraftJobForAI(workspaceId: string | null) {
       if (error) throw error;
       const jobRow = job as WorkshopJob;
 
-      const { data: userRes } = await supabase.auth.getUser();
-      const uploadedBy = userRes.user?.id ?? null;
-
-      for (const file of input.photos) {
-        const uuid =
-          (globalThis.crypto as any)?.randomUUID?.() ??
-          Math.random().toString(36).slice(2);
-        const path = `${workspaceId}/${jobRow.id}/${uuid}.${extOf(file.name)}`;
-        const { error: upErr } = await supabase.storage
-          .from(JOB_PHOTOS_BUCKET)
-          .upload(path, file, { contentType: file.type || undefined });
-        if (upErr) throw upErr;
-        const { error: fErr } = await sbCore().from("files").insert({
-          workspace_id: workspaceId,
-          owner_type: "workshop.jobs",
-          owner_id: jobRow.id,
-          file_type: "intake_photo",
-          url: path,
-          status: "approved",
-          uploaded_by: uploadedBy,
-        });
-        if (fErr) throw fErr;
-      }
+      await uploadIntakePhotos(workspaceId, jobRow.id, input.photos);
       return jobRow;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs", workspaceId] }),
