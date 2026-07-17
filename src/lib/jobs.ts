@@ -793,3 +793,244 @@ export function useApprovePartRevision(workspaceId: string | null) {
       qc.invalidateQueries({ queryKey: ["repair-parts", workspaceId, res.jobId] }),
   });
 }
+
+// ---- Phase 1: AI-assisted work-request intake ----
+
+export const WORK_REQUEST_SOURCES = [
+  "internal_fleet",
+  "dhx_rental",
+  "my_garage",
+  "dhx_rebuild",
+  "walk_in",
+  "insurance",
+  "partner_workshop",
+] as const;
+export type WorkRequestSource = (typeof WORK_REQUEST_SOURCES)[number];
+
+export const WORK_REQUEST_SOURCE_LABELS: Record<WorkRequestSource, string> = {
+  internal_fleet: "Internal Fleet",
+  dhx_rental: "DHX Rental",
+  my_garage: "My Garage",
+  dhx_rebuild: "DHX Rebuild",
+  walk_in: "Walk-in Customer",
+  insurance: "Insurance",
+  partner_workshop: "Partner Workshop",
+};
+
+export function useSearchVehiclesByPlate(
+  workspaceId: string | null,
+  query: string,
+) {
+  const q = query.trim();
+  return useQuery({
+    queryKey: ["vehicle-search", workspaceId, q.toUpperCase()],
+    enabled: !!workspaceId && q.length >= 2,
+    queryFn: async () => {
+      const { data, error } = await sbCore()
+        .from("vehicles")
+        .select("id, plate_number, make, model, year")
+        .eq("workspace_id", workspaceId)
+        .ilike("plate_number", `%${q}%`)
+        .order("plate_number")
+        .limit(10);
+      if (error) throw error;
+      return (data ?? []) as Pick<
+        CoreVehicle,
+        "id" | "plate_number" | "make" | "model" | "year"
+      >[];
+    },
+  });
+}
+
+export function useQuickAddVehicle(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      plate_number: string;
+      make: string;
+      model: string;
+      year: number | null;
+    }) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { data, error } = await sbCore()
+        .from("vehicles")
+        .insert({
+          workspace_id: workspaceId,
+          plate_number: input.plate_number.trim().toUpperCase(),
+          make: input.make.trim() || null,
+          model: input.model.trim() || null,
+          year: input.year,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as CoreVehicle;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["vehicle-search", workspaceId] });
+    },
+  });
+}
+
+/**
+ * Create a draft job + upload intake photos. Photos are attached BEFORE the AI
+ * runs so the server function can pull them via signed URLs. The job starts
+ * `open` / `queued` and is upgraded on approval (or left as-is if the user
+ * bails out — it still flows into the normal jobs board).
+ */
+export function useCreateDraftJobForAI(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      vehicle_id: string;
+      work_request_source: WorkRequestSource;
+      damage_description: string;
+      photos: File[];
+    }) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { data: job, error } = await sbWorkshop()
+        .from("jobs")
+        .insert({
+          workspace_id: workspaceId,
+          vehicle_id: input.vehicle_id,
+          description: input.damage_description || null,
+          damage_description: input.damage_description || null,
+          work_request_source: input.work_request_source,
+          repair_stage: "queued" as RepairStage,
+          status: "open",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      const jobRow = job as WorkshopJob;
+
+      const { data: userRes } = await supabase.auth.getUser();
+      const uploadedBy = userRes.user?.id ?? null;
+
+      for (const file of input.photos) {
+        const uuid =
+          (globalThis.crypto as any)?.randomUUID?.() ??
+          Math.random().toString(36).slice(2);
+        const path = `${workspaceId}/${jobRow.id}/${uuid}.${extOf(file.name)}`;
+        const { error: upErr } = await supabase.storage
+          .from(JOB_PHOTOS_BUCKET)
+          .upload(path, file, { contentType: file.type || undefined });
+        if (upErr) throw upErr;
+        const { error: fErr } = await sbCore().from("files").insert({
+          workspace_id: workspaceId,
+          owner_type: "workshop.jobs",
+          owner_id: jobRow.id,
+          file_type: "intake_photo",
+          url: path,
+          status: "approved",
+          uploaded_by: uploadedBy,
+        });
+        if (fErr) throw fErr;
+      }
+      return jobRow;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs", workspaceId] }),
+  });
+}
+
+export type CorrectedFinding = {
+  component: string;
+  severity: "minor" | "moderate" | "major";
+  recommendedAction: "replace" | "repair";
+  notes: string;
+};
+export type CorrectedPart = {
+  partName: string;
+  quantity: number;
+  unitPrice: number | null;
+  recommendedAction: "replace" | "repair";
+  relatedComponent: string;
+};
+
+/**
+ * Persist the human-approved assessment: writes the corrected snapshot
+ * (+ raw AI output) onto the job, materializes each part with
+ * provenance='initial_assessment', and records the initial estimate. The
+ * job continues through the existing workflow untouched.
+ */
+export function useApproveInitialAssessment(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      jobId: string;
+      aiRawJson: string;
+      correctedFindings: CorrectedFinding[];
+      correctedParts: CorrectedPart[];
+      estimatedLabourHours: number;
+      estimatedPaintPanels: number;
+      estimatedDays: number;
+      estimateAmount: number | null;
+      summary: string;
+    }) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { data: userRes } = await supabase.auth.getUser();
+      const createdBy = userRes.user?.id ?? null;
+
+      let aiRaw: unknown = null;
+      try {
+        aiRaw = JSON.parse(input.aiRawJson);
+      } catch {
+        aiRaw = { raw: input.aiRawJson };
+      }
+      const corrected = {
+        summary: input.summary,
+        findings: input.correctedFindings,
+        parts: input.correctedParts,
+        estimatedLabourHours: input.estimatedLabourHours,
+        estimatedPaintPanels: input.estimatedPaintPanels,
+        estimatedDays: input.estimatedDays,
+        estimateAmount: input.estimateAmount,
+        approvedAt: new Date().toISOString(),
+      };
+
+      const { error: jErr } = await sbWorkshop()
+        .from("jobs")
+        .update({
+          ai_initial_assessment: aiRaw,
+          ai_corrected_assessment: corrected,
+          damage_description: input.summary || null,
+          estimate_amount: input.estimateAmount,
+          estimated_labour_hours: input.estimatedLabourHours,
+          estimated_paint_panels: input.estimatedPaintPanels,
+          estimated_days: input.estimatedDays,
+          labor_hours_estimate: input.estimatedLabourHours || null,
+        })
+        .eq("id", input.jobId);
+      if (jErr) throw jErr;
+
+      if (input.correctedParts.length > 0) {
+        const rows = input.correctedParts.map((p) => ({
+          workspace_id: workspaceId,
+          job_id: input.jobId,
+          part_name: p.partName,
+          quantity: p.quantity,
+          unit_cost: p.unitPrice,
+          status: "required" as RepairPartStatus,
+          created_by: createdBy,
+          provenance: "initial_assessment" as PartProvenance,
+          recommended_action: p.recommendedAction,
+          related_damage: p.relatedComponent || null,
+          revision_status: "approved" as PartRevisionStatus,
+        }));
+        const { error: pErr } = await sbWorkshop()
+          .from("repair_parts")
+          .insert(rows);
+        if (pErr) throw pErr;
+      }
+      return { jobId: input.jobId };
+    },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["job", workspaceId, res.jobId] });
+      qc.invalidateQueries({
+        queryKey: ["repair-parts", workspaceId, res.jobId],
+      });
+    },
+  });
+}
