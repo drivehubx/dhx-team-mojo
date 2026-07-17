@@ -810,7 +810,7 @@ export function useSearchVehiclesByPlate(
   workspaceId: string | null,
   query: string,
 ) {
-  const q = query.trim();
+  const q = query.trim().replace(/[^\w\s-]/g, "");
   return useQuery({
     queryKey: ["vehicle-search", workspaceId, q.toUpperCase()],
     enabled: !!workspaceId && q.length >= 2,
