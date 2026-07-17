@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   Loader2,
@@ -11,6 +11,7 @@ import {
   Check,
   Trash2,
   Plus,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -556,6 +557,20 @@ function StepPhotos({
   onBack: () => void;
   onNext: () => void;
 }) {
+  // AI detection starts automatically once photos settle (founder rule: no extra tap).
+  // Adding another photo restarts the countdown; typing notes pauses it.
+  const [notesFocused, setNotesFocused] = useState(false);
+  const autoRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (autoRef.current) window.clearTimeout(autoRef.current);
+    if (photos.length === 0 || notesFocused) return;
+    autoRef.current = window.setTimeout(() => onNext(), 3500);
+    return () => {
+      if (autoRef.current) window.clearTimeout(autoRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photos.length, notesFocused]);
+
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -591,12 +606,24 @@ function StepPhotos({
           {photos.length < MAX_PHOTOS && (
             <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-muted-foreground hover:bg-secondary/40">
               <Camera className="h-6 w-6" />
-              <span className="text-[11px]">Camera / Gallery</span>
+              <span className="text-[11px]">Camera</span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => onPick(e.target.files)}
+              />
+            </label>
+          )}
+          {photos.length < MAX_PHOTOS && (
+            <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-muted-foreground hover:bg-secondary/40">
+              <Upload className="h-6 w-6" />
+              <span className="text-[11px]">Upload</span>
               <input
                 type="file"
                 accept="image/*"
                 multiple
-                capture="environment"
                 className="hidden"
                 onChange={(e) => onPick(e.target.files)}
               />
@@ -613,10 +640,22 @@ function StepPhotos({
           id="notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
+          onFocus={() => setNotesFocused(true)}
+          onBlur={() => setNotesFocused(false)}
           placeholder="Anything the photos don't show clearly…"
           className="mt-2 min-h-[80px] resize-none"
         />
       </section>
+
+      {photos.length > 0 && (
+        <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+          <Sparkles className="h-4 w-4 animate-pulse text-primary" />
+          <span>
+            🤖 AI detection starts automatically ({photos.length} photo{photos.length > 1 ? "s" : ""})
+            — add more or it begins in a moment…
+          </span>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <button
@@ -632,7 +671,7 @@ function StepPhotos({
           disabled={photos.length === 0}
           className="inline-flex flex-[2] items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow disabled:opacity-50"
         >
-          <Sparkles className="h-4 w-4" /> Analyze with AI
+          <Sparkles className="h-4 w-4" /> Analyze now
         </button>
       </div>
     </div>
