@@ -26,6 +26,8 @@ import {
   type WorkRequestSource,
   type CorrectedFinding,
   type CorrectedPart,
+  BUDGET_STRATEGY_LABELS,
+  budgetStrategyFor,
 } from "@/lib/jobs";
 import { analyzeInitialDamage } from "@/lib/ai-damage.functions";
 import { Textarea } from "@/components/ui/textarea";
@@ -523,6 +525,9 @@ function StepVehicle({
             </SelectContent>
           </Select>
         </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Budget strategy: {BUDGET_STRATEGY_LABELS[budgetStrategyFor(source)]}
+        </p>
       </section>
 
       <button

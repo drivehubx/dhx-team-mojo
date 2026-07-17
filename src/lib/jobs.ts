@@ -796,26 +796,15 @@ export function useApprovePartRevision(workspaceId: string | null) {
 
 // ---- Phase 1: AI-assisted work-request intake ----
 
-export const WORK_REQUEST_SOURCES = [
-  "internal_fleet",
-  "dhx_rental",
-  "my_garage",
-  "dhx_rebuild",
-  "walk_in",
-  "insurance",
-  "partner_workshop",
-] as const;
-export type WorkRequestSource = (typeof WORK_REQUEST_SOURCES)[number];
-
-export const WORK_REQUEST_SOURCE_LABELS: Record<WorkRequestSource, string> = {
-  internal_fleet: "Internal Fleet",
-  dhx_rental: "DHX Rental",
-  my_garage: "My Garage",
-  dhx_rebuild: "DHX Rebuild",
-  walk_in: "Walk-in Customer",
-  insurance: "Insurance",
-  partner_workshop: "Partner Workshop",
-};
+export {
+  WORK_REQUEST_SOURCES,
+  WORK_REQUEST_SOURCE_LABELS,
+  WORK_SOURCE_CATEGORY,
+  CATEGORY_BUDGET_STRATEGY,
+  BUDGET_STRATEGY_LABELS,
+  budgetStrategyFor,
+} from "@/lib/work-source";
+export type { WorkRequestSource, WorkSourceCategory, BudgetStrategy } from "@/lib/work-source";
 
 export function useSearchVehiclesByPlate(
   workspaceId: string | null,

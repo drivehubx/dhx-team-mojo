@@ -3,6 +3,7 @@
 // Designed so other modules (Rental, Fleet, My Garage) can call the same fn later.
 
 import { createServerFn } from "@tanstack/react-start";
+import { BUDGET_STRATEGY_AI_GUIDANCE, budgetStrategyFor, type WorkRequestSource } from "@/lib/work-source";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -292,7 +293,7 @@ export const analyzeInitialDamage = createServerFn({ method: "POST" })
 
     const { data: job } = await workshop
       .from("jobs")
-      .select("id, vehicle_id, damage_description, repair_stage")
+      .select("id, vehicle_id, damage_description, repair_stage, work_request_source")
       .eq("id", data.jobId)
       .maybeSingle();
     if (!job) throw new Error("Job not found");
@@ -335,6 +336,7 @@ guessing. Never invent parts you cannot see damage evidence for.
 
 Vehicle: ${veh.plate_number ?? "?"} · ${veh.make ?? ""} ${veh.model ?? ""} ${veh.year ?? ""} ${veh.color ?? ""}
 Notes from work request: ${job.damage_description ?? "(none)"}
+${BUDGET_STRATEGY_AI_GUIDANCE[budgetStrategyFor((job.work_request_source ?? "walk_in") as WorkRequestSource)]}
 
 Respond with ONLY a JSON object of this exact shape (no prose, no code fence):
 {
