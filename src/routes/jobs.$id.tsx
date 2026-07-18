@@ -1446,6 +1446,15 @@ function AIAssessmentCard({
     );
   }
   const findings: any[] = Array.isArray(a.findings) ? a.findings : [];
+  const parts: any[] = Array.isArray(a.parts) ? a.parts : [];
+  const partsTotal = parts.reduce((sum, p) => {
+    const price = p?.estimatedUnitPrice;
+    const qty = Number(p?.quantity) || 0;
+    return price == null || !Number.isFinite(Number(price)) ? sum : sum + Number(price) * qty;
+  }, 0);
+  const hasPricedPart = parts.some(
+    (p) => p?.estimatedUnitPrice != null && Number.isFinite(Number(p.estimatedUnitPrice)),
+  );
   const stats: { label: string; value: string }[] = [
     { label: "Labour", value: `${a.estimatedLabourHours ?? job.estimated_labour_hours ?? "—"} h` },
     { label: "Paint", value: `${a.estimatedPaintPanels ?? job.estimated_paint_panels ?? "—"} panels` },
