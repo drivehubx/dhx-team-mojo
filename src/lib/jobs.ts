@@ -804,6 +804,7 @@ export {
   BUDGET_STRATEGY_LABELS,
   budgetStrategyFor,
 } from "@/lib/work-source";
+import type { WorkRequestSource } from "@/lib/work-source";
 export type { WorkRequestSource, WorkSourceCategory, BudgetStrategy } from "@/lib/work-source";
 
 export function useSearchVehiclesByPlate(
