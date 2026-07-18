@@ -217,6 +217,22 @@ function JobDetailPage() {
         </div>
       </header>
 
+      {job.vehicle && (!job.vehicle.make || !job.vehicle.model) && (
+        <section className="px-5 mt-4">
+          <VehicleModelFixer
+            workspaceId={workspaceId}
+            vehicle={{
+              id: job.vehicle.id,
+              plate_number: job.vehicle.plate_number,
+              make: job.vehicle.make,
+              model: job.vehicle.model,
+              year: (job.vehicle as any).year ?? null,
+            }}
+            jobId={job.id}
+          />
+        </section>
+      )}
+
       {/* Intake Photos */}
       <section className="px-5 mt-4">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">Intake Photos</h2>
