@@ -29,9 +29,9 @@ import {
   BUDGET_STRATEGY_LABELS,
   budgetStrategyFor,
   uploadIntakePhotos,
-  useUpdateVehicleBasics,
 } from "@/lib/jobs";
 import { analyzeInitialDamage } from "@/lib/ai-damage.functions";
+import { VehicleModelFixer } from "@/components/vehicle-model-fixer";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
