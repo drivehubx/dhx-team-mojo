@@ -40,6 +40,7 @@ import {
   useSaveAIAssessmentDraft,
 } from "@/lib/jobs";
 import { analyzeInitialDamage, analyzeRepairPart } from "@/lib/ai-damage.functions";
+import { VehicleModelFixer } from "@/components/vehicle-model-fixer";
 import type {
   JobStatus,
   RepairStage,
