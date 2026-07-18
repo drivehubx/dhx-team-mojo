@@ -1475,11 +1475,47 @@ function AIAssessmentCard({
         : "bg-emerald-500/15 text-emerald-600";
   return (
     <section className="mx-5 mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">AI Assessment</h2>
-        <span className="text-[11px] text-muted-foreground">
-          {job.ai_corrected_assessment ? "Human-approved" : "AI draft"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground">
+            {job.ai_corrected_assessment ? "Human-approved" : "AI draft"}
+          </span>
+          {isStaff && !job.ai_corrected_assessment && (
+            <button
+              type="button"
+              disabled={running}
+              onClick={async () => {
+                setRunning(true);
+                try {
+                  const r = await analyzeInit({ data: { jobId: job.id } });
+                  await saveDraft.mutateAsync({
+                    jobId: job.id,
+                    rawJson: r.rawJson,
+                    estimatedLabourHours: r.estimatedLabourHours,
+                    estimatedPaintPanels: r.estimatedPaintPanels,
+                    estimatedDays: r.estimatedDays,
+                    estimatedCost: r.estimatedCost ?? null,
+                    summary: r.summary ?? "",
+                  });
+                  const savedFallback = (() => { try { return JSON.parse(r.rawJson)?.fallback === true; } catch { return false; } })();
+                  if (savedFallback) {
+                    toast.error("AI could not analyze — see the reason shown on this job");
+                  } else {
+                    toast.success("AI assessment re-run — draft updated");
+                  }
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "AI assessment failed");
+                } finally {
+                  setRunning(false);
+                }
+              }}
+              className="text-[11px] font-medium text-primary underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              {running ? "Re-running…" : "Re-run AI assessment"}
+            </button>
+          )}
+        </div>
       </div>
       {a.summary && <p className="mt-2 text-sm text-muted-foreground">{a.summary}</p>}
       <div className="mt-3 grid grid-cols-4 gap-2 text-center">
