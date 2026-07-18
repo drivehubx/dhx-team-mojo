@@ -939,6 +939,8 @@ export function useUpdateVehicleBasics(workspaceId: string | null) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vehicles", workspaceId] });
       qc.invalidateQueries({ queryKey: ["vehicle-search", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["job", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["jobs", workspaceId] });
     },
   });
 }
