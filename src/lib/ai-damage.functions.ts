@@ -458,3 +458,139 @@ PRICING RULE — IMPORTANT:
       rawJson: JSON.stringify(parsed),
     };
   });
+
+// ---------------------------------------------------------------------------
+// Vehicle identification from intake photos.
+// AI-drafts / humans-approve: fills make/model/year/color from photos; the
+// technician still confirms and saves via VehicleModelFixer.
+// ---------------------------------------------------------------------------
+
+const IdentifyInput = z.object({ jobId: z.string().uuid() });
+
+export type IdentifyVehicleResult = {
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  color: string | null;
+  confidence: number;
+  rawJson: string;
+};
+
+function identifyFallback(reason = "unknown"): IdentifyVehicleResult {
+  console.error("[identifyVehicleFromPhotos] fallback:", reason);
+  return {
+    make: null,
+    model: null,
+    year: null,
+    color: null,
+    confidence: 0,
+    rawJson: JSON.stringify({ fallback: true, reason }),
+  };
+}
+
+export const identifyVehicleFromPhotos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((v: unknown) => IdentifyInput.parse(v))
+  .handler(async ({ data, context }): Promise<IdentifyVehicleResult> => {
+    const sb = context.supabase as any;
+    const workshop = sb.schema("workshop");
+    const core = sb.schema("core");
+
+    const { data: job } = await workshop
+      .from("jobs")
+      .select("id, vehicle_id")
+      .eq("id", data.jobId)
+      .maybeSingle();
+    if (!job) throw new Error("Job not found");
+
+    const [{ data: vehicle }, { data: intakeFiles }] = await Promise.all([
+      core
+        .from("vehicles")
+        .select("plate_number")
+        .eq("id", job.vehicle_id)
+        .maybeSingle(),
+      core
+        .from("files")
+        .select("url")
+        .eq("owner_type", "workshop.jobs")
+        .eq("owner_id", data.jobId)
+        .eq("file_type", "intake_photo")
+        .order("created_at", { ascending: true })
+        .limit(8),
+    ]);
+
+    const paths = ((intakeFiles ?? []) as { url: string }[]).map((f) => f.url);
+    if (paths.length === 0) return identifyFallback("no_intake_photos");
+
+    const { data: signed } = await sb.storage
+      .from(JOB_PHOTOS_BUCKET)
+      .createSignedUrls(paths, 60 * 10);
+    const photoUrls = (signed ?? [])
+      .map((s: any) => s?.signedUrl)
+      .filter(Boolean) as string[];
+    if (photoUrls.length === 0) return identifyFallback("storage_signed_urls_failed");
+
+    const plate = (vehicle as any)?.plate_number ?? "?";
+    const systemPrompt = `You are a vehicle identification assistant for a Malaysian workshop.
+Look at the photos of the vehicle (plate: ${plate}) and identify:
+- make (brand, e.g. "Perodua", "Toyota", "Honda")
+- model (e.g. "Axia", "Myvi", "Alza", "Vios", "City")
+- year (best-guess model year as integer, or null if unsure)
+- color (short common name, e.g. "White", "Silver", "Red")
+- confidence (0.0-1.0 overall)
+
+Common Malaysian fleet cars include Perodua Axia / Bezza / Myvi / Alza,
+Proton Saga / Persona / X50, Toyota Vios / Yaris, Honda City / Jazz.
+
+Respond with ONLY a JSON object of this exact shape (no prose, no code fence):
+{ "make": string|null, "model": string|null, "year": integer|null, "color": string|null, "confidence": 0.0-1.0 }`;
+
+    let text = "";
+    try {
+      const { data: aiRes, error: aiErr } = await sb.functions.invoke("ai-vision", {
+        body: {
+          system: systemPrompt,
+          user_text: "Identify the vehicle in these photos:",
+          image_urls: photoUrls,
+          context: "vehicle_identify",
+          source_id: data.jobId,
+        },
+      });
+      if (aiErr) return identifyFallback(`ai_vision_invoke: ${aiErr.message ?? "error"}`);
+      if (aiRes?.error) {
+        return identifyFallback(
+          `${aiRes.error}${aiRes.detail ? ": " + String(aiRes.detail).slice(0, 140) : ""}`,
+        );
+      }
+      text = String(aiRes?.text ?? "");
+    } catch (e) {
+      return identifyFallback(`network: ${e instanceof Error ? e.message : "error"}`);
+    }
+
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      const m = text.match(/\{[\s\S]*\}/);
+      if (m) {
+        try {
+          parsed = JSON.parse(m[0]);
+        } catch {
+          parsed = null;
+        }
+      }
+    }
+    if (!parsed) return identifyFallback("ai_response_not_json");
+
+    const yearNum = Number(parsed.year);
+    return {
+      make: parsed.make ? String(parsed.make).slice(0, 60) : null,
+      model: parsed.model ? String(parsed.model).slice(0, 60) : null,
+      year: Number.isFinite(yearNum) && yearNum >= 1950 && yearNum <= 2100
+        ? Math.floor(yearNum)
+        : null,
+      color: parsed.color ? String(parsed.color).slice(0, 40) : null,
+      confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
+      rawJson: JSON.stringify(parsed),
+    };
+  });
