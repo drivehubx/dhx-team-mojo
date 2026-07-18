@@ -1510,6 +1510,69 @@ function AIAssessmentCard({
           ))}
         </div>
       )}
+      {parts.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Parts &amp; Estimated Cost
+            </h3>
+            <span className="text-[10px] text-muted-foreground">AI draft — for staff review</span>
+          </div>
+          <div className="mt-2 overflow-hidden rounded-lg border border-border/60">
+            <table className="w-full text-sm">
+              <thead className="bg-background/40 text-[10px] uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-1.5 text-left font-medium">Part</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Qty</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Unit</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Line</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parts.map((p, i) => {
+                  const qty = Number(p?.quantity) || 0;
+                  const unit = p?.estimatedUnitPrice;
+                  const unitNum =
+                    unit != null && Number.isFinite(Number(unit)) ? Number(unit) : null;
+                  const line = unitNum != null ? unitNum * qty : null;
+                  return (
+                    <tr key={i} className="border-t border-border/60">
+                      <td className="px-2 py-1.5">
+                        <p className="font-medium">{p.partName || "—"}</p>
+                        {p.relatedComponent && (
+                          <p className="text-[10px] text-muted-foreground">{p.relatedComponent}</p>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{qty}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">
+                        {unitNum != null ? `RM ${unitNum.toFixed(2)}` : "—"}
+                      </td>
+                      <td className="px-2 py-1.5 text-right tabular-nums font-medium">
+                        {line != null ? `RM ${line.toFixed(2)}` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              {hasPricedPart && (
+                <tfoot>
+                  <tr className="border-t border-border bg-background/40">
+                    <td className="px-2 py-1.5 text-xs font-semibold" colSpan={3}>
+                      Estimated parts total
+                    </td>
+                    <td className="px-2 py-1.5 text-right text-xs font-semibold tabular-nums">
+                      RM {partsTotal.toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            AI drafts, humans approve — prices are best-estimate suggestions for the estimator, not a locked quotation.
+          </p>
+        </div>
+      )}
     </section>
   );
 }
