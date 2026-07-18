@@ -155,6 +155,8 @@ Respond with ONLY a JSON object matching this exact shape (no prose, no code fen
           user_text:
             "New photo taken now (the part in question). Additional reference photos of the original damage follow.",
           image_urls: imageUrls,
+          context: "additional_part",
+          source_id: data.jobId,
         },
       });
       if (aiErr || aiRes?.error) {
@@ -352,6 +354,8 @@ Respond with ONLY a JSON object of this exact shape (no prose, no code fence):
           system: systemPrompt,
           user_text: "Damage photos of the incoming vehicle:",
           image_urls: photoUrls,
+          context: "initial_assessment",
+          source_id: data.jobId,
         },
       });
       if (aiErr) return initialFallback(`ai_vision_invoke: ${aiErr.message ?? "error"}`);
