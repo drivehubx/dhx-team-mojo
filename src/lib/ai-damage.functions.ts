@@ -335,7 +335,7 @@ Respond with ONLY a JSON object of this exact shape (no prose, no code fence):
     {
       "partName": "e.g. Front Bumper Cover",
       "quantity": integer >= 1,
-      "estimatedUnitPrice": number in MYR or null if unknown,
+      "estimatedUnitPrice": number in MYR (see pricing rule below),
       "recommendedAction": "replace" | "repair",
       "relatedComponent": "which finding.component this ties to"
     }
@@ -343,9 +343,19 @@ Respond with ONLY a JSON object of this exact shape (no prose, no code fence):
   "estimatedLabourHours": number,
   "estimatedPaintPanels": integer,
   "estimatedDays": integer,
-  "estimatedCost": number in MYR or null,
+  "estimatedCost": number in MYR (sum of parts + labour + paint),
   "overallConfidence": 0.0-1.0
-}`;
+}
+
+PRICING RULE — IMPORTANT:
+- ALWAYS provide a realistic best-estimate MYR unit price for every part, based on
+  typical Malaysian workshop / aftermarket pricing for this vehicle's make, model
+  and year (e.g. Perodua Axia / Bezza / Myvi / Alza parts are cheap; continental
+  makes are higher). A rough but reasonable number is far more useful to the
+  estimator than null.
+- Use null ONLY for a genuinely un-priceable placeholder line (e.g. "misc
+  consumables TBD"). Do not use null just because you are uncertain — give
+  your best guess.`;
 
     let text = "";
     try {
