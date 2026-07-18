@@ -437,12 +437,19 @@ PRICING RULE — IMPORTANT:
         Math.floor(Number(parsed.estimatedPaintPanels) || 0),
       ),
       estimatedDays: Math.max(0, Math.floor(Number(parsed.estimatedDays) || 0)),
-      estimatedCost:
-        parsed.estimatedCost == null
-          ? null
-          : Number.isFinite(Number(parsed.estimatedCost))
-            ? Math.max(0, Number(parsed.estimatedCost))
-            : null,
+      estimatedCost: (() => {
+        // Authoritative: sum of (qty × unit price) across priced parts.
+        // Fall back to AI-provided total only when no priced parts exist.
+        const partsSum = parts.reduce((acc, p) => {
+          if (p.estimatedUnitPrice == null) return acc;
+          return acc + p.estimatedUnitPrice * p.quantity;
+        }, 0);
+        if (partsSum > 0) return Math.round(partsSum * 100) / 100;
+        if (parsed.estimatedCost == null) return null;
+        return Number.isFinite(Number(parsed.estimatedCost))
+          ? Math.max(0, Number(parsed.estimatedCost))
+          : null;
+      })(),
       overallConfidence: Math.max(
         0,
         Math.min(1, Number(parsed.overallConfidence) || 0),
