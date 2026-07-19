@@ -67,6 +67,16 @@ function JobsPage() {
     <div className="pb-8">
       <AppHeader title="Jobs" subtitle={`${list.length} jobs shown`} />
 
+      <div className="px-5 pt-1 -mt-2 flex justify-end">
+        <Link
+          to="/vehicles/sold"
+          className="text-[11px] font-medium text-muted-foreground hover:text-primary underline underline-offset-2"
+        >
+          Sold ›
+        </Link>
+      </div>
+
+
       <div className="sticky top-[88px] z-30 px-5 pb-2 pt-3 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

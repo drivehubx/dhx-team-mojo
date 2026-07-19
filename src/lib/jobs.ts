@@ -10,7 +10,7 @@ import {
 } from "@/integrations/supabase/shared-schema";
 
 export type JobWithRels = WorkshopJob & {
-  vehicle: Pick<CoreVehicle, "id" | "plate_number" | "make" | "model"> | null;
+  vehicle: Pick<CoreVehicle, "id" | "plate_number" | "make" | "model" | "status"> | null;
   workers: Array<{
     id: string;
     profile_id: string;
@@ -24,7 +24,7 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   const vIds = Array.from(new Set(rows.map((r) => r.vehicle_id)));
   const jIds = rows.map((r) => r.id);
   const [{ data: vehicles }, { data: jws }] = await Promise.all([
-    sbCore().from("vehicles").select("id, plate_number, make, model").in("id", vIds),
+    sbCore().from("vehicles").select("id, plate_number, make, model, status").in("id", vIds),
     sbWorkshop().from("job_workers").select("*").in("job_id", jIds),
   ]);
   const vMap = new Map((vehicles ?? []).map((v: any) => [v.id, v]));
@@ -48,9 +48,13 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   }));
 }
 
-export function useJobs(workspaceId: string | null) {
+export function useJobs(
+  workspaceId: string | null,
+  opts: { includeSold?: boolean } = {},
+) {
+  const includeSold = !!opts.includeSold;
   return useQuery({
-    queryKey: ["jobs", workspaceId],
+    queryKey: ["jobs", workspaceId, { includeSold }],
     enabled: !!workspaceId,
     queryFn: async () => {
       const { data, error } = await sbWorkshop()
@@ -59,7 +63,10 @@ export function useJobs(workspaceId: string | null) {
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return hydrateJobs((data ?? []) as WorkshopJob[]);
+      const hydrated = await hydrateJobs((data ?? []) as WorkshopJob[]);
+      if (includeSold) return hydrated;
+      // Hide jobs whose vehicle is sold. Jobs with no vehicle stay visible.
+      return hydrated.filter((j) => j.vehicle?.status !== "sold");
     },
   });
 }
@@ -83,16 +90,38 @@ export function useJob(workspaceId: string | null, id: string) {
   });
 }
 
-export function useVehicles(workspaceId: string | null) {
+export function useVehicles(
+  workspaceId: string | null,
+  opts: { includeSold?: boolean } = {},
+) {
+  const includeSold = !!opts.includeSold;
   return useQuery({
-    queryKey: ["vehicles", workspaceId],
+    queryKey: ["vehicles", workspaceId, { includeSold }],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      let qb = sbCore()
+        .from("vehicles")
+        .select("*")
+        .eq("workspace_id", workspaceId);
+      if (!includeSold) qb = qb.neq("status", "sold");
+      const { data, error } = await qb.order("plate_number");
+      if (error) throw error;
+      return (data ?? []) as CoreVehicle[];
+    },
+  });
+}
+
+export function useSoldVehicles(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ["vehicles", workspaceId, { onlySold: true }],
     enabled: !!workspaceId,
     queryFn: async () => {
       const { data, error } = await sbCore()
         .from("vehicles")
         .select("*")
         .eq("workspace_id", workspaceId)
-        .order("plate_number");
+        .eq("status", "sold")
+        .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CoreVehicle[];
     },
@@ -822,6 +851,7 @@ export function useSearchVehiclesByPlate(
         .select("id, plate_number, make, model, year")
         .eq("workspace_id", workspaceId)
         .or(`plate_number.ilike.%${q}%,make.ilike.%${q}%,model.ilike.%${q}%`)
+        .neq("status", "sold")
         .order("plate_number")
         .limit(10);
       if (error) throw error;
