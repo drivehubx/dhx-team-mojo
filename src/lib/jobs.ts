@@ -90,16 +90,38 @@ export function useJob(workspaceId: string | null, id: string) {
   });
 }
 
-export function useVehicles(workspaceId: string | null) {
+export function useVehicles(
+  workspaceId: string | null,
+  opts: { includeSold?: boolean } = {},
+) {
+  const includeSold = !!opts.includeSold;
   return useQuery({
-    queryKey: ["vehicles", workspaceId],
+    queryKey: ["vehicles", workspaceId, { includeSold }],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      let qb = sbCore()
+        .from("vehicles")
+        .select("*")
+        .eq("workspace_id", workspaceId);
+      if (!includeSold) qb = qb.neq("status", "sold");
+      const { data, error } = await qb.order("plate_number");
+      if (error) throw error;
+      return (data ?? []) as CoreVehicle[];
+    },
+  });
+}
+
+export function useSoldVehicles(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ["vehicles", workspaceId, { onlySold: true }],
     enabled: !!workspaceId,
     queryFn: async () => {
       const { data, error } = await sbCore()
         .from("vehicles")
         .select("*")
         .eq("workspace_id", workspaceId)
-        .order("plate_number");
+        .eq("status", "sold")
+        .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CoreVehicle[];
     },
