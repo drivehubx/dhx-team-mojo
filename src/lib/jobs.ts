@@ -10,7 +10,7 @@ import {
 } from "@/integrations/supabase/shared-schema";
 
 export type JobWithRels = WorkshopJob & {
-  vehicle: Pick<CoreVehicle, "id" | "plate_number" | "make" | "model"> | null;
+  vehicle: Pick<CoreVehicle, "id" | "plate_number" | "make" | "model" | "status"> | null;
   workers: Array<{
     id: string;
     profile_id: string;
