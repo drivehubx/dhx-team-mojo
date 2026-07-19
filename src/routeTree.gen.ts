@@ -21,6 +21,7 @@ import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as BpIndexRouteImport } from './routes/bp.index'
+import { Route as VehiclesSoldRouteImport } from './routes/vehicles.sold'
 import { Route as JobsNewRouteImport } from './routes/jobs.new'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 import { Route as BpNewRouteImport } from './routes/bp.new'
@@ -86,6 +87,11 @@ const BpIndexRoute = BpIndexRouteImport.update({
   path: '/bp/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VehiclesSoldRoute = VehiclesSoldRouteImport.update({
+  id: '/vehicles/sold',
+  path: '/vehicles/sold',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobsNewRoute = JobsNewRouteImport.update({
   id: '/jobs/new',
   path: '/jobs/new',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
 }
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp': typeof BpIndexRoute
   '/jobs': typeof JobsIndexRoute
 }
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
 }
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/vehicles/sold'
     | '/bp/'
     | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/vehicles/sold'
     | '/bp'
     | '/jobs'
   id:
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/vehicles/sold'
     | '/bp/'
     | '/jobs/'
   fileRoutesById: FileRoutesById
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   BpNewRoute: typeof BpNewRoute
   JobsIdRoute: typeof JobsIdRoute
   JobsNewRoute: typeof JobsNewRoute
+  VehiclesSoldRoute: typeof VehiclesSoldRoute
   BpIndexRoute: typeof BpIndexRoute
   JobsIndexRoute: typeof JobsIndexRoute
 }
@@ -324,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BpIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vehicles/sold': {
+      id: '/vehicles/sold'
+      path: '/vehicles/sold'
+      fullPath: '/vehicles/sold'
+      preLoaderRoute: typeof VehiclesSoldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs/new': {
       id: '/jobs/new'
       path: '/jobs/new'
@@ -370,6 +390,7 @@ const rootRouteChildren: RootRouteChildren = {
   BpNewRoute: BpNewRoute,
   JobsIdRoute: JobsIdRoute,
   JobsNewRoute: JobsNewRoute,
+  VehiclesSoldRoute: VehiclesSoldRoute,
   BpIndexRoute: BpIndexRoute,
   JobsIndexRoute: JobsIndexRoute,
 }

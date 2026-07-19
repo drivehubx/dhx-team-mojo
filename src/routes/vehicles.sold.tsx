@@ -71,11 +71,11 @@ function SoldCard({ v }: { v: CoreVehicle }) {
       <div className="mt-2 flex items-center justify-end">
         <Link
           to="/jobs"
-          search={{ plate: v.plate_number } as never}
           className="inline-flex items-center gap-0.5 text-[11px] font-medium text-primary"
         >
-          View jobs <ChevronRight className="h-3.5 w-3.5" />
+          Back to jobs <ChevronRight className="h-3.5 w-3.5" />
         </Link>
+
       </div>
     </li>
   );
