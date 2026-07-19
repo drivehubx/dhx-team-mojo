@@ -851,6 +851,7 @@ export function useSearchVehiclesByPlate(
         .select("id, plate_number, make, model, year")
         .eq("workspace_id", workspaceId)
         .or(`plate_number.ilike.%${q}%,make.ilike.%${q}%,model.ilike.%${q}%`)
+        .neq("status", "sold")
         .order("plate_number")
         .limit(10);
       if (error) throw error;
