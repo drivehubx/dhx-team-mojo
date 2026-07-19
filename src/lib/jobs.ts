@@ -24,7 +24,7 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   const vIds = Array.from(new Set(rows.map((r) => r.vehicle_id)));
   const jIds = rows.map((r) => r.id);
   const [{ data: vehicles }, { data: jws }] = await Promise.all([
-    sbCore().from("vehicles").select("id, plate_number, make, model").in("id", vIds),
+    sbCore().from("vehicles").select("id, plate_number, make, model, status").in("id", vIds),
     sbWorkshop().from("job_workers").select("*").in("job_id", jIds),
   ]);
   const vMap = new Map((vehicles ?? []).map((v: any) => [v.id, v]));
