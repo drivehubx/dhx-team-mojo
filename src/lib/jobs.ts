@@ -48,9 +48,13 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   }));
 }
 
-export function useJobs(workspaceId: string | null) {
+export function useJobs(
+  workspaceId: string | null,
+  opts: { includeSold?: boolean } = {},
+) {
+  const includeSold = !!opts.includeSold;
   return useQuery({
-    queryKey: ["jobs", workspaceId],
+    queryKey: ["jobs", workspaceId, { includeSold }],
     enabled: !!workspaceId,
     queryFn: async () => {
       const { data, error } = await sbWorkshop()
@@ -59,7 +63,10 @@ export function useJobs(workspaceId: string | null) {
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return hydrateJobs((data ?? []) as WorkshopJob[]);
+      const hydrated = await hydrateJobs((data ?? []) as WorkshopJob[]);
+      if (includeSold) return hydrated;
+      // Hide jobs whose vehicle is sold. Jobs with no vehicle stay visible.
+      return hydrated.filter((j) => j.vehicle?.status !== "sold");
     },
   });
 }
