@@ -46,7 +46,7 @@ function SettingsPage() {
   const switchRole = (r: DevRole) => {
     localStorage.setItem(DEV_ROLE_KEY, r);
     setDevRole(r);
-    toast.success(`${tr("Role")}: ${tr(r === "worker" ? "Worker" : r === "manager" ? "Manager" : "Owner")}`);
+    toast.success(`${tr("Role")}: ${tr(r === "worker" ? "Member" : r === "manager" ? "Manager" : "Owner")}`);
   };
 
   const doLogout = async () => {
@@ -106,7 +106,7 @@ function SettingsPage() {
             <div className="grid grid-cols-3 gap-2">
               {(["worker", "manager", "owner"] as DevRole[]).map((r) => {
                 const active = devRole === r;
-                const label = r === "worker" ? tr("Worker") : r === "manager" ? tr("Manager") : tr("Owner");
+                const label = r === "worker" ? tr("Member") : r === "manager" ? tr("Manager") : tr("Owner");
                 return (
                   <button
                     key={r}

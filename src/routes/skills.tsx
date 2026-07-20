@@ -28,7 +28,7 @@ export const Route = createFileRoute("/skills")({
   head: () => ({
     meta: [
       { title: "Skills — DHX Body & Paint" },
-      { name: "description", content: "Crew skill levels, gaps, assessments, and training recommendations." },
+      { name: "description", content: "Team member skill levels, gaps, assessments, and training recommendations." },
     ],
   }),
   component: SkillsPage,
@@ -465,7 +465,7 @@ function SkillsPage() {
               {tr("Assessment Requests")}
             </p>
             <span className="text-[10px] text-muted-foreground">
-              {tr("Flow: Crew → Manager → Owner")}
+              {tr("Flow: Member → Manager → Owner")}
             </span>
           </div>
           {requests.length === 0 && (
@@ -528,7 +528,7 @@ function SkillsPage() {
         {/* Crew skill cards */}
         <div className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {tr("Crew Skills")}
+            {tr("Team Skills")}
           </p>
           {crew.length === 0 && (
             <Card className="p-4 text-center text-xs text-muted-foreground">{tr("No crew yet")}</Card>
@@ -712,7 +712,7 @@ function SkillsPage() {
           <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
             <p><span className="font-semibold text-foreground">{tr("Owner")}:</span> {tr("Full edit · quick adjust · final approval")}</p>
             <p><span className="font-semibold text-foreground">{tr("Manager")}:</span> {tr("Review requests · comment · forward to Owner")}</p>
-            <p><span className="font-semibold text-foreground">{tr("Crew")}:</span> {tr("View · request assessment")}</p>
+            <p><span className="font-semibold text-foreground">{tr("Member")}:</span> {tr("View · request assessment")}</p>
           </div>
         </Card>
       </div>

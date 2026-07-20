@@ -360,7 +360,7 @@ function JobDetailPage() {
           <h2 className="text-sm font-semibold tracking-tight mb-2.5">Work Order</h2>
           <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Crew Lead</label>
+              <label className="text-xs font-medium text-muted-foreground">Team Lead</label>
               <select
                 value={leadId}
                 onChange={(e) => setLeadId(e.target.value)}
