@@ -13,7 +13,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useT } from "@/lib/i18n";
+import { useT, LanguagePicker, LANGS } from "@/lib/i18n";
+import { Languages } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,10 +45,12 @@ function initialsOf(name: string) {
 }
 
 function ProfilePage() {
-  const { t, tr } = useT();
+  const { t, tr, lang } = useT();
   const { user, signOut } = useAuth();
   const { profile, workspaceId, refresh, role, isStaff } = useWorkspace();
   const [editOpen, setEditOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const currentLang = LANGS.find((l) => l.code === lang) ?? LANGS[0];
 
   if (!profile || !workspaceId || !user) return null;
 
@@ -96,6 +99,9 @@ function ProfilePage() {
             <Row icon={UserIcon} label={tr("Edit Profile")} value={displayName} />
           </button>
           <Row icon={Phone} label={t("page.profile.phone")} value={profile.phone || tr("Not set")} />
+          <button onClick={() => setLangOpen(true)} className="w-full text-left">
+            <Row icon={Languages} label={tr("Preferred Language")} value={currentLang.native} />
+          </button>
           <Link to="/settings">
             <Row icon={Settings} label={t("page.profile.settings")} value="" />
           </Link>
@@ -125,6 +131,7 @@ function ProfilePage() {
           }}
         />
       )}
+      {langOpen && <LanguagePicker onClose={() => setLangOpen(false)} />}
     </div>
   );
 }
