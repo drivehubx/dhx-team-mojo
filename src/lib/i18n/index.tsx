@@ -16,6 +16,10 @@ import { useAuth } from "@/lib/auth";
 
 export type Lang = "en" | "zh" | "ms" | "id";
 
+/** Bumped whenever the AI translation prompt/contract changes. Stored on new
+ * repair_parts rows in ai_translation_version. Never mutate historical rows. */
+export const TRANSLATION_VERSION = 1;
+
 export const LANGS: { code: Lang; label: string; flag: string; native: string }[] = [
   { code: "en", flag: "🇬🇧", label: "English", native: "English" },
   { code: "ms", flag: "🇲🇾", label: "Bahasa Melayu", native: "Bahasa Melayu" },
