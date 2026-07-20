@@ -85,6 +85,7 @@ function BPDetailPage() {
             <p className="text-xs uppercase tracking-widest text-white/60 truncate">
               {job.plate_number ?? "—"} · {[job.car_make, job.car_model].filter(Boolean).join(" ")}
             </p>
+            <p className="mt-0.5 text-[10px] font-mono text-white/50">{roRef(job.id)}</p>
             <h1 className="mt-1 text-xl font-semibold tracking-tight truncate">
               {job.customer_name || "No customer"}
             </h1>
