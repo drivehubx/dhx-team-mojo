@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { dhxWorkshop } from "@/lib/dhx";
 import { supabase } from "@/integrations/supabase/client";
 import { useT } from "@/lib/i18n";
-import { useWorkspace, canSupervise } from "@/lib/workspace";
+import { useWorkspace } from "@/lib/workspace";
 
 type RevisionRow = {
   id: string;
