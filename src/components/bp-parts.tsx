@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sbCore } from "@/integrations/supabase/shared-schema";
 import { dhxWorkshop } from "@/lib/dhx";
 import { useWorkspace } from "@/lib/workspace";
-import { useT, Translatable, type Lang } from "@/lib/i18n";
+import { useT, Translatable, TRANSLATION_VERSION, type Lang } from "@/lib/i18n";
 import { analyzeRepairPart, type AnalyzeRepairPartResult } from "@/lib/ai-damage.functions";
 import type {
   PartDiscoveryStage,
@@ -50,6 +50,9 @@ type PartRow = {
   related_damage: string | null;
   photo_file_id: string | null;
   ai_suggestion: any;
+  ai_outcome: string | null;
+  human_edits: Record<string, [any, any]> | null;
+  ai_translation_version: number | null;
   revision_status: string | null;
   created_at: string;
 };
@@ -94,6 +97,38 @@ function stageLabel(v: string | null | undefined): string {
   }
 }
 
+// ---------- confidence bucket (colour + words + small percent) ----------
+type ConfidenceBucket = { tone: string; text: string; label: string };
+function confidenceBucket(c: number): ConfidenceBucket {
+  if (c >= 0.8)
+    return {
+      tone: "bg-[--color-success]/15 text-[--color-success] border-[--color-success]/40",
+      text: "bg-[--color-success]",
+      label: "High Confidence",
+    };
+  if (c >= 0.5)
+    return {
+      tone: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40",
+      text: "bg-amber-500",
+      label: "Review Suggested",
+    };
+  return {
+    tone: "bg-destructive/15 text-destructive border-destructive/40",
+    text: "bg-destructive",
+    label: "Manual Review Required",
+  };
+}
+
+// ---------- timeline groups ----------
+const GROUP_LABEL: Record<number, string> = {
+  1: "Initial Intake",
+  2: "Added During Dismantling",
+  3: "Added During Repair",
+  4: "Customer Requested",
+  5: "Found at QC",
+  6: "Other",
+};
+
 // ---------- workspace AI settings ----------
 type PartsMode = "photo_first" | "manual" | "both";
 type AiSettings = {
@@ -124,11 +159,18 @@ function useAiSettings(workspaceId: string | null) {
 }
 
 // ---------- parts query ----------
+type EnrichedPart = PartRow & {
+  photoUrl: string | null;
+  timeline_group: number;
+  photo_count: number;
+  ai_assisted: boolean;
+};
+
 function useParts(workspaceId: string | null, jobId: string) {
   return useQuery({
     queryKey: ["bp-parts", workspaceId, jobId],
     enabled: !!workspaceId && !!jobId,
-    queryFn: async () => {
+    queryFn: async (): Promise<EnrichedPart[]> => {
       const { data: parts, error } = await dhxWorkshop()
         .from("repair_parts")
         .select("*")
@@ -137,14 +179,47 @@ function useParts(workspaceId: string | null, jobId: string) {
         .order("created_at", { ascending: true });
       if (error) throw error;
       const rows = (parts ?? []) as PartRow[];
+      if (!rows.length) return [];
 
-      const fileIds = rows.map((r) => r.photo_file_id).filter(Boolean) as string[];
+      // Timeline enrichment from view.
+      const { data: tl } = await dhxWorkshop()
+        .from("parts_timeline")
+        .select("id, timeline_group, photo_count, ai_assisted")
+        .eq("workspace_id", workspaceId!)
+        .eq("job_id", jobId);
+      const tlById: Record<string, { g: number; c: number; a: boolean }> = {};
+      for (const t of (tl ?? []) as any[]) {
+        tlById[t.id] = {
+          g: Number(t.timeline_group) || 6,
+          c: Number(t.photo_count) || 0,
+          a: !!t.ai_assisted,
+        };
+      }
+
+      // Prefer first repair_part_photos row per part; fall back to
+      // photo_file_id on the part itself for legacy rows.
+      const partIds = rows.map((r) => r.id);
+      const { data: rpp } = await dhxWorkshop()
+        .from("repair_part_photos")
+        .select("part_id, file_id, sort_order")
+        .in("part_id", partIds)
+        .order("sort_order", { ascending: true });
+      const firstFileIdByPart: Record<string, string> = {};
+      for (const p of (rpp ?? []) as any[]) {
+        if (!firstFileIdByPart[p.part_id]) firstFileIdByPart[p.part_id] = p.file_id;
+      }
+
+      const fileIds = new Set<string>();
+      for (const r of rows) {
+        const fid = firstFileIdByPart[r.id] ?? r.photo_file_id;
+        if (fid) fileIds.add(fid);
+      }
       const signedByFileId: Record<string, string> = {};
-      if (fileIds.length) {
+      if (fileIds.size) {
         const { data: files } = await sbCore()
           .from("files")
           .select("id, url, storage_path")
-          .in("id", fileIds);
+          .in("id", Array.from(fileIds));
         const filesList = (files ?? []) as FileMeta[];
         const paths = filesList
           .map((f) => f.storage_path || f.url)
@@ -164,10 +239,17 @@ function useParts(workspaceId: string | null, jobId: string) {
         }
       }
 
-      return rows.map((r) => ({
-        ...r,
-        photoUrl: r.photo_file_id ? signedByFileId[r.photo_file_id] ?? null : null,
-      }));
+      return rows.map((r) => {
+        const thumbFileId = firstFileIdByPart[r.id] ?? r.photo_file_id;
+        const meta = tlById[r.id];
+        return {
+          ...r,
+          photoUrl: thumbFileId ? signedByFileId[thumbFileId] ?? null : null,
+          timeline_group: meta?.g ?? 6,
+          photo_count: meta?.c ?? (r.photo_file_id ? 1 : 0),
+          ai_assisted: meta?.a ?? !!r.ai_suggestion,
+        };
+      });
     },
   });
 }
@@ -210,11 +292,7 @@ export function BPParts({
           {tr("No parts yet.")}
         </p>
       ) : (
-        <ul className="space-y-2">
-          {parts.map((p) => (
-            <PartCard key={p.id} part={p} showCost={isAdmin} />
-          ))}
-        </ul>
+        <PartsTimeline parts={parts} showCost={isAdmin} />
       )}
 
       <Button
@@ -241,11 +319,63 @@ export function BPParts({
 // ============================================================
 // Part card
 // ============================================================
+function PartsTimeline({
+  parts,
+  showCost,
+}: {
+  parts: EnrichedPart[];
+  showCost: boolean;
+}) {
+  const { tr } = useT();
+  const groups = useMemo(() => {
+    const map = new Map<number, EnrichedPart[]>();
+    for (const p of parts) {
+      const g = p.timeline_group ?? 6;
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(p);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a - b);
+  }, [parts]);
+
+  return (
+    <div className="space-y-4">
+      {groups.map(([g, list]) => {
+        const groupCost = list.reduce(
+          (sum, p) => sum + (Number(p.unit_cost) || 0) * (Number(p.quantity) || 0),
+          0,
+        );
+        return (
+          <div key={g} className="relative pl-4">
+            <span className="absolute left-1 top-2 h-2 w-2 rounded-full bg-primary" />
+            <span className="absolute left-[7px] top-4 bottom-0 w-px bg-border" />
+            <div className="flex items-baseline justify-between gap-2 mb-2">
+              <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {tr(GROUP_LABEL[g] ?? "Other")}{" "}
+                <span className="ml-1 text-muted-foreground/70">({list.length})</span>
+              </h3>
+              {showCost && groupCost > 0 && (
+                <span className="text-[11px] font-medium tabular-nums">
+                  RM {groupCost.toFixed(2)}
+                </span>
+              )}
+            </div>
+            <ul className="space-y-2">
+              {list.map((p) => (
+                <PartCard key={p.id} part={p} showCost={showCost} />
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function PartCard({
   part,
   showCost,
 }: {
-  part: PartRow & { photoUrl: string | null };
+  part: EnrichedPart;
   showCost: boolean;
 }) {
   const { tr } = useT();
@@ -312,9 +442,24 @@ function PartCard({
           <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
             {tr(provenanceLabel(part.provenance))}
           </span>
-          {confidence !== null && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
-              <Sparkles className="h-2.5 w-2.5" /> {Math.round(confidence * 100)}%
+          {confidence !== null && (() => {
+            const b = confidenceBucket(confidence);
+            return (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${b.tone}`}
+                aria-label={`${b.label} ${Math.round(confidence * 100)}%`}
+              >
+                <Sparkles className="h-2.5 w-2.5" />
+                <span className="font-semibold">{tr(b.label)}</span>
+                <span className="opacity-70 tabular-nums">
+                  {Math.round(confidence * 100)}%
+                </span>
+              </span>
+            );
+          })()}
+          {part.photo_count > 1 && (
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+              📷 {part.photo_count}
             </span>
           )}
         </div>
@@ -350,10 +495,10 @@ function PartCard({
 // ============================================================
 type Step = "choose" | "analyzing" | "review" | "manual";
 
+type UploadedPhoto = { file: File; photoPath: string; fileId: string };
+
 type ReviewState = {
-  photoFile: File;
-  photoPath: string;
-  fileId: string;
+  photos: UploadedPhoto[]; // photos[0] is the AI-analyzed one when AI ran
   detectedPart: string;
   reasonRequired: string;
   relatedOriginalDamage: string;
@@ -416,7 +561,7 @@ function AddPartSheet({
 
   const uploadPhoto = async (
     file: File,
-  ): Promise<{ photoPath: string; fileId: string }> => {
+  ): Promise<UploadedPhoto> => {
     if (!workspaceId) throw new Error("Workspace not ready");
     const { data: userRes } = await supabase.auth.getUser();
     const uploadedBy = userRes.user?.id ?? null;
@@ -444,23 +589,25 @@ function AddPartSheet({
       .select("id")
       .single();
     if (fErr) throw fErr;
-    return { photoPath, fileId: (fileRow as { id: string }).id };
+    return { file, photoPath, fileId: (fileRow as { id: string }).id };
   };
 
   const handlePicked = async (fl: FileList | null) => {
-    const f = fl?.[0];
-    if (!f) return;
+    if (!fl || !fl.length) return;
     setStep("analyzing");
     setAiFailedMsg(null);
     try {
-      const { photoPath, fileId } = await uploadPhoto(f);
+      const files = Array.from(fl);
+      const uploaded: UploadedPhoto[] = [];
+      for (const f of files) {
+        uploaded.push(await uploadPhoto(f));
+      }
+      const first = uploaded[0];
 
       // AI OFF or Manual mode → skip AI, jump to review with blanks.
       if (!aiSettings.partsDetection) {
         setReview({
-          photoFile: f,
-          photoPath,
-          fileId,
+          photos: uploaded,
           detectedPart: "",
           reasonRequired: "",
           relatedOriginalDamage: "",
@@ -482,7 +629,7 @@ function AddPartSheet({
         result = await analyze({
           data: {
             jobId,
-            photoPath,
+            photoPath: first.photoPath,
             currentRepairStage: repairStage,
             lang: lang as Lang,
           },
@@ -490,9 +637,7 @@ function AddPartSheet({
       } catch (e) {
         setAiFailedMsg(e instanceof Error ? e.message : "AI unavailable");
         setReview({
-          photoFile: f,
-          photoPath,
-          fileId,
+          photos: uploaded,
           detectedPart: "",
           reasonRequired: "",
           relatedOriginalDamage: "",
@@ -518,6 +663,8 @@ function AddPartSheet({
       const aiPayload = {
         canonical,
         translations: translation ? { [result.lang]: translation } : {},
+        translation_version: TRANSLATION_VERSION,
+        created_at: new Date().toISOString(),
         confidence: result.confidence,
         lang: result.lang,
         recommendedAction: result.recommendedAction,
@@ -531,9 +678,7 @@ function AddPartSheet({
       const prefill = translation ?? canonical;
 
       setReview({
-        photoFile: f,
-        photoPath,
-        fileId,
+        photos: uploaded,
         detectedPart: prefill.detectedPart,
         reasonRequired: prefill.reasonRequired,
         relatedOriginalDamage: prefill.relatedOriginalDamage,
@@ -612,6 +757,36 @@ function AddPartSheet({
         ? "pending"
         : "approved";
 
+      // Compute human_edits diff (only changed fields).
+      const aiFinalAction = r.aiPayload?.recommendedAction as string | undefined;
+      const aiFinalStage = r.aiPayload?.discoveryStage as string | undefined;
+      const aiFinalQty = r.aiPayload?.quantity as number | undefined;
+      const humanEdits: Record<string, [unknown, unknown]> = {};
+      const aiSaidView = translation ?? canonical;
+      if (aiSaidView) {
+        if ((aiSaidView.detectedPart ?? "").trim() !== finalDetected)
+          humanEdits.part_name = [aiSaidView.detectedPart ?? "", finalDetected];
+        if ((aiSaidView.reasonRequired ?? "").trim() !== finalReason)
+          humanEdits.reason_required = [aiSaidView.reasonRequired ?? "", finalReason];
+        if ((aiSaidView.relatedOriginalDamage ?? "").trim() !== finalRelated)
+          humanEdits.related_damage = [
+            aiSaidView.relatedOriginalDamage ?? "",
+            finalRelated,
+          ];
+      }
+      if (aiFinalAction && aiFinalAction !== r.recommendedAction)
+        humanEdits.recommended_action = [aiFinalAction, r.recommendedAction];
+      if (aiFinalStage && aiFinalStage !== r.discoveryStage)
+        humanEdits.discovery_stage = [aiFinalStage, r.discoveryStage];
+      if (typeof aiFinalQty === "number" && aiFinalQty !== r.quantity)
+        humanEdits.quantity = [aiFinalQty, r.quantity];
+
+      const aiOutcome: "accepted" | "modified" | "suggested" = r.aiWasUsed
+        ? Object.keys(humanEdits).length
+          ? "modified"
+          : "accepted"
+        : "suggested";
+
       // Insert repair_parts row.
       const insertPayload: Record<string, unknown> = {
         workspace_id: workspaceId,
@@ -626,9 +801,12 @@ function AddPartSheet({
         reason_required: reason || null,
         recommended_action: r.recommendedAction,
         related_damage: related || null,
-        photo_file_id: r.fileId,
+        photo_file_id: r.photos[0]?.fileId ?? null,
         ai_suggestion: aiSuggestion,
         revision_status: revisionStatus,
+        ai_outcome: r.aiWasUsed ? aiOutcome : null,
+        human_edits: Object.keys(humanEdits).length ? humanEdits : null,
+        ai_translation_version: r.aiPayload ? TRANSLATION_VERSION : null,
       };
 
       const { data: partRow, error: pErr } = await dhxWorkshop()
@@ -639,8 +817,26 @@ function AddPartSheet({
       if (pErr) throw pErr;
       const partId = (partRow as { id: string }).id;
 
+      // Insert repair_part_photos rows (all photos).
+      if (r.photos.length) {
+        const photoRows = r.photos.map((p, idx) => ({
+          workspace_id: workspaceId,
+          part_id: partId,
+          file_id: p.fileId,
+          sort_order: idx,
+          used_by_ai: idx === 0 && r.aiWasUsed,
+        }));
+        const { error: ppErr } = await dhxWorkshop()
+          .from("repair_part_photos")
+          .insert(photoRows);
+        if (ppErr) {
+          // Non-fatal: photos linked via photo_file_id already.
+          console.warn("repair_part_photos insert failed", ppErr);
+        }
+      }
+
       // Record an assessment version (append-only).
-      const source = r.aiWasUsed ? (edited ? "hybrid" : "ai") : "human";
+      const source = r.aiWasUsed ? (Object.keys(humanEdits).length ? "hybrid" : "ai") : "human";
       try {
         const { data: versionId, error: vErr } = await dhxWorkshop().rpc(
           "add_assessment_version",
@@ -650,6 +846,7 @@ function AddPartSheet({
             p_source: source,
             p_json: {
               ai_suggestion: aiSuggestion,
+              human_edits: humanEdits,
               confirmed: {
                 partName,
                 quantity: r.quantity,
@@ -657,7 +854,7 @@ function AddPartSheet({
                 discoveryStage: r.discoveryStage,
                 reasonRequired: reason,
                 relatedOriginalDamage: related,
-                photoPath: r.photoPath,
+                photoPaths: r.photos.map((p) => p.photoPath),
               },
               partId,
             },
@@ -700,6 +897,7 @@ function AddPartSheet({
           ref={galleryRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={(e) => handlePicked(e.target.files)}
         />
@@ -824,11 +1022,14 @@ function ReviewForm({
   aiFailedMsg: string | null;
 }) {
   const { tr } = useT();
-  const photoUrl = useMemo(
-    () => URL.createObjectURL(state.photoFile),
-    [state.photoFile],
+  const photoUrls = useMemo(
+    () => state.photos.map((p) => URL.createObjectURL(p.file)),
+    [state.photos],
   );
-  useEffect(() => () => URL.revokeObjectURL(photoUrl), [photoUrl]);
+  useEffect(
+    () => () => photoUrls.forEach((u) => URL.revokeObjectURL(u)),
+    [photoUrls],
+  );
 
   const set = (patch: Partial<ReviewState>) => setState({ ...state, ...patch });
   const confidencePct = Math.round(state.confidence * 100);
@@ -842,34 +1043,41 @@ function ReviewForm({
           </div>
         )}
 
-        <img
-          src={photoUrl}
-          alt=""
-          className="w-full max-h-[42vh] rounded-2xl object-cover border border-border"
-        />
+        <div className="space-y-2">
+          <img
+            src={photoUrls[0]}
+            alt=""
+            className="w-full max-h-[42vh] rounded-2xl object-cover border border-border"
+          />
+          {photoUrls.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto">
+              {photoUrls.slice(1).map((u, i) => (
+                <img
+                  key={i}
+                  src={u}
+                  alt=""
+                  className="h-16 w-16 flex-none rounded-lg object-cover border border-border"
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-        {state.confidence > 0 && (
-          <div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Sparkles className="h-3 w-3" /> {tr("AI confidence")}
+        {state.confidence > 0 && (() => {
+          const b = confidenceBucket(state.confidence);
+          return (
+            <div
+              className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${b.tone}`}
+            >
+              <span className="inline-flex items-center gap-2 text-sm font-semibold">
+                <Sparkles className="h-4 w-4" /> {tr(b.label)}
               </span>
-              <span className="font-semibold">{confidencePct}%</span>
+              <span className="text-xs font-medium tabular-nums opacity-80">
+                {confidencePct}%
+              </span>
             </div>
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
-              <div
-                className={`h-full ${
-                  confidencePct >= 70
-                    ? "bg-[--color-success]"
-                    : confidencePct >= 40
-                      ? "bg-amber-500"
-                      : "bg-destructive"
-                }`}
-                style={{ width: `${confidencePct}%` }}
-              />
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Repair vs Replace */}
         <div>
