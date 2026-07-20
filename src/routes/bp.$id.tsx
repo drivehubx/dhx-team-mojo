@@ -140,6 +140,12 @@ function BPDetailPage() {
         {/* Parts */}
         <BPParts jobId={job.id} repairStage={job.repair_stage ?? null} />
 
+        {/* Quotation Revisions */}
+        <BPQuotationRevisions jobId={job.id} />
+
+        {/* Assessment History */}
+        <BPAssessmentHistory jobId={job.id} />
+
 
 
 
