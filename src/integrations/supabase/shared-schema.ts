@@ -6,7 +6,49 @@ import { supabase } from "./client";
 
 export type UUID = string;
 
-export type AppRole = "owner" | "manager" | "worker" | "crew";
+export type AppRole =
+  | "owner"
+  | "administrator"
+  | "manager"
+  | "supervisor"
+  | "member"
+  // Legacy values that may exist on old rows — displayed as "Member" in the UI.
+  | "worker"
+  | "crew";
+
+export type CorePosition = {
+  id: UUID;
+  code: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type CoreEngagementType = {
+  id: UUID;
+  code: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type TeamDirectoryRow = {
+  id: UUID;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  is_active: boolean;
+  last_login_at: string | null;
+  system_role: AppRole | null;
+  engagement_code: string | null;
+  engagement_label: string | null;
+  engagement_type_id: UUID | null;
+  positions: Array<{ id: UUID; code: string; label: string }> | null;
+  teams: Array<{ id: UUID; name: string }> | null;
+  active_job_count: number | null;
+  created_at?: string | null;
+};
 export type FileStatus = "pending" | "approved" | "rejected";
 export type AdvanceStatus = "pending" | "approved" | "rejected";
 export type JobStatus = "open" | "in_progress" | "completed" | "cancelled";
