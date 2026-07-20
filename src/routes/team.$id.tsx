@@ -189,26 +189,35 @@ function TeamMemberDetail() {
 
         {/* System Role */}
         <Section title="System Role" subtitle="Controls what this person can access.">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {SYSTEM_ROLE_OPTIONS.map((r) => {
-              const active = m.system_role === r.value;
-              return (
-                <button
-                  key={r.value}
-                  disabled={readOnly || setRole.isPending}
-                  onClick={() => handleRole(r.value)}
-                  className={`rounded-xl border p-3 text-left transition-colors ${
-                    active
-                      ? "border-primary bg-primary/10"
-                      : "border-border bg-card hover:border-primary/40"
-                  } ${readOnly ? "opacity-70" : ""}`}
-                >
-                  <p className="text-sm font-semibold">{r.label}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">{r.hint}</p>
-                </button>
-              );
-            })}
-          </div>
+          {m.system_role === "owner" ? (
+            <div className="rounded-xl border border-border bg-muted/40 p-3 text-sm">
+              <p className="font-semibold">Owner</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ownership cannot be reassigned from this screen.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {SYSTEM_ROLE_OPTIONS.map((r) => {
+                const active = m.system_role === r.value;
+                return (
+                  <button
+                    key={r.value}
+                    disabled={readOnly || setRole.isPending}
+                    onClick={() => handleRole(r.value)}
+                    className={`rounded-xl border p-3 text-left transition-colors ${
+                      active
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card hover:border-primary/40"
+                    } ${readOnly ? "opacity-70" : ""}`}
+                  >
+                    <p className="text-sm font-semibold">{r.label}</p>
+                    <p className="text-[10px] text-muted-foreground leading-tight">{r.hint}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </Section>
 
         {/* Positions */}
