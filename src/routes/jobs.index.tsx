@@ -149,12 +149,15 @@ function JobsPage() {
 
 function JobCard({ job }: { job: JobWithRels }) {
   const meta = statusChip[job.status];
+  const archived = (job as any).archived_at != null;
   return (
     <li>
       <Link
         to="/jobs/$id"
         params={{ id: job.id }}
-        className="block rounded-2xl border border-border bg-card px-4 py-3 active:bg-secondary"
+        className={`block rounded-2xl border border-border bg-card px-4 py-3 active:bg-secondary ${
+          archived ? "opacity-60" : ""
+        }`}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -166,13 +169,21 @@ function JobCard({ job }: { job: JobWithRels }) {
                 <span className="text-muted-foreground">No vehicle</span>
               )}
             </p>
+            <p className="mt-0.5 text-[10px] font-mono text-muted-foreground/80">{roRef(job.id)}</p>
             {job.description && (
               <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{job.description}</p>
             )}
           </div>
-          <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${meta.chip}`}>
-            {meta.label}
-          </span>
+          <div className="shrink-0 flex flex-col items-end gap-1">
+            {archived && (
+              <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2 py-1 text-[10px] font-semibold">
+                Archived
+              </span>
+            )}
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${meta.chip}`}>
+              {meta.label}
+            </span>
+          </div>
         </div>
         <div className="mt-2.5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
