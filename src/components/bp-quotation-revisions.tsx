@@ -71,8 +71,8 @@ function usePendingCostedParts(workspaceId: string | null, jobId: string) {
 
 export function BPQuotationRevisions({ jobId }: { jobId: string }) {
   const { tr } = useT();
-  const { workspaceId, role, isAdmin } = useWorkspace();
-  const canSee = canSupervise(role);
+  const { workspaceId, canSupervise: canSee, isAdmin } = useWorkspace();
+
   const revisionsQ = useRevisions(workspaceId, jobId);
   const pendingPartsQ = usePendingCostedParts(workspaceId, jobId);
   const [createOpen, setCreateOpen] = useState(false);
