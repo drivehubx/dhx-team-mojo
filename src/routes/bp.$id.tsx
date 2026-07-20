@@ -135,6 +135,9 @@ function BPDetailPage() {
         {/* Assigned Team Members */}
         <BPAssignedMembers jobId={job.id} />
 
+        {/* Parts */}
+        <BPParts jobId={job.id} repairStage={job.repair_stage ?? null} />
+
 
 
 
