@@ -1,10 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
-import { useWorkspaceProfiles } from "@/lib/jobs";
 import { sbCore } from "@/integrations/supabase/shared-schema";
-import { Loader2, Plus, UserCheck, UserX, CheckCircle, MessageCircle } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  UserCheck,
+  UserX,
+  CheckCircle,
+  MessageCircle,
+  Search,
+  ChevronRight,
+  Briefcase,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -16,12 +25,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  displayRole,
+  usePositions,
+  useTeamDirectory,
+} from "@/lib/team";
+import type { TeamDirectoryRow } from "@/integrations/supabase/shared-schema";
 
 export const Route = createFileRoute("/team")({
   head: () => ({
     meta: [
       { title: "Team — DHX Body & Paint" },
-      { name: "description", content: "Workshop team members." },
+      { name: "description", content: "Team members: roles, positions, engagement." },
     ],
   }),
   component: () => (
@@ -36,69 +51,115 @@ function initialsOf(name: string) {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "??";
 }
 
+type StatusFilter = "all" | "active" | "inactive";
+
 function TeamPage() {
-  const { isStaff } = useWorkspace();
-  const q = useWorkspaceProfiles(useWorkspace().workspaceId);
-  const list = q.data ?? [];
+  const { isAdmin } = useWorkspace();
+  const dir = useTeamDirectory();
+  const positionsQ = usePositions();
+
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState<StatusFilter>("active");
+  const [positionId, setPositionId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+
+  const list = dir.data ?? [];
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return list.filter((m) => {
+      if (status === "active" && !m.is_active) return false;
+      if (status === "inactive" && m.is_active) return false;
+      if (positionId && !(m.positions ?? []).some((p) => p.id === positionId)) return false;
+      if (!needle) return true;
+      const hay = `${m.full_name} ${m.phone ?? ""} ${m.email ?? ""}`.toLowerCase();
+      return hay.includes(needle);
+    });
+  }, [list, q, status, positionId]);
 
   return (
     <div>
-      <AppHeader title="Team" subtitle={`${list.length} members`} />
+      <AppHeader title="Team" subtitle={`${filtered.length} of ${list.length} team members`} />
 
-      <div className="px-5 space-y-3 pb-24">
-        {q.isLoading && (
-          <div className="py-10 text-center text-muted-foreground">
-            <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-          </div>
-        )}
-        {!q.isLoading && list.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            No crew yet.
-          </div>
-        )}
-        {list.map((p) => (
-          <div key={p.id} className="rounded-2xl border border-border bg-card p-4 flex items-center gap-3">
-            {p.avatar_url ? (
-              <img src={p.avatar_url} alt="" className="h-11 w-11 rounded-full object-cover" />
-            ) : (
-              <div className="grid h-11 w-11 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-                {initialsOf(p.full_name)}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{p.full_name}</p>
-              {p.phone && <p className="text-[11px] text-muted-foreground truncate">{p.phone}</p>}
-            </div>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                p.is_active
-                  ? "bg-[--color-success]/15 text-[--color-success]"
+      <div className="px-5 pb-24 space-y-4">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search name or phone…"
+            className="pl-9 h-11"
+          />
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1">
+          {(["all", "active", "inactive"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatus(s)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                status === s
+                  ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground"
               }`}
             >
-              {p.is_active ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
-              {p.is_active ? "Active" : "Inactive"}
-            </span>
-          </div>
-        ))}
+              {s}
+            </button>
+          ))}
+          <div className="mx-1 h-6 w-px bg-border shrink-0" />
+          <button
+            onClick={() => setPositionId(null)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+              positionId === null ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            All positions
+          </button>
+          {(positionsQ.data ?? []).map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setPositionId(p.id === positionId ? null : p.id)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                positionId === p.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          {dir.isLoading && (
+            <div className="py-10 text-center text-muted-foreground">
+              <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+            </div>
+          )}
+          {!dir.isLoading && filtered.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              No team members match these filters.
+            </div>
+          )}
+          {filtered.map((m) => (
+            <MemberCard key={m.id} m={m} clickable={isAdmin} />
+          ))}
+        </div>
       </div>
 
-      {isStaff && (
+      {isAdmin && (
         <>
           <button
             onClick={() => setOpen(true)}
             className="fixed bottom-20 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
-            Add Crew
+            Add Team Member
           </button>
-          <AddCrewDialog
+          <AddMemberDialog
             open={open}
             onOpenChange={setOpen}
-            onSuccess={() => {
-              void q.refetch();
-            }}
+            onSuccess={() => void dir.refetch()}
           />
         </>
       )}
@@ -106,10 +167,75 @@ function TeamPage() {
   );
 }
 
-type CrewRole = "crew" | "manager";
-type CompType = "salary" | "task_based" | "commission";
+function MemberCard({ m, clickable }: { m: TeamDirectoryRow; clickable: boolean }) {
+  const positions = m.positions ?? [];
+  const inner = (
+    <div className="w-full rounded-2xl border border-border bg-card p-4 flex items-center gap-3 text-left hover:border-primary/40 transition-colors">
+      {m.avatar_url ? (
+        <img src={m.avatar_url} alt="" className="h-12 w-12 rounded-full object-cover shrink-0" />
+      ) : (
+        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+          {initialsOf(m.full_name)}
+        </div>
+      )}
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-semibold">{m.full_name}</p>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary shrink-0">
+            {displayRole(m.system_role)}
+          </span>
+        </div>
+        {m.phone && <p className="text-[11px] text-muted-foreground truncate">{m.phone}</p>}
+        {positions.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {positions.slice(0, 3).map((p) => (
+              <span key={p.id} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
+                {p.label}
+              </span>
+            ))}
+            {positions.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">+{positions.length - 3}</span>
+            )}
+          </div>
+        )}
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          {m.engagement_label && <span>{m.engagement_label}</span>}
+          {typeof m.active_job_count === "number" && m.active_job_count > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <Briefcase className="h-3 w-3" />
+              {m.active_job_count} active
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            m.is_active
+              ? "bg-[--color-success]/15 text-[--color-success]"
+              : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {m.is_active ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
+          {m.is_active ? "Active" : "Inactive"}
+        </span>
+        {clickable && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+      </div>
+    </div>
+  );
 
-function AddCrewDialog({
+  if (!clickable) return inner;
+  return (
+    <Link to="/team/$id" params={{ id: m.id }} className="block">
+      {inner}
+    </Link>
+  );
+}
+
+type CompType = "salary" | "task_based" | "commission";
+type InviteRole = "member" | "supervisor" | "manager" | "administrator";
+
+function AddMemberDialog({
   open,
   onOpenChange,
   onSuccess,
@@ -121,7 +247,7 @@ function AddCrewDialog({
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<CrewRole>("crew");
+  const [role, setRole] = useState<InviteRole>("member");
   const [compensationType, setCompensationType] = useState<CompType>("salary");
   const [submitting, setSubmitting] = useState(false);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -132,7 +258,7 @@ function AddCrewDialog({
     setFullName("");
     setPhone("");
     setEmail("");
-    setRole("crew");
+    setRole("member");
     setCompensationType("salary");
     setSubmitting(false);
     setInviteToken(null);
@@ -161,14 +287,10 @@ function AddCrewDialog({
       toast.error(error.message);
       return;
     }
-    toast.success("Crew added — send them the invite link");
+    toast.success("Team member added — send them the invite link");
     setInviteToken((token as string | null) ?? null);
     setInviteStep(true);
     onSuccess();
-  };
-
-  const handleAddAnother = () => {
-    reset();
   };
 
   const handleCopyLink = async () => {
@@ -188,6 +310,13 @@ function AddCrewDialog({
     window.open(url, "_blank");
   };
 
+  const roleOptions: Array<{ value: InviteRole; label: string }> = [
+    { value: "member", label: "Member" },
+    { value: "supervisor", label: "Supervisor" },
+    { value: "manager", label: "Manager" },
+    { value: "administrator", label: "Admin" },
+  ];
+
   const compOptions: Array<{ value: CompType; label: string }> = [
     { value: "salary", label: "Salary" },
     { value: "task_based", label: "Task-based" },
@@ -200,7 +329,7 @@ function AddCrewDialog({
         {inviteStep ? (
           <>
             <DialogHeader>
-              <DialogTitle className="text-center">Crew Added!</DialogTitle>
+              <DialogTitle className="text-center">Team Member Added</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-2 text-center">
               <div className="rounded-full bg-[--color-success]/15 p-3">
@@ -219,20 +348,10 @@ function AddCrewDialog({
                   <MessageCircle className="h-4 w-4" />
                   Send WhatsApp Invite
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleCopyLink}
-                >
+                <Button type="button" variant="outline" className="w-full" onClick={handleCopyLink}>
                   {copied ? "Copied!" : "Copy Invite Link"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={handleAddAnother}
-                >
+                <Button type="button" variant="ghost" className="w-full" onClick={reset}>
                   Add Another
                 </Button>
               </div>
@@ -241,17 +360,12 @@ function AddCrewDialog({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Add Crew</DialogTitle>
+              <DialogTitle>Add Team Member</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
+                <Input id="fullName" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="phone">Phone</Label>
@@ -275,23 +389,24 @@ function AddCrewDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Role</Label>
-                <div className="grid grid-cols-2 gap-2 rounded-md bg-muted p-1">
-                  {(["crew", "manager"] as const).map((r) => (
+                <Label>System Role</Label>
+                <div className="grid grid-cols-4 gap-1 rounded-md bg-muted p-1">
+                  {roleOptions.map((r) => (
                     <button
-                      key={r}
+                      key={r.value}
                       type="button"
-                      onClick={() => setRole(r)}
-                      className={`rounded-sm px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-                        role === r
-                          ? "bg-background shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                      onClick={() => setRole(r.value)}
+                      className={`rounded-sm px-2 py-1.5 text-xs font-medium transition-colors ${
+                        role === r.value ? "bg-background shadow-sm" : "text-muted-foreground"
                       }`}
                     >
-                      {r}
+                      {r.label}
                     </button>
                   ))}
                 </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Position and engagement can be set on the member's page.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>Compensation Type</Label>
@@ -304,7 +419,7 @@ function AddCrewDialog({
                       className={`rounded-sm px-2 py-1.5 text-xs font-medium transition-colors ${
                         compensationType === opt.value
                           ? "bg-background shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                          : "text-muted-foreground"
                       }`}
                     >
                       {opt.label}
@@ -313,17 +428,12 @@ function AddCrewDialog({
                 </div>
               </div>
               <DialogFooter className="gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleOpenChange(false)}
-                  disabled={submitting}
-                >
+                <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={submitting}>
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Add Crew
+                  Add Team Member
                 </Button>
               </DialogFooter>
             </form>
