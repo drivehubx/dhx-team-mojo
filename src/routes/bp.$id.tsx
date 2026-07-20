@@ -16,6 +16,7 @@ import {
   type BPRepairStage,
 } from "@/lib/bp";
 import { BPAssignedMembers } from "@/components/bp-assigned-members";
+import { BPParts } from "@/components/bp-parts";
 
 export const Route = createFileRoute("/bp/$id")({
   head: () => ({
