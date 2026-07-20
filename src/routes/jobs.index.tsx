@@ -20,9 +20,9 @@ export const Route = createFileRoute("/jobs/")({
   ),
 });
 
-type FilterKey = "Mine" | "All" | "Open" | "In Progress" | "Completed" | "Cancelled";
+type FilterKey = "Mine" | "All" | "Open" | "In Progress" | "Completed" | "Cancelled" | "Archived";
 
-const statusOfFilter: Record<Exclude<FilterKey, "Mine" | "All">, JobStatus> = {
+const statusOfFilter: Record<"Open" | "In Progress" | "Completed" | "Cancelled", JobStatus> = {
   Open: "open",
   "In Progress": "in_progress",
   Completed: "completed",
@@ -35,6 +35,10 @@ const statusChip: Record<JobStatus, { chip: string; label: string }> = {
   completed: { chip: "bg-[--color-success]/15 text-[--color-success]", label: "Completed" },
   cancelled: { chip: "bg-muted text-muted-foreground", label: "Cancelled" },
 };
+
+function roRef(id: string) {
+  return "RO-" + id.slice(0, 8).toUpperCase();
+}
 
 function JobsPage() {
   const { workspaceId, profile } = useWorkspace();
