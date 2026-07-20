@@ -92,7 +92,7 @@ function TeamPage() {
           />
         </div>
 
-        <div className="flex gap-2 overflow-x-auto -mx-1 px-1">
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {(["all", "active", "inactive"] as const).map((s) => (
             <button
               key={s}
