@@ -131,6 +131,7 @@ function ProfilePage() {
           }}
         />
       )}
+      {langOpen && <LanguagePicker onClose={() => setLangOpen(false)} />}
     </div>
   );
 }
