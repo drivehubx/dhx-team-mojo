@@ -17,6 +17,8 @@ import {
 } from "@/lib/bp";
 import { BPAssignedMembers } from "@/components/bp-assigned-members";
 import { BPParts } from "@/components/bp-parts";
+import { BPQuotationRevisions } from "@/components/bp-quotation-revisions";
+import { BPAssessmentHistory } from "@/components/bp-assessment-history";
 
 export const Route = createFileRoute("/bp/$id")({
   head: () => ({
