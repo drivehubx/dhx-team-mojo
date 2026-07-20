@@ -28,6 +28,7 @@ export type WorkspaceState = {
   isCrew: boolean;
   isStaff: boolean;
   isAdmin: boolean;
+  canSupervise: boolean;
   refresh: () => Promise<void>;
 };
 
