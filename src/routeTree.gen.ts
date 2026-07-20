@@ -22,6 +22,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as BpIndexRouteImport } from './routes/bp.index'
 import { Route as VehiclesSoldRouteImport } from './routes/vehicles.sold'
+import { Route as TeamIdRouteImport } from './routes/team.$id'
 import { Route as JobsNewRouteImport } from './routes/jobs.new'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 import { Route as BpNewRouteImport } from './routes/bp.new'
@@ -92,6 +93,11 @@ const VehiclesSoldRoute = VehiclesSoldRouteImport.update({
   path: '/vehicles/sold',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeamIdRoute = TeamIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => TeamRoute,
+} as any)
 const JobsNewRoute = JobsNewRouteImport.update({
   id: '/jobs/new',
   path: '/jobs/new',
@@ -123,11 +129,12 @@ export interface FileRoutesByFullPath {
   '/salary': typeof SalaryRoute
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
-  '/team': typeof TeamRoute
+  '/team': typeof TeamRouteWithChildren
   '/bp/$id': typeof BpIdRoute
   '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/team/$id': typeof TeamIdRoute
   '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -142,11 +149,12 @@ export interface FileRoutesByTo {
   '/salary': typeof SalaryRoute
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
-  '/team': typeof TeamRoute
+  '/team': typeof TeamRouteWithChildren
   '/bp/$id': typeof BpIdRoute
   '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/team/$id': typeof TeamIdRoute
   '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp': typeof BpIndexRoute
   '/jobs': typeof JobsIndexRoute
@@ -162,11 +170,12 @@ export interface FileRoutesById {
   '/salary': typeof SalaryRoute
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
-  '/team': typeof TeamRoute
+  '/team': typeof TeamRouteWithChildren
   '/bp/$id': typeof BpIdRoute
   '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/team/$id': typeof TeamIdRoute
   '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/team/$id'
     | '/vehicles/sold'
     | '/bp/'
     | '/jobs/'
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/team/$id'
     | '/vehicles/sold'
     | '/bp'
     | '/jobs'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/team/$id'
     | '/vehicles/sold'
     | '/bp/'
     | '/jobs/'
@@ -241,7 +253,7 @@ export interface RootRouteChildren {
   SalaryRoute: typeof SalaryRoute
   SettingsRoute: typeof SettingsRoute
   SkillsRoute: typeof SkillsRoute
-  TeamRoute: typeof TeamRoute
+  TeamRoute: typeof TeamRouteWithChildren
   BpIdRoute: typeof BpIdRoute
   BpNewRoute: typeof BpNewRoute
   JobsIdRoute: typeof JobsIdRoute
@@ -344,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VehiclesSoldRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/team/$id': {
+      id: '/team/$id'
+      path: '/$id'
+      fullPath: '/team/$id'
+      preLoaderRoute: typeof TeamIdRouteImport
+      parentRoute: typeof TeamRoute
+    }
     '/jobs/new': {
       id: '/jobs/new'
       path: '/jobs/new'
@@ -375,6 +394,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface TeamRouteChildren {
+  TeamIdRoute: typeof TeamIdRoute
+}
+
+const TeamRouteChildren: TeamRouteChildren = {
+  TeamIdRoute: TeamIdRoute,
+}
+
+const TeamRouteWithChildren = TeamRoute._addFileChildren(TeamRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivateRoute: ActivateRoute,
@@ -385,7 +414,7 @@ const rootRouteChildren: RootRouteChildren = {
   SalaryRoute: SalaryRoute,
   SettingsRoute: SettingsRoute,
   SkillsRoute: SkillsRoute,
-  TeamRoute: TeamRoute,
+  TeamRoute: TeamRouteWithChildren,
   BpIdRoute: BpIdRoute,
   BpNewRoute: BpNewRoute,
   JobsIdRoute: JobsIdRoute,

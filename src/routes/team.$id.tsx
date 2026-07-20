@@ -144,18 +144,16 @@ function TeamMemberDetail() {
 
   return (
     <div>
-      <AppHeader
-        title="Team member"
-        leftAction={
-          <button
-            onClick={() => navigate({ to: "/team" })}
-            className="grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-        }
-      />
+      <AppHeader title="Team member" />
+      <div className="px-5 pb-2">
+        <button
+          onClick={() => navigate({ to: "/team" })}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          Back to team
+        </button>
+      </div>
 
       <div className="px-5 pb-24 space-y-4">
         {/* Identity */}
