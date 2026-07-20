@@ -19,6 +19,9 @@ import { BPAssignedMembers } from "@/components/bp-assigned-members";
 import { BPParts } from "@/components/bp-parts";
 import { BPQuotationRevisions } from "@/components/bp-quotation-revisions";
 import { BPAssessmentHistory } from "@/components/bp-assessment-history";
+import { BPManageSection } from "@/components/bp-manage";
+import { roRef } from "@/lib/bp";
+import { Archive } from "lucide-react";
 
 export const Route = createFileRoute("/bp/$id")({
   head: () => ({
