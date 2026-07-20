@@ -85,7 +85,15 @@ export type BPJob = {
   repair_stage: BPRepairStage;
   status: string;
   created_at: string;
+  archived_at: string | null;
+  archived_by: string | null;
+  archive_reason: string | null;
 };
+
+export function roRef(id: string): string {
+  return "RO-" + id.slice(0, 8).toUpperCase();
+}
+
 
 export type BPDocType = "before" | "after";
 
@@ -117,22 +125,35 @@ function extOf(name: string): string {
 
 // ---- Queries ----
 
-export function useBPJobs(workspaceId: string | null) {
+export type BPListFilter = "active" | "archived" | "cancelled";
+
+export function useBPJobs(
+  workspaceId: string | null,
+  filter: BPListFilter = "active",
+) {
   return useQuery({
-    queryKey: ["bp-jobs", workspaceId],
+    queryKey: ["bp-jobs", workspaceId, filter],
     enabled: !!workspaceId,
     queryFn: async () => {
-      const { data, error } = await dhxWorkshop()
+      let qb = dhxWorkshop()
         .from("jobs")
         .select("*")
         .eq("workspace_id", workspaceId)
-        .eq("job_type", "body_paint")
-        .order("created_at", { ascending: false });
+        .eq("job_type", "body_paint");
+      if (filter === "active") {
+        qb = qb.is("archived_at", null).neq("status", "cancelled");
+      } else if (filter === "archived") {
+        qb = qb.not("archived_at", "is", null);
+      } else {
+        qb = qb.eq("status", "cancelled").is("archived_at", null);
+      }
+      const { data, error } = await qb.order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as BPJob[];
     },
   });
 }
+
 
 export function useBPJob(workspaceId: string | null, id: string) {
   return useQuery({
