@@ -314,7 +314,7 @@ function AddMemberDialog({
     { value: "member", label: "Member" },
     { value: "supervisor", label: "Supervisor" },
     { value: "manager", label: "Manager" },
-    { value: "administrator", label: "Admin" },
+    { value: "administrator", label: "Administrator" },
   ];
 
   const compOptions: Array<{ value: CompType; label: string }> = [
