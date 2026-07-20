@@ -129,8 +129,12 @@ function BPDetailPage() {
               </button>
             ))}
           </div>
+        </section>
+
         {/* Assigned Team Members */}
         <BPAssignedMembers jobId={job.id} />
+
+
 
 
 
