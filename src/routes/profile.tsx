@@ -13,7 +13,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useT } from "@/lib/i18n";
+import { useT, LanguagePicker, LANGS } from "@/lib/i18n";
+import { Languages } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { supabase } from "@/integrations/supabase/client";
