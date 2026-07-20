@@ -712,7 +712,7 @@ function SkillsPage() {
           <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
             <p><span className="font-semibold text-foreground">{tr("Owner")}:</span> {tr("Full edit · quick adjust · final approval")}</p>
             <p><span className="font-semibold text-foreground">{tr("Manager")}:</span> {tr("Review requests · comment · forward to Owner")}</p>
-            <p><span className="font-semibold text-foreground">{tr("Crew")}:</span> {tr("View · request assessment")}</p>
+            <p><span className="font-semibold text-foreground">{tr("Member")}:</span> {tr("View · request assessment")}</p>
           </div>
         </Card>
       </div>
