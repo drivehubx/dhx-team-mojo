@@ -129,7 +129,10 @@ function BPDetailPage() {
               </button>
             ))}
           </div>
-        </section>
+        {/* Assigned Team Members */}
+        <BPAssignedMembers jobId={job.id} />
+
+
 
         {job.damage_description && (
           <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
