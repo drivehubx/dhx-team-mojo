@@ -149,8 +149,10 @@ export function displayRole(role: AppRole | null | undefined): string {
   }
 }
 
+// Owner is intentionally omitted — the database rejects granting owner and
+// an owner's own role cannot be reassigned here. `displayRole` still renders
+// "Owner" for the badge when a member already holds that role.
 export const SYSTEM_ROLE_OPTIONS: Array<{ value: AppRole; label: string; hint: string }> = [
-  { value: "owner", label: "Owner", hint: "Full control of the workspace" },
   { value: "administrator", label: "Administrator", hint: "Manage team, jobs, settings" },
   { value: "manager", label: "Manager", hint: "Manage team and jobs" },
   { value: "supervisor", label: "Supervisor", hint: "Oversee jobs, read-only on team" },
