@@ -7,14 +7,29 @@ import { BUDGET_STRATEGY_AI_GUIDANCE, budgetStrategyFor, type WorkRequestSource 
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const DISCOVERY_STAGES = ["dismantling", "repair", "qc"] as const;
+const DISCOVERY_STAGES = [
+  "dismantling",
+  "repair",
+  "qc",
+  "customer_request",
+  "other",
+] as const;
 const ACTIONS = ["replace", "repair"] as const;
+const LANGS = ["en", "zh", "ms", "id"] as const;
+type Lang = (typeof LANGS)[number];
 
 const Input = z.object({
   jobId: z.string().uuid(),
   photoPath: z.string().min(1), // storage path inside job-photos bucket
   currentRepairStage: z.string().nullable().optional(),
+  lang: z.enum(LANGS).optional(),
 });
+
+export type RepairPartTranslation = {
+  detectedPart: string;
+  reasonRequired: string;
+  relatedOriginalDamage: string;
+};
 
 export type AnalyzeRepairPartResult = {
   detectedPart: string;
@@ -24,6 +39,8 @@ export type AnalyzeRepairPartResult = {
   recommendedAction: (typeof ACTIONS)[number];
   relatedOriginalDamage: string;
   confidence: number;
+  lang: Lang;
+  translation: RepairPartTranslation | null;
   rawJson: string; // serialized AI response for the learning loop
 };
 
@@ -38,6 +55,7 @@ function stageDefault(stage?: string | null): (typeof DISCOVERY_STAGES)[number] 
 function fallback(
   photoPath: string,
   currentRepairStage?: string | null,
+  lang: Lang = "en",
 ): AnalyzeRepairPartResult {
   return {
     detectedPart: "",
@@ -47,6 +65,8 @@ function fallback(
     recommendedAction: "replace",
     relatedOriginalDamage: "",
     confidence: 0,
+    lang,
+    translation: null,
     rawJson: JSON.stringify({ fallback: true, photoPath }),
   };
 }
