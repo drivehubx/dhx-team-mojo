@@ -897,6 +897,7 @@ function AddPartSheet({
           ref={galleryRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={(e) => handlePicked(e.target.files)}
         />
