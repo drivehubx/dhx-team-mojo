@@ -1042,34 +1042,41 @@ function ReviewForm({
           </div>
         )}
 
-        <img
-          src={photoUrl}
-          alt=""
-          className="w-full max-h-[42vh] rounded-2xl object-cover border border-border"
-        />
+        <div className="space-y-2">
+          <img
+            src={photoUrls[0]}
+            alt=""
+            className="w-full max-h-[42vh] rounded-2xl object-cover border border-border"
+          />
+          {photoUrls.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto">
+              {photoUrls.slice(1).map((u, i) => (
+                <img
+                  key={i}
+                  src={u}
+                  alt=""
+                  className="h-16 w-16 flex-none rounded-lg object-cover border border-border"
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-        {state.confidence > 0 && (
-          <div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Sparkles className="h-3 w-3" /> {tr("AI confidence")}
+        {state.confidence > 0 && (() => {
+          const b = confidenceBucket(state.confidence);
+          return (
+            <div
+              className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${b.tone}`}
+            >
+              <span className="inline-flex items-center gap-2 text-sm font-semibold">
+                <Sparkles className="h-4 w-4" /> {tr(b.label)}
               </span>
-              <span className="font-semibold">{confidencePct}%</span>
+              <span className="text-xs font-medium tabular-nums opacity-80">
+                {confidencePct}%
+              </span>
             </div>
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
-              <div
-                className={`h-full ${
-                  confidencePct >= 70
-                    ? "bg-[--color-success]"
-                    : confidencePct >= 40
-                      ? "bg-amber-500"
-                      : "bg-destructive"
-                }`}
-                style={{ width: `${confidencePct}%` }}
-              />
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Repair vs Replace */}
         <div>
