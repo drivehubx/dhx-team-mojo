@@ -465,7 +465,7 @@ function SkillsPage() {
               {tr("Assessment Requests")}
             </p>
             <span className="text-[10px] text-muted-foreground">
-              {tr("Flow: Crew → Manager → Owner")}
+              {tr("Flow: Member → Manager → Owner")}
             </span>
           </div>
           {requests.length === 0 && (
@@ -528,7 +528,7 @@ function SkillsPage() {
         {/* Crew skill cards */}
         <div className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {tr("Crew Skills")}
+            {tr("Team Skills")}
           </p>
           {crew.length === 0 && (
             <Card className="p-4 text-center text-xs text-muted-foreground">{tr("No crew yet")}</Card>
