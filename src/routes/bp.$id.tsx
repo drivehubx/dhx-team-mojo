@@ -72,7 +72,7 @@ function BPDetailPage() {
 
   return (
     <div className="pb-24">
-      <header className="sticky top-0 z-40 mb-4 bg-[--color-navy] text-[--color-navy-foreground] pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
+      <header className="sticky top-0 z-40 mb-4 bg-navy text-navy-foreground pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
         <div className="flex items-center gap-3">
           <Link
             to="/bp"
@@ -193,7 +193,7 @@ function BPDetailPage() {
               </p>
             </div>
             {job.estimate_approved ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[--color-success]/15 text-[--color-success] px-2.5 py-1 text-[11px] font-semibold">
+              <span className="inline-flex items-center gap-1 rounded-full bg-success/15 text-success px-2.5 py-1 text-[11px] font-semibold">
                 <Check className="h-3.5 w-3.5" /> Approved
               </span>
             ) : (
@@ -358,7 +358,7 @@ function CostsCard({ job }: { job: NonNullable<ReturnType<typeof useBPJob>["data
       </div>
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Profit</span>
-        <span className={`font-semibold ${preview.profit > 0 ? "text-[--color-success]" : preview.profit < 0 ? "text-destructive" : ""}`}>
+        <span className={`font-semibold ${preview.profit > 0 ? "text-success" : preview.profit < 0 ? "text-destructive" : ""}`}>
           RM {preview.profit.toFixed(2)}
         </span>
       </div>

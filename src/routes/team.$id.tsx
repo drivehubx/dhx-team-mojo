@@ -173,7 +173,7 @@ function TeamMemberDetail() {
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                   m.is_active
-                    ? "bg-[--color-success]/15 text-[--color-success]"
+                    ? "bg-success/15 text-success"
                     : "bg-muted text-muted-foreground"
                 }`}
               >

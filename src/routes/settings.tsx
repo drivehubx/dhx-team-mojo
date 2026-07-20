@@ -52,7 +52,7 @@ function SettingsPage() {
 
   return (
     <div>
-      <header className="sticky top-0 z-40 bg-[--color-navy] text-[--color-navy-foreground] pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
+      <header className="sticky top-0 z-40 bg-navy text-navy-foreground pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.history.back()}

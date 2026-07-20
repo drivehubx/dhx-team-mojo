@@ -102,8 +102,8 @@ type ConfidenceBucket = { tone: string; text: string; label: string };
 function confidenceBucket(c: number): ConfidenceBucket {
   if (c >= 0.8)
     return {
-      tone: "bg-[--color-success]/15 text-[--color-success] border-[--color-success]/40",
-      text: "bg-[--color-success]",
+      tone: "bg-success/15 text-success border-success/40",
+      text: "bg-success",
       label: "High Confidence",
     };
   if (c >= 0.5)
@@ -389,7 +389,7 @@ function PartCard({
   const revision = part.revision_status ?? "pending";
   const revTone =
     revision === "approved"
-      ? "bg-[--color-success]/15 text-[--color-success]"
+      ? "bg-success/15 text-success"
       : revision === "rejected"
         ? "bg-destructive/15 text-destructive"
         : "bg-amber-500/15 text-amber-700 dark:text-amber-300";
