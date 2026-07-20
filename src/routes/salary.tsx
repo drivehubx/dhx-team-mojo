@@ -77,7 +77,7 @@ function SalaryPage() {
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4 text-primary" />
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Period & Employee
+              Period & Team Member
             </h2>
           </div>
 
@@ -93,7 +93,7 @@ function SalaryPage() {
             </label>
 
             <label className="block">
-              <span className="text-[11px] text-muted-foreground">Employee</span>
+              <span className="text-[11px] text-muted-foreground">Team Member</span>
               <select
                 value={selectedId ?? ""}
                 onChange={(e) => setSelectedId(e.target.value)}

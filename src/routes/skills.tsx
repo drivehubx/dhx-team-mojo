@@ -28,7 +28,7 @@ export const Route = createFileRoute("/skills")({
   head: () => ({
     meta: [
       { title: "Skills — DHX Body & Paint" },
-      { name: "description", content: "Crew skill levels, gaps, assessments, and training recommendations." },
+      { name: "description", content: "Team member skill levels, gaps, assessments, and training recommendations." },
     ],
   }),
   component: SkillsPage,

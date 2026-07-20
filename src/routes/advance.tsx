@@ -10,7 +10,7 @@ export const Route = createFileRoute("/advance")({
   head: () => ({
     meta: [
       { title: "Advance — DHX Body & Paint" },
-      { name: "description", content: "Employee advances: request, approve, track." },
+      { name: "description", content: "Team member advances: request, approve, track." },
     ],
   }),
   component: () => (
@@ -49,7 +49,7 @@ function AdvancePage() {
 
   return (
     <div>
-      <AppHeader title="Advance" subtitle="Employee credit ledger" />
+      <AppHeader title="Advance" subtitle="Team member credit ledger" />
 
       <div className="px-5">
         <div className="rounded-2xl bg-card border border-border p-4 shadow-sm grid grid-cols-2 gap-2 text-center">
