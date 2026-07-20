@@ -50,26 +50,30 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
 
 export function useJobs(
   workspaceId: string | null,
-  opts: { includeSold?: boolean } = {},
+  opts: { includeSold?: boolean; includeArchived?: boolean; includeCancelled?: boolean } = {},
 ) {
   const includeSold = !!opts.includeSold;
+  const includeArchived = !!opts.includeArchived;
+  const includeCancelled = opts.includeCancelled ?? true;
   return useQuery({
-    queryKey: ["jobs", workspaceId, { includeSold }],
+    queryKey: ["jobs", workspaceId, { includeSold, includeArchived, includeCancelled }],
     enabled: !!workspaceId,
     queryFn: async () => {
-      const { data, error } = await sbWorkshop()
+      let qb = sbWorkshop()
         .from("jobs")
         .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
+        .eq("workspace_id", workspaceId);
+      if (!includeArchived) qb = qb.is("archived_at", null);
+      const { data, error } = await qb.order("created_at", { ascending: false });
       if (error) throw error;
-      const hydrated = await hydrateJobs((data ?? []) as WorkshopJob[]);
-      if (includeSold) return hydrated;
-      // Hide jobs whose vehicle is sold. Jobs with no vehicle stay visible.
-      return hydrated.filter((j) => j.vehicle?.status !== "sold");
+      let hydrated = await hydrateJobs((data ?? []) as WorkshopJob[]);
+      if (!includeSold) hydrated = hydrated.filter((j) => j.vehicle?.status !== "sold");
+      if (!includeCancelled) hydrated = hydrated.filter((j) => j.status !== "cancelled");
+      return hydrated;
     },
   });
 }
+
 
 export function useJob(workspaceId: string | null, id: string) {
   return useQuery({

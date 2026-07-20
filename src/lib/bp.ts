@@ -85,7 +85,15 @@ export type BPJob = {
   repair_stage: BPRepairStage;
   status: string;
   created_at: string;
+  archived_at: string | null;
+  archived_by: string | null;
+  archive_reason: string | null;
 };
+
+export function roRef(id: string): string {
+  return "RO-" + id.slice(0, 8).toUpperCase();
+}
+
 
 export type BPDocType = "before" | "after";
 
@@ -117,22 +125,35 @@ function extOf(name: string): string {
 
 // ---- Queries ----
 
-export function useBPJobs(workspaceId: string | null) {
+export type BPListFilter = "active" | "archived" | "cancelled";
+
+export function useBPJobs(
+  workspaceId: string | null,
+  filter: BPListFilter = "active",
+) {
   return useQuery({
-    queryKey: ["bp-jobs", workspaceId],
+    queryKey: ["bp-jobs", workspaceId, filter],
     enabled: !!workspaceId,
     queryFn: async () => {
-      const { data, error } = await dhxWorkshop()
+      let qb = dhxWorkshop()
         .from("jobs")
         .select("*")
         .eq("workspace_id", workspaceId)
-        .eq("job_type", "body_paint")
-        .order("created_at", { ascending: false });
+        .eq("job_type", "body_paint");
+      if (filter === "active") {
+        qb = qb.is("archived_at", null).neq("status", "cancelled");
+      } else if (filter === "archived") {
+        qb = qb.not("archived_at", "is", null);
+      } else {
+        qb = qb.eq("status", "cancelled").is("archived_at", null);
+      }
+      const { data, error } = await qb.order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as BPJob[];
     },
   });
 }
+
 
 export function useBPJob(workspaceId: string | null, id: string) {
   return useQuery({
@@ -369,6 +390,91 @@ export function useCreateBPInvoice(workspaceId: string | null) {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] });
       qc.invalidateQueries({ queryKey: ["bp-job", workspaceId, vars.jobId] });
+    },
+  });
+}
+
+// ---- Owner data-maintenance ----
+
+export function useJobDeleteBlockReason(workspaceId: string | null, jobId: string) {
+  return useQuery({
+    queryKey: ["bp-job-delete-block", workspaceId, jobId],
+    enabled: !!workspaceId && !!jobId,
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await dhxWorkshop().rpc("job_delete_block_reason", {
+        p_job_id: jobId,
+      });
+      if (error) throw error;
+      return (data as string | null) ?? null;
+    },
+  });
+}
+
+export function useArchiveBPJob(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { jobId: string; reason: string }) => {
+      const { error } = await dhxWorkshop().rpc("archive_job", {
+        p_job_id: input.jobId,
+        p_reason: input.reason || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["bp-job", workspaceId, vars.jobId] });
+    },
+  });
+}
+
+export function useRestoreBPJob(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (jobId: string) => {
+      const { error } = await dhxWorkshop().rpc("restore_job", { p_job_id: jobId });
+      if (error) throw error;
+    },
+    onSuccess: (_d, jobId) => {
+      qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["bp-job", workspaceId, jobId] });
+    },
+  });
+}
+
+export function useHardDeleteBPJob(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { jobId: string; confirmation: string; reason: string }) => {
+      const { error } = await dhxWorkshop().rpc("hard_delete_job", {
+        p_job_id: input.jobId,
+        p_confirmation: input.confirmation,
+        p_reason: input.reason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] });
+    },
+  });
+}
+
+export function useAdminOverride() {
+  return useMutation({
+    mutationFn: async (input: {
+      entityType: string;
+      entityId: string;
+      action: string;
+      reason: string;
+      confirmation: string;
+    }) => {
+      const { error } = await dhxCore().rpc("admin_override", {
+        p_entity_type: input.entityType,
+        p_entity_id: input.entityId,
+        p_action: input.action,
+        p_reason: input.reason,
+        p_confirmation: input.confirmation,
+      });
+      if (error) throw error;
     },
   });
 }

@@ -19,6 +19,9 @@ import { BPAssignedMembers } from "@/components/bp-assigned-members";
 import { BPParts } from "@/components/bp-parts";
 import { BPQuotationRevisions } from "@/components/bp-quotation-revisions";
 import { BPAssessmentHistory } from "@/components/bp-assessment-history";
+import { BPManageSection } from "@/components/bp-manage";
+import { roRef } from "@/lib/bp";
+import { Archive } from "lucide-react";
 
 export const Route = createFileRoute("/bp/$id")({
   head: () => ({
@@ -82,6 +85,7 @@ function BPDetailPage() {
             <p className="text-xs uppercase tracking-widest text-white/60 truncate">
               {job.plate_number ?? "—"} · {[job.car_make, job.car_model].filter(Boolean).join(" ")}
             </p>
+            <p className="mt-0.5 text-[10px] font-mono text-white/50">{roRef(job.id)}</p>
             <h1 className="mt-1 text-xl font-semibold tracking-tight truncate">
               {job.customer_name || "No customer"}
             </h1>
@@ -93,6 +97,17 @@ function BPDetailPage() {
       </header>
 
       <div className="px-5 space-y-5">
+        {job.archived_at && (
+          <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm flex items-start gap-2">
+            <Archive className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
+            <div>
+              <p className="font-semibold">This repair order is archived.</p>
+              {job.archive_reason && (
+                <p className="mt-1 text-xs text-muted-foreground">Reason: {job.archive_reason}</p>
+              )}
+            </div>
+          </div>
+        )}
         {/* Stage stepper */}
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <h2 className="text-sm font-semibold mb-3">Repair Stage</h2>
@@ -244,6 +259,9 @@ function BPDetailPage() {
             />
           )}
         </section>
+
+        {/* Manage (admin/owner only) */}
+        <BPManageSection job={job} />
       </div>
 
       {showInvoice && job.invoice_no && (

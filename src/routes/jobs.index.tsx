@@ -20,9 +20,9 @@ export const Route = createFileRoute("/jobs/")({
   ),
 });
 
-type FilterKey = "Mine" | "All" | "Open" | "In Progress" | "Completed" | "Cancelled";
+type FilterKey = "Mine" | "All" | "Open" | "In Progress" | "Completed" | "Cancelled" | "Archived";
 
-const statusOfFilter: Record<Exclude<FilterKey, "Mine" | "All">, JobStatus> = {
+const statusOfFilter: Record<"Open" | "In Progress" | "Completed" | "Cancelled", JobStatus> = {
   Open: "open",
   "In Progress": "in_progress",
   Completed: "completed",
@@ -36,21 +36,36 @@ const statusChip: Record<JobStatus, { chip: string; label: string }> = {
   cancelled: { chip: "bg-muted text-muted-foreground", label: "Cancelled" },
 };
 
+function roRef(id: string) {
+  return "RO-" + id.slice(0, 8).toUpperCase();
+}
+
 function JobsPage() {
   const { workspaceId, profile } = useWorkspace();
-  const q = useJobs(workspaceId);
+  const includeArchived = false; // archived shown only via filter chip below? Kept off — jobs list excludes archived by default.
+  const q = useJobs(workspaceId, { includeArchived });
+  const qArchived = useJobs(workspaceId, { includeArchived: true, includeCancelled: true });
   const jobs = q.data ?? [];
+  const archivedJobs = (qArchived.data ?? []).filter((j) => (j as any).archived_at != null);
 
   const [filter, setFilter] = useState<FilterKey>("All");
   const [query, setQuery] = useState("");
 
   const list = useMemo(() => {
     const txt = query.trim().toLowerCase();
-    return jobs.filter((j) => {
+    const source =
+      filter === "Archived"
+        ? archivedJobs
+        : filter === "Cancelled"
+          ? jobs.filter((j) => j.status === "cancelled")
+          : jobs;
+    return source.filter((j) => {
       if (filter === "Mine") {
         if (!j.workers.some((w) => w.profile_id === profile?.id)) return false;
-      } else if (filter !== "All" && j.status !== statusOfFilter[filter]) {
-        return false;
+      } else if (filter === "All") {
+        if (j.status === "cancelled") return false;
+      } else if (filter !== "Archived" && filter !== "Cancelled") {
+        if (j.status !== statusOfFilter[filter as keyof typeof statusOfFilter]) return false;
       }
       if (!txt) return true;
       const plate = j.vehicle?.plate_number?.toLowerCase() ?? "";
@@ -59,9 +74,9 @@ function JobsPage() {
       const desc = j.description?.toLowerCase() ?? "";
       return plate.includes(txt) || make.includes(txt) || model.includes(txt) || desc.includes(txt);
     });
-  }, [jobs, filter, query, profile?.id]);
+  }, [jobs, archivedJobs, filter, query, profile?.id]);
 
-  const filters: FilterKey[] = ["Mine", "All", "Open", "In Progress", "Completed", "Cancelled"];
+  const filters: FilterKey[] = ["Mine", "All", "Open", "In Progress", "Completed", "Cancelled", "Archived"];
 
   return (
     <div className="pb-8">
@@ -134,12 +149,15 @@ function JobsPage() {
 
 function JobCard({ job }: { job: JobWithRels }) {
   const meta = statusChip[job.status];
+  const archived = (job as any).archived_at != null;
   return (
     <li>
       <Link
         to="/jobs/$id"
         params={{ id: job.id }}
-        className="block rounded-2xl border border-border bg-card px-4 py-3 active:bg-secondary"
+        className={`block rounded-2xl border border-border bg-card px-4 py-3 active:bg-secondary ${
+          archived ? "opacity-60" : ""
+        }`}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -151,13 +169,21 @@ function JobCard({ job }: { job: JobWithRels }) {
                 <span className="text-muted-foreground">No vehicle</span>
               )}
             </p>
+            <p className="mt-0.5 text-[10px] font-mono text-muted-foreground/80">{roRef(job.id)}</p>
             {job.description && (
               <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{job.description}</p>
             )}
           </div>
-          <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${meta.chip}`}>
-            {meta.label}
-          </span>
+          <div className="shrink-0 flex flex-col items-end gap-1">
+            {archived && (
+              <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2 py-1 text-[10px] font-semibold">
+                Archived
+              </span>
+            )}
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${meta.chip}`}>
+              {meta.label}
+            </span>
+          </div>
         </div>
         <div className="mt-2.5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
