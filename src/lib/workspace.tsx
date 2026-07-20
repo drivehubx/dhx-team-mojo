@@ -28,6 +28,7 @@ export type WorkspaceState = {
   isCrew: boolean;
   isStaff: boolean;
   isAdmin: boolean;
+  canSupervise: boolean;
   refresh: () => Promise<void>;
 };
 
@@ -110,6 +111,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       isCrew,
       isStaff: isAdmin || isSupervisor,
       isAdmin,
+      canSupervise: isAdmin || isSupervisor,
       refresh: async () => {
         if (user) await load(user.id);
       },

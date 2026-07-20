@@ -15,6 +15,7 @@ import {
   BP_STAGE_LABEL,
   type BPRepairStage,
 } from "@/lib/bp";
+import { BPAssignedMembers } from "@/components/bp-assigned-members";
 
 export const Route = createFileRoute("/bp/$id")({
   head: () => ({
@@ -129,6 +130,13 @@ function BPDetailPage() {
             ))}
           </div>
         </section>
+
+        {/* Assigned Team Members */}
+        <BPAssignedMembers jobId={job.id} />
+
+
+
+
 
         {job.damage_description && (
           <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
