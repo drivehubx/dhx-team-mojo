@@ -212,7 +212,7 @@ function MemberCard({ m, clickable }: { m: TeamDirectoryRow; clickable: boolean 
         <span
           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
             m.is_active
-              ? "bg-[--color-success]/15 text-[--color-success]"
+              ? "bg-success/15 text-success"
               : "bg-muted text-muted-foreground"
           }`}
         >
@@ -332,8 +332,8 @@ function AddMemberDialog({
               <DialogTitle className="text-center">Team Member Added</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-2 text-center">
-              <div className="rounded-full bg-[--color-success]/15 p-3">
-                <CheckCircle className="h-8 w-8 text-[--color-success]" />
+              <div className="rounded-full bg-success/15 p-3">
+                <CheckCircle className="h-8 w-8 text-success" />
               </div>
               <div>
                 <p className="text-base font-semibold">{fullName}</p>
@@ -342,7 +342,7 @@ function AddMemberDialog({
               <div className="grid w-full gap-2">
                 <Button
                   type="button"
-                  className="w-full gap-2 bg-[--color-success] text-[--color-success-foreground] hover:bg-[--color-success]/90"
+                  className="w-full gap-2 bg-success text-success-foreground hover:bg-success/90"
                   onClick={handleWhatsApp}
                 >
                   <MessageCircle className="h-4 w-4" />

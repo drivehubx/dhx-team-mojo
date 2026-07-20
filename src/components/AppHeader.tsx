@@ -4,7 +4,7 @@ import { useT } from "@/lib/i18n";
 export function AppHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   const { t } = useT();
   return (
-    <header className="sticky top-0 z-40 mb-4 bg-[--color-navy] text-[--color-navy-foreground] pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
+    <header className="sticky top-0 z-40 mb-4 bg-navy text-navy-foreground pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs uppercase tracking-widest text-white/60">{t("common.brand")}</p>
@@ -16,7 +16,7 @@ export function AppHeader({ title, subtitle }: { title: string; subtitle?: strin
           className="relative grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white"
         >
           <Bell className="h-5 w-5" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[--color-warning]" />
+          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-warning" />
         </button>
       </div>
     </header>

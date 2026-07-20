@@ -330,7 +330,7 @@ function JobDetailPage() {
           <div className="rounded-2xl border border-border bg-card p-4">
             {job.estimate_approved ? (
               <div className="flex items-center gap-2 text-sm">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[--color-success]/15 text-[--color-success] px-2.5 py-1 text-xs font-semibold">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 text-success px-2.5 py-1 text-xs font-semibold">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Estimate Approved
                 </span>
                 <span className="text-muted-foreground text-xs">
@@ -425,7 +425,7 @@ function JobDetailPage() {
                   <span
                     className={`text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 ${
                       v?.checked
-                        ? "bg-[--color-success]/15 text-[--color-success]"
+                        ? "bg-success/15 text-success"
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
@@ -528,7 +528,7 @@ function JobDetailPage() {
             <button
               onClick={() => setStatus("completed")}
               disabled={update.isPending}
-              className="w-full rounded-xl bg-[--color-success] py-3 text-sm font-semibold text-white disabled:opacity-60"
+              className="w-full rounded-xl bg-success py-3 text-sm font-semibold text-white disabled:opacity-60"
             >
               {update.isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Mark Complete"}
             </button>
@@ -779,7 +779,7 @@ function PartsSection({
                           .catch((e) => toast.error(e?.message ?? "Failed"))
                       }
                       disabled={approveRev.isPending}
-                      className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[--color-success] px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
+                      className="mt-2 inline-flex items-center gap-1 rounded-lg bg-success px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
                     >
                       <Check className="h-3 w-3" /> Approve revision
                     </button>
@@ -1162,7 +1162,7 @@ function QcSection({
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
                   rec.passed
-                    ? "bg-[--color-success]/15 text-[--color-success]"
+                    ? "bg-success/15 text-success"
                     : "bg-destructive/15 text-destructive"
                 }`}
               >
@@ -1325,10 +1325,10 @@ function ReleaseSection({
     return (
       <section className="px-5 mt-4">
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">Release</h2>
-        <div className="rounded-2xl border border-[--color-success]/40 bg-[--color-success]/10 p-4">
+        <div className="rounded-2xl border border-success/40 bg-success/10 p-4">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-[--color-success]" />
-            <p className="text-sm font-semibold text-[--color-success]">Released</p>
+            <CheckCircle2 className="h-4 w-4 text-success" />
+            <p className="text-sm font-semibold text-success">Released</p>
           </div>
           <p className="text-xs text-muted-foreground mt-1.5">
             {new Date(releasedAt).toLocaleString()}

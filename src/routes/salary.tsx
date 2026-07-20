@@ -209,7 +209,7 @@ function SalaryEditor({
             </span>
           )}
           {initial?.paid && (
-            <span className="rounded-full bg-[--color-success]/15 px-2 py-0.5 text-[10px] font-semibold text-[--color-success]">
+            <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">
               PAID
             </span>
           )}
@@ -413,7 +413,7 @@ function CrewAdvanceSection({ workspaceId, userId }: { workspaceId: string; user
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     pending: "bg-amber-500/15 text-amber-600",
-    approved: "bg-[--color-success]/15 text-[--color-success]",
+    approved: "bg-success/15 text-success",
     rejected: "bg-destructive/15 text-destructive",
   };
   return (

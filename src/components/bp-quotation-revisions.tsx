@@ -228,7 +228,7 @@ function CreateRevisionForm({
       </div>
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{tr("Additional amount")}</span>
-        <span className="text-lg font-semibold text-[--color-success]">
+        <span className="text-lg font-semibold text-success">
           + RM {additional.toFixed(2)}
         </span>
       </div>
@@ -273,7 +273,7 @@ function RevisionCard({
   };
   const statusTone: Record<RevisionRow["status"], string> = {
     pending: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-    approved: "bg-[--color-success]/15 text-[--color-success]",
+    approved: "bg-success/15 text-success",
     rejected: "bg-destructive/15 text-destructive",
     superseded: "bg-secondary text-muted-foreground",
   };
@@ -319,7 +319,7 @@ function RevisionCard({
             RM {Number(rev.previous_total ?? 0).toFixed(2)}
           </span>
         </div>
-        <div className="flex items-center justify-between text-[--color-success]">
+        <div className="flex items-center justify-between text-success">
           <span className="inline-flex items-center gap-1">
             <ArrowUp className="h-3 w-3" /> {tr("Revision")} +
             {rev.revision_number}

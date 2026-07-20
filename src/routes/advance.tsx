@@ -53,8 +53,8 @@ function AdvancePage() {
 
       <div className="px-5">
         <div className="rounded-2xl bg-card border border-border p-4 shadow-sm grid grid-cols-2 gap-2 text-center">
-          <Stat label="Pending" value={fmtMYR(totalPending)} accent="text-[--color-warning]" />
-          <Stat label="Approved" value={fmtMYR(totalApproved)} accent="text-[--color-success]" />
+          <Stat label="Pending" value={fmtMYR(totalPending)} accent="text-warning" />
+          <Stat label="Approved" value={fmtMYR(totalApproved)} accent="text-success" />
         </div>
       </div>
 
@@ -185,7 +185,7 @@ function PendingList({ list }: { list: AdvanceWithProfile[] }) {
             <button
               onClick={() => handle(a.id, "approved")}
               disabled={decide.isPending}
-              className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-[--color-success] px-2 py-2 text-xs font-semibold text-white disabled:opacity-60"
+              className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-success px-2 py-2 text-xs font-semibold text-white disabled:opacity-60"
             >
               <Check className="h-3.5 w-3.5" /> Approve
             </button>

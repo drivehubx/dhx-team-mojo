@@ -67,8 +67,8 @@ function Dashboard() {
           <div className="grid grid-cols-2 gap-3">
             <KpiCard label="Active Jobs" value={String(open.length)} icon={Wrench} accent="bg-primary/10 text-primary" />
             <KpiCard label="Ready for QC" value={String(readyForQc)} icon={ClipboardCheck} accent="bg-purple-500/10 text-purple-500" />
-            <KpiCard label="Delayed Jobs" value={String(delayed)} icon={AlertCircle} accent="bg-[--color-warning]/15 text-[--color-warning]" />
-            <KpiCard label="Released Today" value={String(releasedToday)} icon={CheckCircle} accent="bg-[--color-success]/15 text-[--color-success]" />
+            <KpiCard label="Delayed Jobs" value={String(delayed)} icon={AlertCircle} accent="bg-warning/15 text-warning" />
+            <KpiCard label="Released Today" value={String(releasedToday)} icon={CheckCircle} accent="bg-success/15 text-success" />
           </div>
         </section>
 
@@ -77,8 +77,8 @@ function Dashboard() {
           <div className="grid grid-cols-2 gap-3">
             <KpiCard label="Avg Repair Days" value={avgRepairDays ?? "—"} icon={CalendarClock} accent="bg-blue-500/10 text-blue-500" />
             <KpiCard label="Rework Rate" value={reworkRate !== null ? `${reworkRate}%` : "—"} icon={RotateCcw} accent="bg-orange-500/10 text-orange-500" />
-            <KpiCard label="Pending Advances" value={String(pending.length)} icon={HandCoins} accent="bg-[--color-warning]/15 text-[--color-warning]" />
-            <KpiCard label="Approved Advances" value={fmtMYR(approvedTotal)} icon={Wallet} accent="bg-[--color-success]/15 text-[--color-success]" />
+            <KpiCard label="Pending Advances" value={String(pending.length)} icon={HandCoins} accent="bg-warning/15 text-warning" />
+            <KpiCard label="Approved Advances" value={fmtMYR(approvedTotal)} icon={Wallet} accent="bg-success/15 text-success" />
           </div>
         </section>
 

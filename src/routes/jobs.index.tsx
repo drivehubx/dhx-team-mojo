@@ -32,7 +32,7 @@ const statusOfFilter: Record<"Open" | "In Progress" | "Completed" | "Cancelled",
 const statusChip: Record<JobStatus, { chip: string; label: string }> = {
   open: { chip: "bg-secondary text-foreground", label: "Open" },
   in_progress: { chip: "bg-primary/10 text-primary", label: "In Progress" },
-  completed: { chip: "bg-[--color-success]/15 text-[--color-success]", label: "Completed" },
+  completed: { chip: "bg-success/15 text-success", label: "Completed" },
   cancelled: { chip: "bg-muted text-muted-foreground", label: "Cancelled" },
 };
 
