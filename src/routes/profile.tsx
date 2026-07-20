@@ -45,10 +45,12 @@ function initialsOf(name: string) {
 }
 
 function ProfilePage() {
-  const { t, tr } = useT();
+  const { t, tr, lang } = useT();
   const { user, signOut } = useAuth();
   const { profile, workspaceId, refresh, role, isStaff } = useWorkspace();
   const [editOpen, setEditOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const currentLang = LANGS.find((l) => l.code === lang) ?? LANGS[0];
 
   if (!profile || !workspaceId || !user) return null;
 
