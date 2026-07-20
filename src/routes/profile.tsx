@@ -99,6 +99,9 @@ function ProfilePage() {
             <Row icon={UserIcon} label={tr("Edit Profile")} value={displayName} />
           </button>
           <Row icon={Phone} label={t("page.profile.phone")} value={profile.phone || tr("Not set")} />
+          <button onClick={() => setLangOpen(true)} className="w-full text-left">
+            <Row icon={Languages} label={tr("Preferred Language")} value={currentLang.native} />
+          </button>
           <Link to="/settings">
             <Row icon={Settings} label={t("page.profile.settings")} value="" />
           </Link>
