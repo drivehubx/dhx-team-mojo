@@ -1021,11 +1021,14 @@ function ReviewForm({
   aiFailedMsg: string | null;
 }) {
   const { tr } = useT();
-  const photoUrl = useMemo(
-    () => URL.createObjectURL(state.photoFile),
-    [state.photoFile],
+  const photoUrls = useMemo(
+    () => state.photos.map((p) => URL.createObjectURL(p.file)),
+    [state.photos],
   );
-  useEffect(() => () => URL.revokeObjectURL(photoUrl), [photoUrl]);
+  useEffect(
+    () => () => photoUrls.forEach((u) => URL.revokeObjectURL(u)),
+    [photoUrls],
+  );
 
   const set = (patch: Partial<ReviewState>) => setState({ ...state, ...patch });
   const confidencePct = Math.round(state.confidence * 100);
