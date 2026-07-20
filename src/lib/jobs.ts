@@ -446,9 +446,14 @@ export const PART_STATUS_ORDER: RepairPartStatus[] = [
 ];
 
 export type PartProvenance = "initial_assessment" | "found_during_repair";
-export type PartDiscoveryStage = "dismantling" | "repair" | "qc";
+export type PartDiscoveryStage =
+  | "dismantling"
+  | "repair"
+  | "qc"
+  | "customer_request"
+  | "other";
 export type PartRecommendedAction = "replace" | "repair";
-export type PartRevisionStatus = "approved" | "draft_revision";
+export type PartRevisionStatus = "pending" | "approved" | "rejected" | "draft_revision";
 
 export type RepairPart = {
   id: string;

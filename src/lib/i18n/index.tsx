@@ -325,16 +325,21 @@ export function tStatus(
 
 export function Translatable({
   en,
+  translated: translatedProp,
   className,
   as: As = "span",
 }: {
   en: string;
+  /** Optional explicit translation (e.g. AI-provided) overriding the dictionary. */
+  translated?: string | null;
   className?: string;
   as?: "span" | "p" | "div";
 }) {
   const { tr, lang } = useT();
   const [showOriginal, setShowOriginal] = useState(false);
-  const translated = tr(en);
+  const dictTranslated = tr(en);
+  const translated =
+    translatedProp && translatedProp.trim().length > 0 ? translatedProp : dictTranslated;
   const isTranslated = lang !== "en" && translated !== en;
   if (!isTranslated) {
     return <As className={className}>{en}</As>;
