@@ -97,6 +97,17 @@ function BPDetailPage() {
       </header>
 
       <div className="px-5 space-y-5">
+        {job.archived_at && (
+          <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm flex items-start gap-2">
+            <Archive className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
+            <div>
+              <p className="font-semibold">This repair order is archived.</p>
+              {job.archive_reason && (
+                <p className="mt-1 text-xs text-muted-foreground">Reason: {job.archive_reason}</p>
+              )}
+            </div>
+          </div>
+        )}
         {/* Stage stepper */}
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <h2 className="text-sm font-semibold mb-3">Repair Stage</h2>
@@ -248,6 +259,9 @@ function BPDetailPage() {
             />
           )}
         </section>
+
+        {/* Manage (admin/owner only) */}
+        <BPManageSection job={job} />
       </div>
 
       {showInvoice && job.invoice_no && (
