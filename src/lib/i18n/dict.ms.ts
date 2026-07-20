@@ -382,7 +382,6 @@ export const MS: Record<string, string> = {
   "Danger zone": "Zon berbahaya",
   "Administrative Override": "Ketepikan Pentadbir",
   "Type DELETE to confirm": "Taip DELETE untuk sahkan",
-  "Reason (optional)": "Sebab (pilihan)",
   "Reason (required)": "Sebab (wajib)",
   "This repair order is archived.": "Kerja pembaikan ini telah diarkibkan.",
   "Repair order archived": "Kerja diarkibkan",

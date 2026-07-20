@@ -414,7 +414,6 @@ export const ZH: Record<string, string> = {
   "Archive repair order": "归档工单",
   "Archiving hides this order from the active list and keeps all data. You can restore it at any time.":
     "归档后工单将从活动列表隐藏，所有数据保留，可随时恢复。",
-  "Reason (optional)": "原因（选填）",
   "Reason (required)": "原因（必填）",
   "Restore repair order": "恢复工单",
   "Restore this repair order back to the active list.": "将此工单恢复到活动列表。",

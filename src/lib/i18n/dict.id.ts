@@ -383,7 +383,6 @@ export const ID: Record<string, string> = {
   "Danger zone": "Zona berbahaya",
   "Administrative Override": "Override Administrator",
   "Type DELETE to confirm": "Ketik DELETE untuk konfirmasi",
-  "Reason (optional)": "Alasan (opsional)",
   "Reason (required)": "Alasan (wajib)",
   "This repair order is archived.": "Order perbaikan ini telah diarsipkan.",
   "Repair order archived": "Order diarsipkan",
