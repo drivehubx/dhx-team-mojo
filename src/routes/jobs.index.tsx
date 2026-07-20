@@ -42,19 +42,30 @@ function roRef(id: string) {
 
 function JobsPage() {
   const { workspaceId, profile } = useWorkspace();
-  const q = useJobs(workspaceId);
+  const includeArchived = false; // archived shown only via filter chip below? Kept off — jobs list excludes archived by default.
+  const q = useJobs(workspaceId, { includeArchived });
+  const qArchived = useJobs(workspaceId, { includeArchived: true, includeCancelled: true });
   const jobs = q.data ?? [];
+  const archivedJobs = (qArchived.data ?? []).filter((j) => (j as any).archived_at != null);
 
   const [filter, setFilter] = useState<FilterKey>("All");
   const [query, setQuery] = useState("");
 
   const list = useMemo(() => {
     const txt = query.trim().toLowerCase();
-    return jobs.filter((j) => {
+    const source =
+      filter === "Archived"
+        ? archivedJobs
+        : filter === "Cancelled"
+          ? jobs.filter((j) => j.status === "cancelled")
+          : jobs;
+    return source.filter((j) => {
       if (filter === "Mine") {
         if (!j.workers.some((w) => w.profile_id === profile?.id)) return false;
-      } else if (filter !== "All" && j.status !== statusOfFilter[filter]) {
-        return false;
+      } else if (filter === "All") {
+        if (j.status === "cancelled") return false;
+      } else if (filter !== "Archived" && filter !== "Cancelled") {
+        if (j.status !== statusOfFilter[filter as keyof typeof statusOfFilter]) return false;
       }
       if (!txt) return true;
       const plate = j.vehicle?.plate_number?.toLowerCase() ?? "";
@@ -63,9 +74,9 @@ function JobsPage() {
       const desc = j.description?.toLowerCase() ?? "";
       return plate.includes(txt) || make.includes(txt) || model.includes(txt) || desc.includes(txt);
     });
-  }, [jobs, filter, query, profile?.id]);
+  }, [jobs, archivedJobs, filter, query, profile?.id]);
 
-  const filters: FilterKey[] = ["Mine", "All", "Open", "In Progress", "Completed", "Cancelled"];
+  const filters: FilterKey[] = ["Mine", "All", "Open", "In Progress", "Completed", "Cancelled", "Archived"];
 
   return (
     <div className="pb-8">
