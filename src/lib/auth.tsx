@@ -24,9 +24,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
+      if (event === "SIGNED_IN") {
+        // Fire and forget — never block on this.
+        (supabase as any).schema("core").rpc("touch_last_login").then(() => {}, () => {});
+      }
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
