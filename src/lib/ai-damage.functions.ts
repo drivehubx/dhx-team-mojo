@@ -143,6 +143,20 @@ export const analyzeRepairPart = createServerFn({ method: "POST" })
             .join("\n")
         : "(none yet)";
 
+    const lang: Lang = (data.lang ?? "en") as Lang;
+    const langName: Record<Lang, string> = {
+      en: "English",
+      zh: "Simplified Chinese",
+      ms: "Bahasa Melayu",
+      id: "Bahasa Indonesia",
+    };
+
+    const translationBlock =
+      lang === "en"
+        ? ""
+        : `\nAlso include a "translations" object with the three free-text fields translated into ${langName[lang]}. Do NOT translate "recommendedAction" or "discoveryStage" — they must stay as the exact English codes above.
+"translations": { "detectedPart": "...", "reasonRequired": "...", "relatedOriginalDamage": "..." }`;
+
     const systemPrompt = `You are a Body & Paint damage-assessment AI for the DHX workshop.
 The technician has JUST discovered new damage while working on this repair order. You must
 propose ONE additional part request based on the new photo, using the existing case context.
@@ -154,15 +168,15 @@ Current repair stage: ${job.repair_stage ?? "(unknown)"}
 Existing parts on this job:
 ${partsList}
 
-Respond with ONLY a JSON object matching this exact shape (no prose, no code fence):
+Respond with ONLY a JSON object matching this exact shape (no prose, no code fence). English is canonical.
 {
-  "detectedPart": "short part name",
-  "reasonRequired": "one sentence why this part is needed",
-  "discoveryStage": "dismantling" | "repair" | "qc",
+  "detectedPart": "short part name (English)",
+  "reasonRequired": "one sentence why this part is needed (English)",
+  "discoveryStage": "dismantling" | "repair" | "qc" | "customer_request" | "other",
   "quantity": integer >= 1,
   "recommendedAction": "replace" | "repair",
-  "relatedOriginalDamage": "which original damage note this ties back to, or empty",
-  "confidence": number between 0 and 1
+  "relatedOriginalDamage": "which original damage note this ties back to, or empty (English)",
+  "confidence": number between 0 and 1${translationBlock ? "," : ""}${translationBlock}
 }`;
 
     const imageUrls = [newPhotoUrl, ...contextPhotoUrls];
@@ -181,12 +195,12 @@ Respond with ONLY a JSON object matching this exact shape (no prose, no code fen
       });
       if (aiErr || aiRes?.error) {
         console.error("[analyzeRepairPart] ai-vision:", aiErr?.message ?? aiRes?.error, aiRes?.detail ?? "");
-        return fallback(data.photoPath, data.currentRepairStage);
+        return fallback(data.photoPath, data.currentRepairStage, lang);
       }
       text = String(aiRes?.text ?? "");
     } catch (e) {
       console.error("[analyzeRepairPart] network:", String(e));
-      return fallback(data.photoPath, data.currentRepairStage);
+      return fallback(data.photoPath, data.currentRepairStage, lang);
     }
     let parsed: any = null;
     try {
@@ -201,7 +215,7 @@ Respond with ONLY a JSON object matching this exact shape (no prose, no code fen
         }
       }
     }
-    if (!parsed) return fallback(data.photoPath, data.currentRepairStage);
+    if (!parsed) return fallback(data.photoPath, data.currentRepairStage, lang);
 
     const discoveryStage =
       (DISCOVERY_STAGES as readonly string[]).includes(parsed.discoveryStage)
@@ -212,6 +226,19 @@ Respond with ONLY a JSON object matching this exact shape (no prose, no code fen
         ? parsed.recommendedAction
         : "replace";
     const qty = Math.max(1, Math.min(99, Number(parsed.quantity) || 1));
+
+    let translation: RepairPartTranslation | null = null;
+    if (lang !== "en" && parsed.translations && typeof parsed.translations === "object") {
+      const t = parsed.translations;
+      translation = {
+        detectedPart: String(t.detectedPart ?? "").slice(0, 120),
+        reasonRequired: String(t.reasonRequired ?? "").slice(0, 500),
+        relatedOriginalDamage: String(t.relatedOriginalDamage ?? "").slice(0, 300),
+      };
+      if (!translation.detectedPart && !translation.reasonRequired) {
+        translation = null;
+      }
+    }
 
     return {
       detectedPart: String(parsed.detectedPart ?? "").slice(0, 120),
@@ -224,6 +251,8 @@ Respond with ONLY a JSON object matching this exact shape (no prose, no code fen
         300,
       ),
       confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
+      lang,
+      translation,
       rawJson: JSON.stringify(parsed),
     };
   });
