@@ -156,6 +156,7 @@ export function WorkspaceGate({ children }: { children: ReactNode }) {
           Your account is not registered with a workspace yet. Please contact your
           manager to be added before you can use the app.
         </p>
+        <NotSetupLangButton />
       </div>
     );
   }
