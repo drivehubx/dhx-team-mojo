@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useT } from "@/lib/i18n";
+import { Languages } from "lucide-react";
+import { useT, LanguagePicker } from "@/lib/i18n";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -23,6 +24,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -90,15 +92,27 @@ function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="bg-navy text-navy-foreground px-6 pt-[max(env(safe-area-inset-top),2rem)] pb-10 rounded-b-3xl">
-        <p className="text-xs uppercase tracking-widest text-white/60">DHX</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-          {mode === "signin" ? tr("Sign in") : tr("Create account")}
-        </h1>
-        <p className="mt-1 text-sm text-white/70">
-          {mode === "signin"
-            ? tr("Welcome back. Please sign in to continue.")
-            : tr("First account becomes Owner.")}
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-white/60">DHX</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+              {mode === "signin" ? tr("Sign in") : tr("Create account")}
+            </h1>
+            <p className="mt-1 text-sm text-white/70">
+              {mode === "signin"
+                ? tr("Welcome back. Please sign in to continue.")
+                : tr("First account becomes Owner.")}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLangOpen(true)}
+            aria-label={tr("Preferred Language")}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-white"
+          >
+            <Languages className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       <form onSubmit={submit} className="flex-1 px-6 py-8 space-y-4">
@@ -195,6 +209,7 @@ function LoginPage() {
 
         <p className="text-center text-[11px] text-muted-foreground">DHX · v1.0</p>
       </form>
+      {langOpen && <LanguagePicker onClose={() => setLangOpen(false)} />}
     </div>
   );
 }

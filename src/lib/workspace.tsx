@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "./auth";
+import { LanguagePicker, useT } from "./i18n";
 import {
   sbCore,
   type AppRole,
@@ -156,6 +157,7 @@ export function WorkspaceGate({ children }: { children: ReactNode }) {
           Your account is not registered with a workspace yet. Please contact your
           manager to be added before you can use the app.
         </p>
+        <NotSetupLangButton />
       </div>
     );
   }
@@ -168,4 +170,20 @@ export function WorkspaceGate({ children }: { children: ReactNode }) {
     );
   }
   return <>{children}</>;
+}
+
+function NotSetupLangButton() {
+  const [open, setOpen] = useState(false);
+  const { tr, lang } = useT();
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium"
+      >
+        🌐 {tr("Preferred Language")} · {lang.toUpperCase()}
+      </button>
+      {open && <LanguagePicker onClose={() => setOpen(false)} />}
+    </>
+  );
 }
