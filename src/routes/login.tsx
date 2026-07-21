@@ -24,6 +24,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
