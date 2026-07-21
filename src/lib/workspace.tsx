@@ -170,3 +170,21 @@ export function WorkspaceGate({ children }: { children: ReactNode }) {
   }
   return <>{children}</>;
 }
+
+function NotSetupLangButton() {
+  const [open, setOpen] = useState(false);
+  // Lazy import to avoid a cycle with i18n.
+  const { LanguagePicker, useT } = require("./i18n") as typeof import("./i18n");
+  const { tr, lang } = useT();
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium"
+      >
+        🌐 {tr("Preferred Language")} · {lang.toUpperCase()}
+      </button>
+      {open && <LanguagePicker onClose={() => setOpen(false)} />}
+    </>
+  );
+}
