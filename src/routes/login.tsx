@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useT } from "@/lib/i18n";
+import { Languages } from "lucide-react";
+import { useT, LanguagePicker } from "@/lib/i18n";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
