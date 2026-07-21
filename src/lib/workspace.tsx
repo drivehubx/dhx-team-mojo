@@ -174,8 +174,6 @@ export function WorkspaceGate({ children }: { children: ReactNode }) {
 
 function NotSetupLangButton() {
   const [open, setOpen] = useState(false);
-  // Lazy import to avoid a cycle with i18n.
-  const { LanguagePicker, useT } = require("./i18n") as typeof import("./i18n");
   const { tr, lang } = useT();
   return (
     <>
