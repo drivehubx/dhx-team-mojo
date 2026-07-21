@@ -209,6 +209,7 @@ function LoginPage() {
 
         <p className="text-center text-[11px] text-muted-foreground">DHX · v1.0</p>
       </form>
+      {langOpen && <LanguagePicker onClose={() => setLangOpen(false)} />}
     </div>
   );
 }
