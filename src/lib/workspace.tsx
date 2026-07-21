@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "./auth";
+import { LanguagePicker, useT } from "./i18n";
 import {
   sbCore,
   type AppRole,
