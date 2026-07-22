@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Offline — DHX Body & Paint</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a1f3c" />
+    <style>
+      html, body { margin: 0; height: 100%; background: #0a1f3c; color: #fff; font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+      main { min-height: 100%; display: grid; place-items: center; padding: 1.5rem; text-align: center; }
+      h1 { font-size: 1.25rem; margin: 0 0 .5rem; }
+      p { color: rgba(255,255,255,0.7); margin: 0 0 1.5rem; max-width: 22rem; }
+      button { padding: .6rem 1.1rem; border-radius: .5rem; border: 0; background: #fff; color: #0a1f3c; font: inherit; font-weight: 600; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <p style="font-size:.75rem;letter-spacing:.2em;opacity:.6;margin:0 0 .5rem">DHX</p>
+        <h1>You're offline</h1>
+        <p>DHX Body & Paint needs a connection to load repair jobs. Reconnect and try again.</p>
+        <button onclick="location.reload()">Try again</button>
+      </div>
+    </main>
+  </body>
+</html>
