@@ -1,10 +1,11 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Languages } from "lucide-react";
+import { Languages, Download } from "lucide-react";
 import { useT, LanguagePicker } from "@/lib/i18n";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useInstallPrompt } from "@/lib/pwa";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -25,6 +26,7 @@ function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const { canInstall, install } = useInstallPrompt();
 
   useEffect(() => {
     if (!loading && user) {
@@ -206,6 +208,17 @@ function LoginPage() {
         >
           {mode === "signin" ? tr("No account? Create one") : tr("Have an account? Sign in")}
         </button>
+
+        {canInstall && (
+          <button
+            type="button"
+            onClick={() => void install()}
+            className="mx-auto flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-foreground"
+          >
+            <Download className="h-4 w-4" />
+            {tr("Install app")}
+          </button>
+        )}
 
         <p className="text-center text-[11px] text-muted-foreground">DHX · v1.0</p>
       </form>
