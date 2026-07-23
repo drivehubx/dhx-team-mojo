@@ -244,7 +244,7 @@ function LanguageModal({ onChoose }: { onChoose: (l: Lang) => void }) {
   const [selected, setSelected] = useState<Lang>(lang);
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl text-card-foreground">
         <p className="text-xs uppercase tracking-widest text-muted-foreground">DHX Body & Paint</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">
           {tr("Choose your language")}
@@ -257,7 +257,7 @@ function LanguageModal({ onChoose }: { onChoose: (l: Lang) => void }) {
             <li key={l.code}>
               <button
                 onClick={() => setSelected(l.code)}
-                className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors text-foreground ${
                   selected === l.code ? "border-primary bg-primary/10" : "border-border bg-background"
                 }`}
               >
@@ -290,7 +290,7 @@ export function LanguagePicker({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl"
+        className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl text-card-foreground"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-semibold tracking-tight">{tr("Preferred Language")}</h2>
@@ -302,7 +302,7 @@ export function LanguagePicker({ onClose }: { onClose: () => void }) {
                   void setLang(l.code);
                   onClose();
                 }}
-                className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left ${
+                className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left text-foreground ${
                   lang === l.code ? "border-primary bg-primary/10" : "border-border bg-background"
                 }`}
               >
