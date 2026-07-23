@@ -291,7 +291,7 @@ function TeamMemberDetail() {
               icon={<Briefcase className="h-3 w-3" />}
             />
             <Stat
-              label="Member since"
+              label="Team member since"
               value={m.created_at ? new Date(m.created_at).toLocaleDateString() : "—"}
             />
           </div>

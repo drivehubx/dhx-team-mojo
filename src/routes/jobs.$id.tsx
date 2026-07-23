@@ -470,7 +470,7 @@ function JobDetailPage() {
         <h2 className="text-sm font-semibold tracking-tight mb-2.5">Team Assignment</h2>
         {job.workers.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
-            No crew assigned.
+            No team members assigned.
           </div>
         ) : (
           <ul className="space-y-2">

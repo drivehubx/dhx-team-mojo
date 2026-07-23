@@ -132,7 +132,7 @@ export function useSetMemberActive() {
 }
 
 export function displayRole(role: AppRole | null | undefined): string {
-  if (!role) return "Member";
+  if (!role) return "Team Member";
   switch (role) {
     case "owner":
       return "Owner";
@@ -145,16 +145,16 @@ export function displayRole(role: AppRole | null | undefined): string {
     case "member":
     case "worker":
     case "crew":
-      return "Member";
+      return "Team Member";
   }
 }
 
 // Owner is intentionally omitted — the database rejects granting owner and
 // an owner's own role cannot be reassigned here. `displayRole` still renders
-// "Owner" for the badge when a member already holds that role.
+// "Owner" for the badge when a team member already holds that role.
 export const SYSTEM_ROLE_OPTIONS: Array<{ value: AppRole; label: string; hint: string }> = [
   { value: "administrator", label: "Administrator", hint: "Manage team, jobs, settings" },
   { value: "manager", label: "Manager", hint: "Manage team and jobs" },
   { value: "supervisor", label: "Supervisor", hint: "Oversee jobs, read-only on team" },
-  { value: "member", label: "Member", hint: "Standard access" },
+  { value: "member", label: "Team Member", hint: "Standard access" },
 ];

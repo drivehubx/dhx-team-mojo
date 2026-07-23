@@ -311,7 +311,7 @@ function AddMemberDialog({
   };
 
   const roleOptions: Array<{ value: InviteRole; label: string }> = [
-    { value: "member", label: "Member" },
+    { value: "member", label: "Team Member" },
     { value: "supervisor", label: "Supervisor" },
     { value: "manager", label: "Manager" },
     { value: "administrator", label: "Administrator" },
@@ -405,7 +405,7 @@ function AddMemberDialog({
                   ))}
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Position and engagement can be set on the member's page.
+                  Position and engagement can be set on the team member's page.
                 </p>
               </div>
               <div className="space-y-1.5">
