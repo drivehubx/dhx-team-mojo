@@ -465,7 +465,7 @@ function SkillsPage() {
               {tr("Assessment Requests")}
             </p>
             <span className="text-[10px] text-muted-foreground">
-              {tr("Flow: Member → Manager → Owner")}
+              {tr("Flow: Team Member → Manager → Owner")}
             </span>
           </div>
           {requests.length === 0 && (
@@ -531,7 +531,7 @@ function SkillsPage() {
             {tr("Team Skills")}
           </p>
           {crew.length === 0 && (
-            <Card className="p-4 text-center text-xs text-muted-foreground">{tr("No crew yet")}</Card>
+            <Card className="p-4 text-center text-xs text-muted-foreground">{tr("No team members yet")}</Card>
           )}
           {crew.map((emp) => {
             const gaps = SKILL_CATS.map((c) => {
@@ -712,7 +712,7 @@ function SkillsPage() {
           <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
             <p><span className="font-semibold text-foreground">{tr("Owner")}:</span> {tr("Full edit · quick adjust · final approval")}</p>
             <p><span className="font-semibold text-foreground">{tr("Manager")}:</span> {tr("Review requests · comment · forward to Owner")}</p>
-            <p><span className="font-semibold text-foreground">{tr("Member")}:</span> {tr("View · request assessment")}</p>
+            <p><span className="font-semibold text-foreground">{tr("Team Member")}:</span> {tr("View · request assessment")}</p>
           </div>
         </Card>
       </div>
