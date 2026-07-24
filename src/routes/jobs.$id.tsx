@@ -7,12 +7,14 @@ import {
   Check,
   CheckCircle2,
   Loader2,
+  Pencil,
   Plus,
   ShieldCheck,
   Sparkles,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { JobEditSheet } from "@/components/job-edit-sheet";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import {
   useJob,
