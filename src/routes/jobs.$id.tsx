@@ -647,7 +647,7 @@ function PartsSection({
     <section className="px-5 mt-4">
       <div className="flex items-center justify-between mb-2.5">
         <h2 className="text-sm font-semibold tracking-tight">Parts</h2>
-        {isStaff && !showForm && (
+        {canEdit && !showForm && (
           <button
             onClick={() => setShowForm(true)}
             className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground"
