@@ -641,7 +641,7 @@ function PartsSection({
 
   const parts = partsQ.data ?? [];
   const pendingRevisions = parts.filter((p) => p.revision_status === "draft_revision");
-  const canAddFound = isStaff && ACTIVE_STAGES_FOR_ADD.includes(repairStage);
+  const canAddFound = canEdit && ACTIVE_STAGES_FOR_ADD.includes(repairStage);
 
   return (
     <section className="px-5 mt-4">
