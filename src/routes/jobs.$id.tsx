@@ -1469,13 +1469,15 @@ function AIAssessmentCard({
     { label: "Labour", value: `${a.estimatedLabourHours ?? job.estimated_labour_hours ?? "—"} h` },
     { label: "Paint", value: `${a.estimatedPaintPanels ?? job.estimated_paint_panels ?? "—"} panels` },
     { label: "Days", value: String(a.estimatedDays ?? job.estimated_days ?? "—") },
-    {
-      label: "Estimate",
-      value:
-        a.estimateAmount != null || job.estimate_amount != null
-          ? `RM ${Number(a.estimateAmount ?? job.estimate_amount).toFixed(2)}`
-          : "—",
-    },
+    ...(isStaff
+      ? [{
+          label: "Est. Repair Cost",
+          value:
+            a.estimateAmount != null || job.estimate_amount != null
+              ? `RM ${Number(a.estimateAmount ?? job.estimate_amount).toFixed(2)}`
+              : "—",
+        }]
+      : []),
   ];
   const sevClass = (sev: string) =>
     sev === "major"
