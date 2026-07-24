@@ -586,10 +586,12 @@ function stageToDiscovery(s: RepairStage): PartDiscoveryStage {
 function PartsSection({
   jobId,
   isStaff,
+  canEdit,
   repairStage,
 }: {
   jobId: string;
   isStaff: boolean;
+  canEdit: boolean;
   repairStage: RepairStage;
 }) {
   const { workspaceId } = useWorkspace();
