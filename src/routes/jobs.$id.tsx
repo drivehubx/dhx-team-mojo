@@ -143,6 +143,15 @@ function JobDetailPage() {
   const stageMeta = stageStyle[stage];
   const checklist = (job.intake_checklist ?? {}) as IntakeChecklist;
 
+  // Assigned Team Member may update operational sections (stage, status,
+  // photos, parts found during repair). Financial/approval sections stay
+  // restricted to isStaff — see individual gates below.
+  const isAssigned =
+    !!profile &&
+    !!job &&
+    (job.workers ?? []).some((w) => w.profile?.id === profile.id);
+  const canEditJob = isStaff || isAssigned;
+
   const setStatus = async (s: JobStatus) => {
     try {
       await update.mutateAsync({ id: job.id, status: s });
@@ -307,7 +316,7 @@ function JobDetailPage() {
             );
           })}
         </div>
-        {isStaff && !isFinalStage && (
+        {canEditJob && !isFinalStage && (
           <button
             onClick={handleAdvance}
             disabled={advance.isPending}
@@ -444,7 +453,7 @@ function JobDetailPage() {
       {/* Parts Tracking */}
       <AIAssessmentCard job={job} isStaff={isStaff} workspaceId={workspaceId} />
 
-      <PartsSection jobId={job.id} isStaff={isStaff} repairStage={stage} />
+      <PartsSection jobId={job.id} isStaff={isStaff} canEdit={canEditJob} repairStage={stage} />
 
       {/* Quality Control */}
       <QcSection
@@ -491,7 +500,7 @@ function JobDetailPage() {
         )}
       </section>
 
-      {isStaff && (
+      {canEditJob && (
         <section className="px-5 mt-6">
           <h2 className="text-sm font-semibold tracking-tight mb-2.5">Update Status</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -513,31 +522,11 @@ function JobDetailPage() {
         </section>
       )}
 
-      {!isStaff && (
+      {!canEditJob && (job.status === "completed" || job.status === "cancelled") && (
         <section className="px-5 mt-6">
-          {job.status === "open" && (
-            <button
-              onClick={() => setStatus("in_progress")}
-              disabled={update.isPending}
-              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-            >
-              {update.isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Start Job"}
-            </button>
-          )}
-          {job.status === "in_progress" && (
-            <button
-              onClick={() => setStatus("completed")}
-              disabled={update.isPending}
-              className="w-full rounded-xl bg-success py-3 text-sm font-semibold text-white disabled:opacity-60"
-            >
-              {update.isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Mark Complete"}
-            </button>
-          )}
-          {(job.status === "completed" || job.status === "cancelled") && (
-            <p className="text-center text-sm text-muted-foreground">
-              This job is {job.status}.
-            </p>
-          )}
+          <p className="text-center text-sm text-muted-foreground">
+            This job is {job.status}.
+          </p>
         </section>
       )}
     </div>
@@ -577,10 +566,12 @@ function stageToDiscovery(s: RepairStage): PartDiscoveryStage {
 function PartsSection({
   jobId,
   isStaff,
+  canEdit,
   repairStage,
 }: {
   jobId: string;
   isStaff: boolean;
+  canEdit: boolean;
   repairStage: RepairStage;
 }) {
   const { workspaceId } = useWorkspace();
@@ -630,13 +621,13 @@ function PartsSection({
 
   const parts = partsQ.data ?? [];
   const pendingRevisions = parts.filter((p) => p.revision_status === "draft_revision");
-  const canAddFound = isStaff && ACTIVE_STAGES_FOR_ADD.includes(repairStage);
+  const canAddFound = canEdit && ACTIVE_STAGES_FOR_ADD.includes(repairStage);
 
   return (
     <section className="px-5 mt-4">
       <div className="flex items-center justify-between mb-2.5">
         <h2 className="text-sm font-semibold tracking-tight">Parts</h2>
-        {isStaff && !showForm && (
+        {canEdit && !showForm && (
           <button
             onClick={() => setShowForm(true)}
             className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground"
