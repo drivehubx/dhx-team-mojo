@@ -284,10 +284,12 @@ function JobDetailPage() {
               <span className="text-muted-foreground">No description.</span>
             )}
           </p>
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-            <span className="text-xs text-muted-foreground">Estimate</span>
-            <span className="text-sm font-semibold">{formatMyr(job.estimate_amount)}</span>
-          </div>
+          {isStaff && (
+            <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+              <span className="text-xs text-muted-foreground">Estimated Repair Cost (internal)</span>
+              <span className="text-sm font-semibold">{formatMyr(job.estimate_amount)}</span>
+            </div>
+          )}
         </div>
       </section>
 
