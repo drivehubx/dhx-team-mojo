@@ -316,7 +316,7 @@ function JobDetailPage() {
             );
           })}
         </div>
-        {isStaff && !isFinalStage && (
+        {canEditJob && !isFinalStage && (
           <button
             onClick={handleAdvance}
             disabled={advance.isPending}
