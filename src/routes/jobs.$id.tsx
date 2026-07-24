@@ -1530,7 +1530,7 @@ function AIAssessmentCard({
         </div>
       </div>
       {a.summary && <p className="mt-2 text-sm text-muted-foreground">{a.summary}</p>}
-      <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+      <div className={`mt-3 grid ${isStaff ? "grid-cols-4" : "grid-cols-3"} gap-2 text-center`}>
         {stats.map((st) => (
           <div key={st.label} className="rounded-lg border border-border/60 bg-background/40 p-2">
             <p className="text-[10px] text-muted-foreground">{st.label}</p>
