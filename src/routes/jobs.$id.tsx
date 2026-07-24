@@ -500,7 +500,7 @@ function JobDetailPage() {
         )}
       </section>
 
-      {isStaff && (
+      {canEditJob && (
         <section className="px-5 mt-6">
           <h2 className="text-sm font-semibold tracking-tight mb-2.5">Update Status</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -522,31 +522,11 @@ function JobDetailPage() {
         </section>
       )}
 
-      {!isStaff && (
+      {!canEditJob && (job.status === "completed" || job.status === "cancelled") && (
         <section className="px-5 mt-6">
-          {job.status === "open" && (
-            <button
-              onClick={() => setStatus("in_progress")}
-              disabled={update.isPending}
-              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-            >
-              {update.isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Start Job"}
-            </button>
-          )}
-          {job.status === "in_progress" && (
-            <button
-              onClick={() => setStatus("completed")}
-              disabled={update.isPending}
-              className="w-full rounded-xl bg-success py-3 text-sm font-semibold text-white disabled:opacity-60"
-            >
-              {update.isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Mark Complete"}
-            </button>
-          )}
-          {(job.status === "completed" || job.status === "cancelled") && (
-            <p className="text-center text-sm text-muted-foreground">
-              This job is {job.status}.
-            </p>
-          )}
+          <p className="text-center text-sm text-muted-foreground">
+            This job is {job.status}.
+          </p>
         </section>
       )}
     </div>
