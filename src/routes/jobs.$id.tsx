@@ -453,7 +453,7 @@ function JobDetailPage() {
       {/* Parts Tracking */}
       <AIAssessmentCard job={job} isStaff={isStaff} workspaceId={workspaceId} />
 
-      <PartsSection jobId={job.id} isStaff={isStaff} repairStage={stage} />
+      <PartsSection jobId={job.id} isStaff={isStaff} canEdit={canEditJob} repairStage={stage} />
 
       {/* Quality Control */}
       <QcSection
