@@ -1147,3 +1147,107 @@ export function useApproveInitialAssessment(workspaceId: string | null) {
     },
   });
 }
+
+// ---- Full edit-job mutations (staff-only edit sheet) ----
+// Uses existing workshop.jobs / repair_parts / job_workers tables via existing
+// sbWorkshop() pattern. No schema or RLS changes.
+
+export type EditableJobFields = {
+  description?: string | null;
+  damage_description?: string | null;
+  estimate_amount?: number | null;
+  estimated_labour_hours?: number | null;
+  estimated_paint_panels?: number | null;
+  estimated_days?: number | null;
+  work_request_source?: string | null;
+  labor_hours_estimate?: number | null;
+  due_date?: string | null;
+  assigned_lead_id?: string | null;
+  repair_stage?: RepairStage | null;
+  status?: JobStatus;
+};
+
+export function useUpdateJobDetails(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { jobId: string; patch: EditableJobFields }) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const patch: Record<string, unknown> = { ...input.patch };
+      // strip undefined so we don't overwrite with null accidentally
+      for (const k of Object.keys(patch)) {
+        if (patch[k] === undefined) delete patch[k];
+      }
+      if (Object.keys(patch).length === 0) return null;
+      const { data, error } = await sbWorkshop()
+        .from("jobs")
+        .update(patch)
+        .eq("id", input.jobId)
+        .eq("workspace_id", workspaceId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as WorkshopJob;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["job", workspaceId, v.jobId] });
+    },
+  });
+}
+
+export function useUpdatePartDetails(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      jobId: string;
+      patch: {
+        part_name?: string;
+        quantity?: number;
+        unit_cost?: number | null;
+        supplier?: string | null;
+        notes?: string | null;
+      };
+    }) => {
+      const { data, error } = await sbWorkshop()
+        .from("repair_parts")
+        .update(input.patch)
+        .eq("id", input.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return { part: data as RepairPart, jobId: input.jobId };
+    },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["repair-parts", workspaceId, res.jobId] });
+    },
+  });
+}
+
+export function useSetJobWorkers(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { jobId: string; profileIds: string[] }) => {
+      if (!workspaceId) throw new Error("Workspace not ready");
+      const { error: delErr } = await sbWorkshop()
+        .from("job_workers")
+        .delete()
+        .eq("job_id", input.jobId)
+        .eq("workspace_id", workspaceId);
+      if (delErr) throw delErr;
+      if (input.profileIds.length > 0) {
+        const rows = input.profileIds.map((pid) => ({
+          workspace_id: workspaceId,
+          job_id: input.jobId,
+          profile_id: pid,
+        }));
+        const { error: insErr } = await sbWorkshop().from("job_workers").insert(rows);
+        if (insErr) throw insErr;
+      }
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["job", workspaceId, v.jobId] });
+    },
+  });
+}
