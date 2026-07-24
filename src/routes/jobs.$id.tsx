@@ -229,6 +229,16 @@ function JobDetailPage() {
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${stageMeta.bg}`}>
             {stageMeta.label}
           </span>
+          {isStaff && (
+            <button
+              onClick={() => setEditOpen(true)}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground active:scale-95"
+              aria-label="Edit Job"
+            >
+              <Pencil className="h-3 w-3" />
+              Edit
+            </button>
+          )}
         </div>
       </header>
 
