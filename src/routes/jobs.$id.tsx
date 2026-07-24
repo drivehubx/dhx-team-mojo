@@ -143,6 +143,15 @@ function JobDetailPage() {
   const stageMeta = stageStyle[stage];
   const checklist = (job.intake_checklist ?? {}) as IntakeChecklist;
 
+  // Assigned Team Member may update operational sections (stage, status,
+  // photos, parts found during repair). Financial/approval sections stay
+  // restricted to isStaff — see individual gates below.
+  const isAssigned =
+    !!profile &&
+    !!job &&
+    (job.workers ?? []).some((w) => w.profile?.id === profile.id);
+  const canEditJob = isStaff || isAssigned;
+
   const setStatus = async (s: JobStatus) => {
     try {
       await update.mutateAsync({ id: job.id, status: s });
