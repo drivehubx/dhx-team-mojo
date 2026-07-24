@@ -546,6 +546,14 @@ function JobDetailPage() {
           </p>
         </section>
       )}
+
+      {isStaff && editOpen && (
+        <JobEditSheet
+          workspaceId={workspaceId}
+          job={job}
+          onClose={() => setEditOpen(false)}
+        />
+      )}
     </div>
   );
 }
