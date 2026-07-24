@@ -120,6 +120,9 @@ function JobDetailPage() {
   const [leadId, setLeadId] = useState<string>("");
   const [laborHours, setLaborHours] = useState<string>("");
   const [dueDate, setDueDate] = useState<string>("");
+  const [editOpen, setEditOpen] = useState(false);
+
+
 
   useEffect(() => {
     if (q.data) {
