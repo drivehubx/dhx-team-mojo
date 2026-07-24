@@ -1562,9 +1562,11 @@ function AIAssessmentCard({
         <div className="mt-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Parts &amp; Estimated Cost
+              {isStaff ? "Parts & Estimated Cost (internal)" : "Parts to Repair / Replace"}
             </h3>
-            <span className="text-[10px] text-muted-foreground">AI draft — for staff review</span>
+            {isStaff && (
+              <span className="text-[10px] text-muted-foreground">AI draft — for staff review</span>
+            )}
           </div>
           <div className="mt-2 overflow-hidden rounded-lg border border-border/60">
             <table className="w-full text-sm">
@@ -1572,8 +1574,8 @@ function AIAssessmentCard({
                 <tr>
                   <th className="px-2 py-1.5 text-left font-medium">Part</th>
                   <th className="px-2 py-1.5 text-right font-medium">Qty</th>
-                  <th className="px-2 py-1.5 text-right font-medium">Unit</th>
-                  <th className="px-2 py-1.5 text-right font-medium">Line</th>
+                  {isStaff && <th className="px-2 py-1.5 text-right font-medium">Unit</th>}
+                  {isStaff && <th className="px-2 py-1.5 text-right font-medium">Line</th>}
                 </tr>
               </thead>
               <tbody>
@@ -1592,17 +1594,21 @@ function AIAssessmentCard({
                         )}
                       </td>
                       <td className="px-2 py-1.5 text-right tabular-nums">{qty}</td>
-                      <td className="px-2 py-1.5 text-right tabular-nums">
-                        {unitNum != null ? `RM ${unitNum.toFixed(2)}` : "—"}
-                      </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums font-medium">
-                        {line != null ? `RM ${line.toFixed(2)}` : "—"}
-                      </td>
+                      {isStaff && (
+                        <td className="px-2 py-1.5 text-right tabular-nums">
+                          {unitNum != null ? `RM ${unitNum.toFixed(2)}` : "—"}
+                        </td>
+                      )}
+                      {isStaff && (
+                        <td className="px-2 py-1.5 text-right tabular-nums font-medium">
+                          {line != null ? `RM ${line.toFixed(2)}` : "—"}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
               </tbody>
-              {hasPricedPart && (
+              {isStaff && hasPricedPart && (
                 <tfoot>
                   <tr className="border-t border-border bg-background/40">
                     <td className="px-2 py-1.5 text-xs font-semibold" colSpan={3}>
@@ -1616,9 +1622,11 @@ function AIAssessmentCard({
               )}
             </table>
           </div>
-          <p className="mt-2 text-[10px] text-muted-foreground">
-            AI drafts, humans approve — prices are best-estimate suggestions for the estimator, not a locked quotation.
-          </p>
+          {isStaff && (
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              AI drafts, humans approve — prices are best-estimate suggestions for the estimator, not a locked quotation.
+            </p>
+          )}
         </div>
       )}
     </section>
