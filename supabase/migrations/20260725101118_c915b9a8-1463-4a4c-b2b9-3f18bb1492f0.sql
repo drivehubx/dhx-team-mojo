@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION core.get_invitation_by_token(uuid) TO anon;
