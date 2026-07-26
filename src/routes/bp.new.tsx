@@ -253,17 +253,165 @@ function BPNewPage() {
 
         <button
           type="submit"
-          disabled={createJob.isPending}
+          disabled={createJob.isPending || checking}
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow disabled:opacity-50"
         >
-          {createJob.isPending ? (
+          {createJob.isPending || checking ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Plus className="h-4 w-4" />
           )}
-          Create Repair Order
+          {checking ? "Checking for duplicates…" : "Create Repair Order"}
         </button>
       </form>
+
+      {duplicates && (
+        <DuplicateWarningSheet
+          candidates={duplicates}
+          reason={overrideReason}
+          setReason={setOverrideReason}
+          onContinueExisting={(id) => {
+            setDuplicates(null);
+            setOverrideReason("");
+            navigate({ to: "/bp/$id", params: { id } });
+          }}
+          onCreateSeparate={() => {
+            const r = overrideReason.trim();
+            if (!r) {
+              toast.error("Please provide a reason for creating a separate job");
+              return;
+            }
+            setDuplicates(null);
+            doCreate(r);
+          }}
+          onCancel={() => {
+            setDuplicates(null);
+            setOverrideReason("");
+          }}
+          creating={createJob.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+function DuplicateWarningSheet({
+  candidates,
+  reason,
+  setReason,
+  onContinueExisting,
+  onCreateSeparate,
+  onCancel,
+  creating,
+}: {
+  candidates: DuplicateCandidate[];
+  reason: string;
+  setReason: (v: string) => void;
+  onContinueExisting: (id: string) => void;
+  onCreateSeparate: () => void;
+  onCancel: () => void;
+  creating: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-end sm:place-items-center bg-black/50 p-0 sm:p-4">
+      <div className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-card border border-border p-5 shadow-xl space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-600">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold">Possible existing job for this vehicle</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {candidates.length} active repair order{candidates.length > 1 ? "s" : ""} found for the same plate. Continue an existing job, or record a reason to create a separate one.
+            </p>
+          </div>
+          <button
+            onClick={onCancel}
+            className="grid h-8 w-8 place-items-center rounded-full hover:bg-secondary"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {candidates.map((c) => {
+            const stageLabel = c.repair_stage
+              ? (BP_STAGE_LABEL as Record<string, string>)[c.repair_stage] ?? c.repair_stage
+              : "—";
+            return (
+              <div
+                key={c.id}
+                className="rounded-xl border border-border bg-background p-3 space-y-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-mono text-[11px] text-muted-foreground">{roRef(c.id)}</p>
+                    <p className="text-sm font-semibold truncate">
+                      {c.plate_number ?? "—"} · {c.customer_name ?? "No customer"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1 justify-end">
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                      {c.status ?? "—"}
+                    </span>
+                    <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-semibold">
+                      {stageLabel}
+                    </span>
+                    {c.has_ai && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-600 px-2 py-0.5 text-[10px] font-semibold">
+                        <Sparkles className="h-3 w-3" /> AI done
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>{new Date(c.created_at).toLocaleDateString()}</span>
+                  <span className="inline-flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3" /> {c.photo_count} photo{c.photo_count === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onContinueExisting(c.id)}
+                  className="w-full rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                >
+                  Continue Existing Job
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="pt-2 border-t border-border space-y-2">
+          <p className="text-xs font-semibold">Create a separate job instead</p>
+          <Textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            placeholder="Reason (e.g. Separate accident, Different repair scope, Previous job already completed)"
+            className="text-sm"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onCreateSeparate}
+              disabled={creating || !reason.trim()}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-50"
+            >
+              {creating && <Loader2 className="h-4 w-4 animate-spin" />}
+              Create Separate Job
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
