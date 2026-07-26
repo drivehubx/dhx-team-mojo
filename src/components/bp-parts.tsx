@@ -432,10 +432,17 @@ function PartsTimeline({
 function PartCard({
   part,
   showCost,
+  canSupervise,
+  workspaceId,
+  jobId,
 }: {
   part: EnrichedPart;
   showCost: boolean;
+  canSupervise: boolean;
+  workspaceId: string | null;
+  jobId: string;
 }) {
+  const reviewMut = useReviewPartMutation(workspaceId, jobId);
   const { tr } = useT();
   const ai = (part.ai_suggestion ?? {}) as any;
   const translations = ai?.translations ?? {};
