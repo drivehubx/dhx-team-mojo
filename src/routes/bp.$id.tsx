@@ -223,44 +223,46 @@ function BPDetailPage() {
         />
 
         {/* Invoice */}
-        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
-          <h2 className="text-sm font-semibold">Invoice</h2>
-          {job.invoice_no ? (
-            <div className="text-sm">
-              <p>
-                <span className="text-muted-foreground">No:</span>{" "}
-                <span className="font-mono">{job.invoice_no}</span>
-              </p>
-              <p>
-                <span className="text-muted-foreground">Issued:</span>{" "}
-                {job.invoiced_at ? new Date(job.invoiced_at).toLocaleString() : "—"}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Ready date:</span>{" "}
-                {job.ready_date ?? "—"}
-              </p>
-              <button
-                onClick={() => setShowInvoice(true)}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
-              >
-                <Printer className="h-3.5 w-3.5" /> View / Print
-              </button>
-            </div>
-          ) : (
-            <CreateInvoiceForm
-              onSubmit={(ready_date) =>
-                invoice.mutate(
-                  { jobId: job.id, ready_date },
-                  {
-                    onSuccess: () => toast.success("Invoice created"),
-                    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-                  },
-                )
-              }
-              pending={invoice.isPending}
-            />
-          )}
-        </section>
+        {isAdmin && (
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
+            <h2 className="text-sm font-semibold">Invoice</h2>
+            {job.invoice_no ? (
+              <div className="text-sm">
+                <p>
+                  <span className="text-muted-foreground">No:</span>{" "}
+                  <span className="font-mono">{job.invoice_no}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Issued:</span>{" "}
+                  {job.invoiced_at ? new Date(job.invoiced_at).toLocaleString() : "—"}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Ready date:</span>{" "}
+                  {job.ready_date ?? "—"}
+                </p>
+                <button
+                  onClick={() => setShowInvoice(true)}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+                >
+                  <Printer className="h-3.5 w-3.5" /> View / Print
+                </button>
+              </div>
+            ) : (
+              <CreateInvoiceForm
+                onSubmit={(ready_date) =>
+                  invoice.mutate(
+                    { jobId: job.id, ready_date },
+                    {
+                      onSuccess: () => toast.success("Invoice created"),
+                      onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+                    },
+                  )
+                }
+                pending={invoice.isPending}
+              />
+            )}
+          </section>
+        )}
 
         {/* Manage (admin/owner only) */}
         <BPManageSection job={job} />
