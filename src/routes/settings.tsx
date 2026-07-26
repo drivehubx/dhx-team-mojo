@@ -141,8 +141,9 @@ function WorkspaceSection({ workspaceId, actorId }: { workspaceId: string; actor
         merged.defaults = { ...(current.defaults ?? {}), language: next.defaultLang };
       }
       if (next.ai) {
-        merged.ai = { ...(current.ai ?? {}), ...next.ai };
+        merged.ai = { ...(current.ai ?? {}), ...next.ai, humanApproval: true };
       }
+
       const { error } = await sbCore()
         .from("workspaces")
         .update({ settings: merged })
