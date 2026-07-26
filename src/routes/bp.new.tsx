@@ -209,7 +209,7 @@ function BPNewPage() {
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-3">
-          <h2 className="text-sm font-semibold">Damage & Quote</h2>
+          <h2 className="text-sm font-semibold">{isAdmin ? "Damage & Quote" : "Damage"}</h2>
           <Field label="Damage description">
             <Textarea
               value={damage_description}
@@ -218,15 +218,17 @@ function BPNewPage() {
               placeholder="Describe the damage…"
             />
           </Field>
-          <Field label="Estimate (RM)">
-            <input
-              value={estimate}
-              onChange={(e) => setEstimate(e.target.value)}
-              inputMode="decimal"
-              className={inputCls}
-              placeholder="0.00"
-            />
-          </Field>
+          {isAdmin && (
+            <Field label="Estimate (RM)">
+              <input
+                value={estimate}
+                onChange={(e) => setEstimate(e.target.value)}
+                inputMode="decimal"
+                className={inputCls}
+                placeholder="0.00"
+              />
+            </Field>
+          )}
         </section>
 
         <button
