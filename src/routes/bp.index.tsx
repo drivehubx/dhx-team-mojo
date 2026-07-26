@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Plus, Loader2, ChevronRight, Archive } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { WorkspaceGate, useWorkspace } from "@/lib/workspace";
 import { useBPJobs, BP_STAGE_LABEL, roRef, type BPJob, type BPListFilter } from "@/lib/bp";
+import { dhxWorkshop } from "@/lib/dhx";
 import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/bp/")({
@@ -20,18 +22,55 @@ export const Route = createFileRoute("/bp/")({
   ),
 });
 
-function BPListPage() {
-  const { workspaceId } = useWorkspace();
-  const { tr } = useT();
-  const [filter, setFilter] = useState<BPListFilter>("active");
-  const q = useBPJobs(workspaceId, filter);
-  const list = q.data ?? [];
+type ListFilter = BPListFilter | "needs_review";
 
-  const chips: { key: BPListFilter; label: string }[] = [
+function useNeedsReviewJobIds(workspaceId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ["bp-needs-review", workspaceId],
+    enabled: enabled && !!workspaceId,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await dhxWorkshop()
+        .from("repair_parts")
+        .select("job_id")
+        .eq("workspace_id", workspaceId!)
+        .eq("revision_status", "pending");
+      if (error) throw error;
+      const ids = new Set<string>();
+      for (const r of (data ?? []) as { job_id: string }[]) ids.add(r.job_id);
+      return Array.from(ids);
+    },
+  });
+}
+
+function BPListPage() {
+  const { workspaceId, canSupervise } = useWorkspace();
+  const { tr } = useT();
+  const [filter, setFilter] = useState<ListFilter>("active");
+  const reviewQ = useNeedsReviewJobIds(workspaceId, canSupervise);
+  const reviewIds = reviewQ.data ?? [];
+  // Fetch active jobs to intersect with review ids when filter === needs_review.
+  const baseFilter: BPListFilter = filter === "needs_review" ? "active" : filter;
+  const q = useBPJobs(workspaceId, baseFilter);
+  const allList = q.data ?? [];
+  const reviewIdSet = new Set(reviewIds);
+  const list =
+    filter === "needs_review"
+      ? allList.filter((j) => reviewIdSet.has(j.id))
+      : allList;
+  const needsReviewCount = allList.filter((j) => reviewIdSet.has(j.id)).length;
+
+  const chips: { key: ListFilter; label: string; badge?: number }[] = [
     { key: "active", label: tr("Active") },
     { key: "archived", label: tr("Archived") },
     { key: "cancelled", label: tr("Cancelled") },
   ];
+  if (canSupervise) {
+    chips.push({
+      key: "needs_review",
+      label: tr("Needs Review"),
+      badge: needsReviewCount,
+    });
+  }
 
   return (
     <div className="pb-24">
@@ -45,13 +84,24 @@ function BPListPage() {
               <button
                 key={c.key}
                 onClick={() => setFilter(c.key)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
+                className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : "bg-card text-muted-foreground border border-border"
                 }`}
               >
                 {c.label}
+                {typeof c.badge === "number" && c.badge > 0 && (
+                  <span
+                    className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                      active
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                    }`}
+                  >
+                    {c.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -70,7 +120,9 @@ function BPListPage() {
               ? tr('No repair orders yet. Tap "+ New" to create the first one.')
               : filter === "archived"
                 ? tr("No archived repair orders.")
-                : tr("No cancelled repair orders.")}
+                : filter === "cancelled"
+                  ? tr("No cancelled repair orders.")
+                  : tr("No repair orders awaiting review.")}
           </li>
         )}
         {list.map((j) => (

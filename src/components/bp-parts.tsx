@@ -265,12 +265,15 @@ export function BPParts({
   repairStage: string | null;
 }) {
   const { tr } = useT();
-  const { workspaceId, isAdmin } = useWorkspace();
+  const { workspaceId, isAdmin, canSupervise } = useWorkspace();
   const partsQ = useParts(workspaceId, jobId);
   const aiSettingsQ = useAiSettings(workspaceId);
   const [addOpen, setAddOpen] = useState(false);
 
   const parts = partsQ.data ?? [];
+  const pendingCount = parts.filter(
+    (p) => (p.revision_status ?? "pending") === "pending",
+  ).length;
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
@@ -281,6 +284,11 @@ export function BPParts({
             {parts.length} {tr(parts.length === 1 ? "part" : "parts")}
           </p>
         </div>
+        {pendingCount > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 px-2.5 py-1 text-[11px] font-semibold">
+            {pendingCount} {tr("awaiting review")}
+          </span>
+        )}
       </div>
 
       {partsQ.isLoading ? (
@@ -292,15 +300,26 @@ export function BPParts({
           {tr("No parts yet.")}
         </p>
       ) : (
-        <PartsTimeline parts={parts} showCost={isAdmin} />
+        <PartsTimeline
+          parts={parts}
+          showCost={isAdmin}
+          canSupervise={canSupervise}
+          workspaceId={workspaceId}
+          jobId={jobId}
+        />
       )}
 
-      <Button
-        onClick={() => setAddOpen(true)}
-        className="h-14 w-full text-base font-semibold"
-      >
-        <Plus className="mr-2 h-5 w-5" /> {tr("Add Part")}
-      </Button>
+      <div className="space-y-1.5">
+        <Button
+          onClick={() => setAddOpen(true)}
+          className="h-14 w-full text-base font-semibold"
+        >
+          <Camera className="mr-2 h-5 w-5" /> {tr("Found Additional Damage")}
+        </Button>
+        <p className="text-center text-[11px] text-muted-foreground">
+          {tr("Take photos of newly discovered damage — AI will suggest parts for review.")}
+        </p>
+      </div>
 
       {addOpen && (
         <AddPartSheet
@@ -316,15 +335,46 @@ export function BPParts({
   );
 }
 
+function useReviewPartMutation(workspaceId: string | null, jobId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      partId,
+      revision_status,
+    }: {
+      partId: string;
+      revision_status: "approved" | "rejected";
+    }) => {
+      const { error } = await dhxWorkshop()
+        .from("repair_parts")
+        .update({ revision_status })
+        .eq("id", partId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bp-parts", workspaceId, jobId] });
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    },
+  });
+}
+
 // ============================================================
 // Part card
 // ============================================================
 function PartsTimeline({
   parts,
   showCost,
+  canSupervise,
+  workspaceId,
+  jobId,
 }: {
   parts: EnrichedPart[];
   showCost: boolean;
+  canSupervise: boolean;
+  workspaceId: string | null;
+  jobId: string;
 }) {
   const { tr } = useT();
   const groups = useMemo(() => {
@@ -361,7 +411,15 @@ function PartsTimeline({
             </div>
             <ul className="space-y-2">
               {list.map((p) => (
-                <PartCard key={p.id} part={p} showCost={showCost} />
+                <PartCard
+                  key={p.id}
+                  part={p}
+                  showCost={showCost}
+                  canSupervise={canSupervise}
+                  workspaceId={workspaceId}
+                  jobId={jobId}
+                />
+
               ))}
             </ul>
           </div>
@@ -374,10 +432,17 @@ function PartsTimeline({
 function PartCard({
   part,
   showCost,
+  canSupervise,
+  workspaceId,
+  jobId,
 }: {
   part: EnrichedPart;
   showCost: boolean;
+  canSupervise: boolean;
+  workspaceId: string | null;
+  jobId: string;
 }) {
+  const reviewMut = useReviewPartMutation(workspaceId, jobId);
   const { tr } = useT();
   const ai = (part.ai_suggestion ?? {}) as any;
   const translations = ai?.translations ?? {};
@@ -484,6 +549,28 @@ function PartCard({
           <p className="text-[11px] font-medium">
             {tr("Unit cost")}: RM {Number(part.unit_cost).toFixed(2)}
           </p>
+        )}
+        {canSupervise && revision === "pending" && (
+          <div className="flex gap-2 pt-1">
+            <button
+              disabled={reviewMut.isPending}
+              onClick={() =>
+                reviewMut.mutate({ partId: part.id, revision_status: "approved" })
+              }
+              className="inline-flex items-center gap-1 rounded-lg bg-success/15 text-success px-2.5 py-1 text-[11px] font-semibold hover:bg-success/25 disabled:opacity-50"
+            >
+              <Check className="h-3 w-3" /> {tr("Approve")}
+            </button>
+            <button
+              disabled={reviewMut.isPending}
+              onClick={() =>
+                reviewMut.mutate({ partId: part.id, revision_status: "rejected" })
+              }
+              className="inline-flex items-center gap-1 rounded-lg bg-destructive/15 text-destructive px-2.5 py-1 text-[11px] font-semibold hover:bg-destructive/25 disabled:opacity-50"
+            >
+              <X className="h-3 w-3" /> {tr("Reject")}
+            </button>
+          </div>
         )}
       </div>
     </li>
