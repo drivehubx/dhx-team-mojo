@@ -411,7 +411,15 @@ function PartsTimeline({
             </div>
             <ul className="space-y-2">
               {list.map((p) => (
-                <PartCard key={p.id} part={p} showCost={showCost} />
+                <PartCard
+                  key={p.id}
+                  part={p}
+                  showCost={showCost}
+                  canSupervise={canSupervise}
+                  workspaceId={workspaceId}
+                  jobId={jobId}
+                />
+
               ))}
             </ul>
           </div>
