@@ -97,6 +97,25 @@ function BPDetailPage() {
       </header>
 
       <div className="px-5 space-y-5">
+        {job.duplicate_status === "archived_duplicate" && (
+          <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm space-y-1">
+            <p className="font-semibold text-amber-700 dark:text-amber-300">
+              This job was marked as a duplicate and is read-only.
+            </p>
+            {job.duplicate_override_reason && (
+              <p className="text-xs text-muted-foreground">Reason: {job.duplicate_override_reason}</p>
+            )}
+            {job.merged_into_job_id && (
+              <Link
+                to="/bp/$id"
+                params={{ id: job.merged_into_job_id }}
+                className="inline-block text-xs font-semibold text-primary underline"
+              >
+                Open the job it was merged into →
+              </Link>
+            )}
+          </div>
+        )}
         {job.archived_at && (
           <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm flex items-start gap-2">
             <Archive className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />

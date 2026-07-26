@@ -1,19 +1,23 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Archive, RotateCcw, Trash2, ShieldAlert, Loader2, X } from "lucide-react";
+import { AlertTriangle, Archive, RotateCcw, Trash2, ShieldAlert, Loader2, X, Copy, Sparkles } from "lucide-react";
 import {
   useJobDeleteBlockReason,
   useArchiveBPJob,
   useRestoreBPJob,
   useHardDeleteBPJob,
   useAdminOverride,
+  useFindDuplicateJobs,
+  useMarkJobDuplicate,
+  roRef,
+  BP_STAGE_LABEL,
   type BPJob,
 } from "@/lib/bp";
 import { useWorkspace } from "@/lib/workspace";
 import { useT } from "@/lib/i18n";
 import { useNavigate } from "@tanstack/react-router";
 
-type ConfirmKind = "archive" | "restore" | "delete" | "override" | null;
+type ConfirmKind = "archive" | "restore" | "delete" | "override" | "duplicate" | null;
 
 export function BPManageSection({ job }: { job: BPJob }) {
   const { workspaceId, isAdmin, isOwner } = useWorkspace();
@@ -24,10 +28,19 @@ export function BPManageSection({ job }: { job: BPJob }) {
   const restore = useRestoreBPJob(workspaceId);
   const hardDelete = useHardDeleteBPJob(workspaceId);
   const override = useAdminOverride();
+  const markDup = useMarkJobDuplicate(workspaceId);
 
   const [dialog, setDialog] = useState<ConfirmKind>(null);
   const [reason, setReason] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  const [retainedId, setRetainedId] = useState<string | null>(null);
+
+  const dupQ = useFindDuplicateJobs(
+    workspaceId,
+    job.vehicle_id,
+    job.plate_number,
+    { enabled: dialog === "duplicate" },
+  );
 
   if (!isAdmin) return null;
 
@@ -38,6 +51,28 @@ export function BPManageSection({ job }: { job: BPJob }) {
     setDialog(null);
     setReason("");
     setConfirmation("");
+    setRetainedId(null);
+  };
+
+  const onMarkDuplicate = () => {
+    if (!retainedId) {
+      toast.error(tr("Select the job to keep"));
+      return;
+    }
+    if (!reason.trim()) {
+      toast.error(tr("Reason is required"));
+      return;
+    }
+    markDup.mutate(
+      { jobId: job.id, retainedJobId: retainedId, reason: reason.trim() },
+      {
+        onSuccess: () => {
+          toast.success(tr("Marked as duplicate"));
+          close();
+        },
+        onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+      },
+    );
   };
 
   const onArchive = () =>
@@ -131,6 +166,15 @@ export function BPManageSection({ job }: { job: BPJob }) {
             </button>
           )}
         </div>
+
+        {!archived && job.duplicate_status !== "archived_duplicate" && (
+          <button
+            onClick={() => setDialog("duplicate")}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-secondary"
+          >
+            <Copy className="h-4 w-4" /> {tr("Mark as duplicate")}
+          </button>
+        )}
 
         {isOwner && (
           <>
@@ -296,6 +340,80 @@ export function BPManageSection({ job }: { job: BPJob }) {
               placeholder="DELETE"
             />
           </label>
+          <label className="block text-xs">
+            <span className="text-muted-foreground">{tr("Reason (required)")}</span>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            />
+          </label>
+        </ConfirmModal>
+      )}
+
+      {dialog === "duplicate" && (
+        <ConfirmModal
+          title={tr("Mark as duplicate")}
+          onClose={close}
+          onConfirm={onMarkDuplicate}
+          pending={markDup.isPending}
+          confirmLabel={tr("Mark as duplicate")}
+          tone="destructive"
+          disabled={!retainedId || reason.trim().length === 0}
+        >
+          <p className="text-sm text-muted-foreground">
+            {tr(
+              "This job will be flagged as a duplicate and become read-only. Pick the real job to keep.",
+            )}
+          </p>
+          {dupQ.isLoading ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> {tr("Searching…")}
+            </div>
+          ) : (dupQ.data ?? []).filter((c) => c.id !== job.id).length === 0 ? (
+            <div className="rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              {tr("No possible duplicates found for this vehicle.")}
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {(dupQ.data ?? [])
+                .filter((c) => c.id !== job.id)
+                .map((c) => {
+                  const stageLabel = c.repair_stage
+                    ? (BP_STAGE_LABEL as Record<string, string>)[c.repair_stage] ?? c.repair_stage
+                    : "—";
+                  const picked = retainedId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setRetainedId(c.id)}
+                      className={`w-full text-left rounded-xl border p-3 text-xs ${
+                        picked
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-background hover:bg-secondary/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] text-muted-foreground">{roRef(c.id)}</span>
+                        {c.has_ai && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-600 px-2 py-0.5 text-[10px] font-semibold">
+                            <Sparkles className="h-3 w-3" /> {tr("AI done")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm font-semibold truncate">
+                        {c.plate_number ?? "—"} · {c.customer_name ?? tr("No customer")}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {stageLabel} · {c.status ?? "—"} · {new Date(c.created_at).toLocaleDateString()}
+                      </p>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
           <label className="block text-xs">
             <span className="text-muted-foreground">{tr("Reason (required)")}</span>
             <textarea
