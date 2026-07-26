@@ -117,8 +117,9 @@ function WorkspaceSection({ workspaceId, actorId }: { workspaceId: string; actor
       const dl = s?.defaults?.language;
       if (dl === "en" || dl === "zh" || dl === "ms" || dl === "id") setDefaultLang(dl);
       const cur = (s?.ai ?? {}) as Partial<AiSettings>;
-      setAi({ ...DEFAULT_AI, ...cur });
+      setAi({ ...DEFAULT_AI, ...cur, humanApproval: true });
       setLoaded(true);
+
     })();
   }, [workspaceId]);
 
@@ -140,8 +141,9 @@ function WorkspaceSection({ workspaceId, actorId }: { workspaceId: string; actor
         merged.defaults = { ...(current.defaults ?? {}), language: next.defaultLang };
       }
       if (next.ai) {
-        merged.ai = { ...(current.ai ?? {}), ...next.ai };
+        merged.ai = { ...(current.ai ?? {}), ...next.ai, humanApproval: true };
       }
+
       const { error } = await sbCore()
         .from("workspaces")
         .update({ settings: merged })
@@ -214,16 +216,20 @@ function WorkspaceSection({ workspaceId, actorId }: { workspaceId: string; actor
           }
         />
 
-        <ToggleRow
-          icon={ShieldCheck}
-          label={tr("Human approval required")}
-          hint={tr("AI suggestions need a person to confirm.")}
-          checked={ai.humanApproval}
-          disabled={!loaded || saving}
-          onChange={(v) =>
-            updateAi({ humanApproval: v }, { "ai.humanApproval": [ai.humanApproval, v] })
-          }
-        />
+        <div className="flex items-center gap-3 p-3.5">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-secondary text-primary">
+            <ShieldCheck className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">
+              {tr("Human approval required")} — {tr("Always on for AI suggestions")}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {tr("AI suggestions must always be confirmed by a person. This cannot be turned off.")}
+            </p>
+          </div>
+        </div>
+
 
         <ChoiceRow
           icon={ListChecks}

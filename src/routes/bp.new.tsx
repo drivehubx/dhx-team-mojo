@@ -23,7 +23,7 @@ export const Route = createFileRoute("/bp/new")({
 const MAX_PHOTOS = 10;
 
 function BPNewPage() {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, isAdmin } = useWorkspace();
   const navigate = useNavigate({ from: "/bp/new" });
   const createJob = useCreateBPJob(workspaceId);
 
@@ -54,10 +54,13 @@ function BPNewPage() {
       toast.error("Customer name and plate number are required");
       return;
     }
-    const amount = estimate.trim() ? Number(estimate) : null;
-    if (amount !== null && !Number.isFinite(amount)) {
-      toast.error("Estimate must be a number");
-      return;
+    let amount: number | null = null;
+    if (isAdmin && estimate.trim()) {
+      amount = Number(estimate);
+      if (!Number.isFinite(amount)) {
+        toast.error("Estimate must be a number");
+        return;
+      }
     }
     createJob.mutate(
       {
@@ -68,7 +71,8 @@ function BPNewPage() {
         car_model: car_model.trim(),
         source,
         damage_description: damage_description.trim(),
-        estimate_amount: amount,
+        ...(isAdmin ? { estimate_amount: amount } : {}),
+        asDraft: !isAdmin,
         before_photos: photos,
       },
       {
@@ -205,7 +209,7 @@ function BPNewPage() {
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-3">
-          <h2 className="text-sm font-semibold">Damage & Quote</h2>
+          <h2 className="text-sm font-semibold">{isAdmin ? "Damage & Quote" : "Damage"}</h2>
           <Field label="Damage description">
             <Textarea
               value={damage_description}
@@ -214,15 +218,17 @@ function BPNewPage() {
               placeholder="Describe the damage…"
             />
           </Field>
-          <Field label="Estimate (RM)">
-            <input
-              value={estimate}
-              onChange={(e) => setEstimate(e.target.value)}
-              inputMode="decimal"
-              className={inputCls}
-              placeholder="0.00"
-            />
-          </Field>
+          {isAdmin && (
+            <Field label="Estimate (RM)">
+              <input
+                value={estimate}
+                onChange={(e) => setEstimate(e.target.value)}
+                inputMode="decimal"
+                className={inputCls}
+                placeholder="0.00"
+              />
+            </Field>
+          )}
         </section>
 
         <button

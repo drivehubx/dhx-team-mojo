@@ -1,10 +1,8 @@
-import { Bell, Languages } from "lucide-react";
-import { useState } from "react";
-import { useT, LanguagePicker } from "@/lib/i18n";
+import { Bell } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export function AppHeader({ title, subtitle }: { title: string; subtitle?: string }) {
-  const { t, tr } = useT();
-  const [langOpen, setLangOpen] = useState(false);
+  const { t } = useT();
   return (
     <header className="sticky top-0 z-40 mb-4 bg-navy text-navy-foreground pb-5 pt-[max(env(safe-area-inset-top),1rem)] px-5 rounded-b-3xl shadow-md">
       <div className="flex items-start justify-between">
@@ -15,13 +13,6 @@ export function AppHeader({ title, subtitle }: { title: string; subtitle?: strin
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setLangOpen(true)}
-            aria-label={tr("Preferred Language")}
-            className="grid h-10 w-10 place-items-center rounded-full bg-navy-foreground/10 text-navy-foreground"
-          >
-            <Languages className="h-5 w-5" />
-          </button>
-          <button
             aria-label="Notifications"
             className="relative grid h-10 w-10 place-items-center rounded-full bg-navy-foreground/10 text-navy-foreground"
           >
@@ -30,7 +21,6 @@ export function AppHeader({ title, subtitle }: { title: string; subtitle?: strin
           </button>
         </div>
       </div>
-      {langOpen && <LanguagePicker onClose={() => setLangOpen(false)} />}
     </header>
   );
 }
