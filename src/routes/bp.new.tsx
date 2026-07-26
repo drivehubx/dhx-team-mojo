@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronLeft, Loader2, Plus, Camera, X } from "lucide-react";
+import { ChevronLeft, Loader2, Plus, Camera, X, AlertTriangle, Sparkles, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { WorkspaceGate, useWorkspace } from "@/lib/workspace";
-import { useCreateBPJob, BP_SOURCE_OPTIONS, type BPSource } from "@/lib/bp";
+import { useCreateBPJob, BP_SOURCE_OPTIONS, findDuplicateJobs, roRef, BP_STAGE_LABEL, type BPSource, type DuplicateCandidate, type BPRepairStage } from "@/lib/bp";
 
 export const Route = createFileRoute("/bp/new")({
   head: () => ({
