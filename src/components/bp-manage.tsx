@@ -17,7 +17,7 @@ import { useWorkspace } from "@/lib/workspace";
 import { useT } from "@/lib/i18n";
 import { useNavigate } from "@tanstack/react-router";
 
-type ConfirmKind = "archive" | "restore" | "delete" | "override" | null;
+type ConfirmKind = "archive" | "restore" | "delete" | "override" | "duplicate" | null;
 
 export function BPManageSection({ job }: { job: BPJob }) {
   const { workspaceId, isAdmin, isOwner } = useWorkspace();
@@ -28,10 +28,19 @@ export function BPManageSection({ job }: { job: BPJob }) {
   const restore = useRestoreBPJob(workspaceId);
   const hardDelete = useHardDeleteBPJob(workspaceId);
   const override = useAdminOverride();
+  const markDup = useMarkJobDuplicate(workspaceId);
 
   const [dialog, setDialog] = useState<ConfirmKind>(null);
   const [reason, setReason] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  const [retainedId, setRetainedId] = useState<string | null>(null);
+
+  const dupQ = useFindDuplicateJobs(
+    workspaceId,
+    job.vehicle_id,
+    job.plate_number,
+    { enabled: dialog === "duplicate" },
+  );
 
   if (!isAdmin) return null;
 
