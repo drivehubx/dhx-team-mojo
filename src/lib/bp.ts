@@ -210,8 +210,9 @@ export type CreateBPJobInput = {
   car_model: string;
   source: BPSource;
   damage_description: string;
-  estimate_amount: number | null;
+  estimate_amount?: number | null;
   before_photos: File[];
+  asDraft?: boolean;
 };
 
 async function uploadPhotos(
