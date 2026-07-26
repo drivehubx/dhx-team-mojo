@@ -88,6 +88,22 @@ export type BPJob = {
   archived_at: string | null;
   archived_by: string | null;
   archive_reason: string | null;
+  duplicate_status: "duplicate" | "archived_duplicate" | null;
+  merged_into_job_id: string | null;
+  duplicate_override_reason: string | null;
+};
+
+export type DuplicateCandidate = {
+  id: string;
+  status: string | null;
+  repair_stage: string | null;
+  plate_number: string | null;
+  customer_name: string | null;
+  created_at: string;
+  created_by: string | null;
+  photo_count: number;
+  has_ai: boolean;
+  match_kind: string;
 };
 
 export function roRef(id: string): string {
