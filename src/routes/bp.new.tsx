@@ -23,7 +23,7 @@ export const Route = createFileRoute("/bp/new")({
 const MAX_PHOTOS = 10;
 
 function BPNewPage() {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, isAdmin } = useWorkspace();
   const navigate = useNavigate({ from: "/bp/new" });
   const createJob = useCreateBPJob(workspaceId);
 
@@ -54,10 +54,13 @@ function BPNewPage() {
       toast.error("Customer name and plate number are required");
       return;
     }
-    const amount = estimate.trim() ? Number(estimate) : null;
-    if (amount !== null && !Number.isFinite(amount)) {
-      toast.error("Estimate must be a number");
-      return;
+    let amount: number | null = null;
+    if (isAdmin && estimate.trim()) {
+      amount = Number(estimate);
+      if (!Number.isFinite(amount)) {
+        toast.error("Estimate must be a number");
+        return;
+      }
     }
     createJob.mutate(
       {
@@ -68,7 +71,8 @@ function BPNewPage() {
         car_model: car_model.trim(),
         source,
         damage_description: damage_description.trim(),
-        estimate_amount: amount,
+        ...(isAdmin ? { estimate_amount: amount } : {}),
+        asDraft: !isAdmin,
         before_photos: photos,
       },
       {
