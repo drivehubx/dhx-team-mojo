@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Archive, RotateCcw, Trash2, ShieldAlert, Loader2, X } from "lucide-react";
+import { AlertTriangle, Archive, RotateCcw, Trash2, ShieldAlert, Loader2, X, Copy, Sparkles } from "lucide-react";
 import {
   useJobDeleteBlockReason,
   useArchiveBPJob,
   useRestoreBPJob,
   useHardDeleteBPJob,
   useAdminOverride,
+  useFindDuplicateJobs,
+  useMarkJobDuplicate,
+  roRef,
+  BP_STAGE_LABEL,
   type BPJob,
 } from "@/lib/bp";
 import { useWorkspace } from "@/lib/workspace";
