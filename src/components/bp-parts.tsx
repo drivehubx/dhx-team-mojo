@@ -366,9 +366,15 @@ function useReviewPartMutation(workspaceId: string | null, jobId: string) {
 function PartsTimeline({
   parts,
   showCost,
+  canSupervise,
+  workspaceId,
+  jobId,
 }: {
   parts: EnrichedPart[];
   showCost: boolean;
+  canSupervise: boolean;
+  workspaceId: string | null;
+  jobId: string;
 }) {
   const { tr } = useT();
   const groups = useMemo(() => {
