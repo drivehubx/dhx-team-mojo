@@ -286,6 +286,9 @@ export function useCreateBPJob(workspaceId: string | null) {
       if (!input.asDraft && input.estimate_amount != null) {
         payload.estimate_amount = input.estimate_amount;
       }
+      if (input.duplicate_override_reason && input.duplicate_override_reason.trim()) {
+        payload.duplicate_override_reason = input.duplicate_override_reason.trim();
+      }
       const { data: job, error } = await dhxWorkshop()
         .from("jobs")
         .insert(payload)
