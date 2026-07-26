@@ -253,22 +253,25 @@ export function useCreateBPJob(workspaceId: string | null) {
   return useMutation({
     mutationFn: async (input: CreateBPJobInput) => {
       if (!workspaceId) throw new Error("Workspace not ready");
+      const payload: Record<string, unknown> = {
+        workspace_id: workspaceId,
+        customer_name: input.customer_name || null,
+        customer_phone: input.customer_phone || null,
+        plate_number: input.plate_number || null,
+        car_make: input.car_make || null,
+        car_model: input.car_model || null,
+        source: input.source,
+        damage_description: input.damage_description || null,
+        repair_stage: "queued",
+        status: input.asDraft ? "draft" : "open",
+        job_type: "body_paint",
+      };
+      if (!input.asDraft && input.estimate_amount != null) {
+        payload.estimate_amount = input.estimate_amount;
+      }
       const { data: job, error } = await dhxWorkshop()
         .from("jobs")
-        .insert({
-          workspace_id: workspaceId,
-          customer_name: input.customer_name || null,
-          customer_phone: input.customer_phone || null,
-          plate_number: input.plate_number || null,
-          car_make: input.car_make || null,
-          car_model: input.car_model || null,
-          source: input.source,
-          damage_description: input.damage_description || null,
-          estimate_amount: input.estimate_amount,
-          repair_stage: "queued",
-          status: "open",
-          job_type: "body_paint",
-        })
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
