@@ -91,36 +91,19 @@ function BPNewPage() {
       toast.error("Customer name and plate number are required");
       return;
     }
-    let amount: number | null = null;
-    if (isAdmin && estimate.trim()) {
-      amount = Number(estimate);
-      if (!Number.isFinite(amount)) {
-        toast.error("Estimate must be a number");
+    setChecking(true);
+    try {
+      const dups = await findDuplicateJobs(null, plate_number.trim().toUpperCase());
+      if (dups.length > 0) {
+        setDuplicates(dups);
+        setChecking(false);
         return;
       }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Duplicate check failed");
     }
-    createJob.mutate(
-      {
-        customer_name: customer_name.trim(),
-        customer_phone: customer_phone.trim(),
-        plate_number: plate_number.trim().toUpperCase(),
-        car_make: car_make.trim(),
-        car_model: car_model.trim(),
-        source,
-        damage_description: damage_description.trim(),
-        ...(isAdmin ? { estimate_amount: amount } : {}),
-        asDraft: !isAdmin,
-        before_photos: photos,
-      },
-      {
-        onSuccess: (job) => {
-          toast.success("Repair order created");
-          navigate({ to: "/bp/$id", params: { id: job.id } });
-        },
-        onError: (err) =>
-          toast.error(err instanceof Error ? err.message : "Failed to create"),
-      },
-    );
+    setChecking(false);
+    doCreate();
   };
 
   return (
