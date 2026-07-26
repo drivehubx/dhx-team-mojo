@@ -502,3 +502,52 @@ export function useAdminOverride() {
     },
   });
 }
+
+// ---- Duplicate prevention ----
+
+export async function findDuplicateJobs(
+  vehicleId: string | null,
+  plate: string | null,
+): Promise<DuplicateCandidate[]> {
+  const { data, error } = await dhxWorkshop().rpc("find_duplicate_jobs", {
+    p_vehicle_id: vehicleId,
+    p_plate: plate,
+  });
+  if (error) throw error;
+  return (data ?? []) as DuplicateCandidate[];
+}
+
+export function useFindDuplicateJobs(
+  workspaceId: string | null,
+  vehicleId: string | null,
+  plate: string | null,
+  opts: { enabled?: boolean } = {},
+) {
+  return useQuery({
+    queryKey: ["bp-find-duplicates", workspaceId, vehicleId, plate],
+    enabled: !!workspaceId && (opts.enabled ?? true) && !!(vehicleId || (plate && plate.trim())),
+    queryFn: () => findDuplicateJobs(vehicleId, plate),
+  });
+}
+
+export function useMarkJobDuplicate(workspaceId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      jobId: string;
+      retainedJobId: string;
+      reason: string;
+    }) => {
+      const { error } = await dhxWorkshop().rpc("mark_job_duplicate", {
+        p_job_id: input.jobId,
+        p_retained_job_id: input.retainedJobId,
+        p_reason: input.reason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["bp-jobs", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["bp-job", workspaceId, vars.jobId] });
+    },
+  });
+}
