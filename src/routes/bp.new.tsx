@@ -36,6 +36,9 @@ function BPNewPage() {
   const [damage_description, setDamage] = useState("");
   const [estimate, setEstimate] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
+  const [checking, setChecking] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateCandidate[] | null>(null);
+  const [overrideReason, setOverrideReason] = useState("");
 
   const previews = useMemo(
     () => photos.map((f) => ({ name: f.name, url: URL.createObjectURL(f) })),
@@ -47,6 +50,40 @@ function BPNewPage() {
     setPhotos((p) => [...p, ...Array.from(fl)].slice(0, MAX_PHOTOS));
   };
   const remove = (i: number) => setPhotos((p) => p.filter((_, k) => k !== i));
+
+  const doCreate = (dupOverrideReason?: string) => {
+    let amount: number | null = null;
+    if (isAdmin && estimate.trim()) {
+      amount = Number(estimate);
+      if (!Number.isFinite(amount)) {
+        toast.error("Estimate must be a number");
+        return;
+      }
+    }
+    createJob.mutate(
+      {
+        customer_name: customer_name.trim(),
+        customer_phone: customer_phone.trim(),
+        plate_number: plate_number.trim().toUpperCase(),
+        car_make: car_make.trim(),
+        car_model: car_model.trim(),
+        source,
+        damage_description: damage_description.trim(),
+        ...(isAdmin ? { estimate_amount: amount } : {}),
+        asDraft: !isAdmin,
+        before_photos: photos,
+        ...(dupOverrideReason ? { duplicate_override_reason: dupOverrideReason } : {}),
+      },
+      {
+        onSuccess: (job) => {
+          toast.success("Repair order created");
+          navigate({ to: "/bp/$id", params: { id: job.id } });
+        },
+        onError: (err) =>
+          toast.error(err instanceof Error ? err.message : "Failed to create"),
+      },
+    );
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
