@@ -51,6 +51,28 @@ export function BPManageSection({ job }: { job: BPJob }) {
     setDialog(null);
     setReason("");
     setConfirmation("");
+    setRetainedId(null);
+  };
+
+  const onMarkDuplicate = () => {
+    if (!retainedId) {
+      toast.error(tr("Select the job to keep"));
+      return;
+    }
+    if (!reason.trim()) {
+      toast.error(tr("Reason is required"));
+      return;
+    }
+    markDup.mutate(
+      { jobId: job.id, retainedJobId: retainedId, reason: reason.trim() },
+      {
+        onSuccess: () => {
+          toast.success(tr("Marked as duplicate"));
+          close();
+        },
+        onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+      },
+    );
   };
 
   const onArchive = () =>
