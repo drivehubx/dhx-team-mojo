@@ -351,6 +351,80 @@ export function BPManageSection({ job }: { job: BPJob }) {
           </label>
         </ConfirmModal>
       )}
+
+      {dialog === "duplicate" && (
+        <ConfirmModal
+          title={tr("Mark as duplicate")}
+          onClose={close}
+          onConfirm={onMarkDuplicate}
+          pending={markDup.isPending}
+          confirmLabel={tr("Mark as duplicate")}
+          tone="destructive"
+          disabled={!retainedId || reason.trim().length === 0}
+        >
+          <p className="text-sm text-muted-foreground">
+            {tr(
+              "This job will be flagged as a duplicate and become read-only. Pick the real job to keep.",
+            )}
+          </p>
+          {dupQ.isLoading ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> {tr("Searching…")}
+            </div>
+          ) : (dupQ.data ?? []).filter((c) => c.id !== job.id).length === 0 ? (
+            <div className="rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              {tr("No possible duplicates found for this vehicle.")}
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {(dupQ.data ?? [])
+                .filter((c) => c.id !== job.id)
+                .map((c) => {
+                  const stageLabel = c.repair_stage
+                    ? (BP_STAGE_LABEL as Record<string, string>)[c.repair_stage] ?? c.repair_stage
+                    : "—";
+                  const picked = retainedId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setRetainedId(c.id)}
+                      className={`w-full text-left rounded-xl border p-3 text-xs ${
+                        picked
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-background hover:bg-secondary/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] text-muted-foreground">{roRef(c.id)}</span>
+                        {c.has_ai && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-600 px-2 py-0.5 text-[10px] font-semibold">
+                            <Sparkles className="h-3 w-3" /> {tr("AI done")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm font-semibold truncate">
+                        {c.plate_number ?? "—"} · {c.customer_name ?? tr("No customer")}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {stageLabel} · {c.status ?? "—"} · {new Date(c.created_at).toLocaleDateString()}
+                      </p>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+          <label className="block text-xs">
+            <span className="text-muted-foreground">{tr("Reason (required)")}</span>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            />
+          </label>
+        </ConfirmModal>
+      )}
     </>
   );
 }
