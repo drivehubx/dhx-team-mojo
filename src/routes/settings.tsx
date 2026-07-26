@@ -117,8 +117,9 @@ function WorkspaceSection({ workspaceId, actorId }: { workspaceId: string; actor
       const dl = s?.defaults?.language;
       if (dl === "en" || dl === "zh" || dl === "ms" || dl === "id") setDefaultLang(dl);
       const cur = (s?.ai ?? {}) as Partial<AiSettings>;
-      setAi({ ...DEFAULT_AI, ...cur });
+      setAi({ ...DEFAULT_AI, ...cur, humanApproval: true });
       setLoaded(true);
+
     })();
   }, [workspaceId]);
 
