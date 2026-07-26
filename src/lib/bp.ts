@@ -229,6 +229,7 @@ export type CreateBPJobInput = {
   estimate_amount?: number | null;
   before_photos: File[];
   asDraft?: boolean;
+  duplicate_override_reason?: string | null;
 };
 
 async function uploadPhotos(
