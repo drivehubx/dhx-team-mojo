@@ -580,12 +580,11 @@ function PartCard({
 // ============================================================
 // Add-Part sheet
 // ============================================================
-type Step = "choose" | "analyzing" | "review" | "manual";
+type Step = "choose" | "ai_choice" | "analyzing" | "review" | "manual";
 
 type UploadedPhoto = { file: File; photoPath: string; fileId: string };
 
 type ReviewState = {
-  photos: UploadedPhoto[]; // photos[0] is the AI-analyzed one when AI ran
   detectedPart: string;
   reasonRequired: string;
   relatedOriginalDamage: string;
@@ -605,6 +604,7 @@ type ReviewState = {
     relatedOriginalDamage: string;
   } | null;
   aiWasUsed: boolean;
+  assessedFileIds: string[]; // fileIds that were part of the last AI run (empty when manual)
 };
 
 function AddPartSheet({
@@ -627,8 +627,11 @@ function AddPartSheet({
   const analyze = useServerFn(analyzeRepairPart);
   const initialStep: Step = aiSettings.partsMode === "manual" ? "manual" : "choose";
   const [step, setStep] = useState<Step>(initialStep);
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
+  const [uploadingCount, setUploadingCount] = useState(0);
   const [review, setReview] = useState<ReviewState | null>(null);
   const [aiFailedMsg, setAiFailedMsg] = useState<string | null>(null);
+  const [dismissedReassess, setDismissedReassess] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -636,7 +639,10 @@ function AddPartSheet({
     if (open) {
       setStep(initialStep);
       setReview(null);
+      setPhotos([]);
       setAiFailedMsg(null);
+      setUploadingCount(0);
+      setDismissedReassess(false);
     }
   }, [open, initialStep]);
 
@@ -679,110 +685,136 @@ function AddPartSheet({
     return { file, photoPath, fileId: (fileRow as { id: string }).id };
   };
 
+  // Upload only — never triggers AI. User can keep adding photos.
   const handlePicked = async (fl: FileList | null) => {
     if (!fl || !fl.length) return;
-    setStep("analyzing");
-    setAiFailedMsg(null);
+    const files = Array.from(fl);
+    setUploadingCount((c) => c + files.length);
     try {
-      const files = Array.from(fl);
-      const uploaded: UploadedPhoto[] = [];
       for (const f of files) {
-        uploaded.push(await uploadPhoto(f));
+        try {
+          const up = await uploadPhoto(f);
+          setPhotos((prev) => [...prev, up]);
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Upload failed");
+        }
       }
-      const first = uploaded[0];
-
-      // AI OFF or Manual mode → skip AI, jump to review with blanks.
-      if (!aiSettings.partsDetection) {
-        setReview({
-          photos: uploaded,
-          detectedPart: "",
-          reasonRequired: "",
-          relatedOriginalDamage: "",
-          discoveryStage: defaultStage,
-          quantity: 1,
-          recommendedAction: "replace",
-          confidence: 0,
-          aiPayload: null,
-          originalEnglish: null,
-          originalTranslation: null,
-          aiWasUsed: false,
-        });
-        setStep("review");
-        return;
-      }
-
-      let result: AnalyzeRepairPartResult;
-      try {
-        result = await analyze({
-          data: {
-            jobId,
-            photoPath: first.photoPath,
-            currentRepairStage: repairStage,
-            lang: lang as Lang,
-          },
-        });
-      } catch (e) {
-        setAiFailedMsg(e instanceof Error ? e.message : "AI unavailable");
-        setReview({
-          photos: uploaded,
-          detectedPart: "",
-          reasonRequired: "",
-          relatedOriginalDamage: "",
-          discoveryStage: defaultStage,
-          quantity: 1,
-          recommendedAction: "replace",
-          confidence: 0,
-          aiPayload: null,
-          originalEnglish: null,
-          originalTranslation: null,
-          aiWasUsed: false,
-        });
-        setStep("review");
-        return;
-      }
-
-      const translation = result.translation;
-      const canonical = {
-        detectedPart: result.detectedPart,
-        reasonRequired: result.reasonRequired,
-        relatedOriginalDamage: result.relatedOriginalDamage,
-      };
-      const aiPayload = {
-        canonical,
-        translations: translation ? { [result.lang]: translation } : {},
-        translation_version: TRANSLATION_VERSION,
-        created_at: new Date().toISOString(),
-        confidence: result.confidence,
-        lang: result.lang,
-        recommendedAction: result.recommendedAction,
-        discoveryStage: result.discoveryStage,
-        quantity: result.quantity,
-        rawJson: result.rawJson,
-      };
-
-      // Prefill review with translated fields when available, so the
-      // technician can read them; canonical English stays inside aiPayload.
-      const prefill = translation ?? canonical;
-
-      setReview({
-        photos: uploaded,
-        detectedPart: prefill.detectedPart,
-        reasonRequired: prefill.reasonRequired,
-        relatedOriginalDamage: prefill.relatedOriginalDamage,
-        discoveryStage: result.discoveryStage,
-        quantity: result.quantity,
-        recommendedAction: result.recommendedAction,
-        confidence: result.confidence,
-        aiPayload,
-        originalEnglish: canonical,
-        originalTranslation: translation,
-        aiWasUsed: result.confidence > 0 || !!result.detectedPart,
-      });
-      setStep("review");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
-      setStep(initialStep);
+    } finally {
+      setUploadingCount((c) => Math.max(0, c - files.length));
     }
+    // Reset file input value so picking same file again re-triggers change.
+    if (cameraRef.current) cameraRef.current.value = "";
+    if (galleryRef.current) galleryRef.current.value = "";
+  };
+
+  const removePhoto = (fileId: string) => {
+    setPhotos((prev) => prev.filter((p) => p.fileId !== fileId));
+  };
+
+  // Build a blank review (manual path).
+  const goManualReview = () => {
+    setReview({
+      detectedPart: "",
+      reasonRequired: "",
+      relatedOriginalDamage: "",
+      discoveryStage: defaultStage,
+      quantity: 1,
+      recommendedAction: "replace",
+      confidence: 0,
+      aiPayload: null,
+      originalEnglish: null,
+      originalTranslation: null,
+      aiWasUsed: false,
+      assessedFileIds: [],
+    });
+    setAiFailedMsg(null);
+    setDismissedReassess(false);
+    setStep("review");
+  };
+
+  // Run AI on current photos and jump to review.
+  const runAI = async () => {
+    if (!photos.length) return;
+    const first = photos[0];
+    setAiFailedMsg(null);
+    setStep("analyzing");
+    let result: AnalyzeRepairPartResult;
+    try {
+      result = await analyze({
+        data: {
+          jobId,
+          photoPath: first.photoPath,
+          currentRepairStage: repairStage,
+          lang: lang as Lang,
+        },
+      });
+    } catch (e) {
+      setAiFailedMsg(e instanceof Error ? e.message : "AI unavailable");
+      setReview({
+        detectedPart: "",
+        reasonRequired: "",
+        relatedOriginalDamage: "",
+        discoveryStage: defaultStage,
+        quantity: 1,
+        recommendedAction: "replace",
+        confidence: 0,
+        aiPayload: null,
+        originalEnglish: null,
+        originalTranslation: null,
+        aiWasUsed: false,
+        assessedFileIds: photos.map((p) => p.fileId),
+      });
+      setDismissedReassess(false);
+      setStep("review");
+      return;
+    }
+
+    const translation = result.translation;
+    const canonical = {
+      detectedPart: result.detectedPart,
+      reasonRequired: result.reasonRequired,
+      relatedOriginalDamage: result.relatedOriginalDamage,
+    };
+    const aiPayload = {
+      canonical,
+      translations: translation ? { [result.lang]: translation } : {},
+      translation_version: TRANSLATION_VERSION,
+      created_at: new Date().toISOString(),
+      confidence: result.confidence,
+      lang: result.lang,
+      recommendedAction: result.recommendedAction,
+      discoveryStage: result.discoveryStage,
+      quantity: result.quantity,
+      rawJson: result.rawJson,
+    };
+    const prefill = translation ?? canonical;
+
+    setReview({
+      detectedPart: prefill.detectedPart,
+      reasonRequired: prefill.reasonRequired,
+      relatedOriginalDamage: prefill.relatedOriginalDamage,
+      discoveryStage: result.discoveryStage,
+      quantity: result.quantity,
+      recommendedAction: result.recommendedAction,
+      confidence: result.confidence,
+      aiPayload,
+      originalEnglish: canonical,
+      originalTranslation: translation,
+      aiWasUsed: result.confidence > 0 || !!result.detectedPart,
+      assessedFileIds: photos.map((p) => p.fileId),
+    });
+    setDismissedReassess(false);
+    setStep("review");
+  };
+
+  // Advance from "choose" → decide next step.
+  const photosComplete = () => {
+    if (!photos.length) return;
+    if (!aiSettings.partsDetection) {
+      goManualReview();
+      return;
+    }
+    setStep("ai_choice");
   };
 
   const save = useMutation({
@@ -791,9 +823,7 @@ function AddPartSheet({
       const { data: userRes } = await supabase.auth.getUser();
       const createdBy = userRes.user?.id ?? null;
 
-      // Determine provenance & source label.
       const provenance = "found_during_repair";
-      // Human-edited iff canonical or translation values differ from final.
       const canonical = r.originalEnglish;
       const translation = r.originalTranslation;
       const finalDetected = r.detectedPart.trim();
@@ -806,7 +836,6 @@ function AddPartSheet({
         (aiSaid.reasonRequired ?? "").trim() !== finalReason ||
         (aiSaid.relatedOriginalDamage ?? "").trim() !== finalRelated;
 
-      // Build ai_suggestion payload; canonical (English) is permanent.
       const aiSuggestion = r.aiPayload
         ? {
             ...r.aiPayload,
@@ -821,12 +850,9 @@ function AddPartSheet({
           }
         : null;
 
-      // Final values stored in normalized columns:
-      // canonical English when AI used (never overwrite with translation),
-      // otherwise the human's typed value.
       const partName = canonical?.detectedPart?.trim()
         ? edited
-          ? finalDetected // human overrode → save human final
+          ? finalDetected
           : canonical.detectedPart
         : finalDetected;
       const reason = canonical?.reasonRequired?.trim()
@@ -844,7 +870,6 @@ function AddPartSheet({
         ? "pending"
         : "approved";
 
-      // Compute human_edits diff (only changed fields).
       const aiFinalAction = r.aiPayload?.recommendedAction as string | undefined;
       const aiFinalStage = r.aiPayload?.discoveryStage as string | undefined;
       const aiFinalQty = r.aiPayload?.quantity as number | undefined;
@@ -874,7 +899,6 @@ function AddPartSheet({
           : "accepted"
         : "suggested";
 
-      // Insert repair_parts row.
       const insertPayload: Record<string, unknown> = {
         workspace_id: workspaceId,
         job_id: jobId,
@@ -888,7 +912,7 @@ function AddPartSheet({
         reason_required: reason || null,
         recommended_action: r.recommendedAction,
         related_damage: related || null,
-        photo_file_id: r.photos[0]?.fileId ?? null,
+        photo_file_id: photos[0]?.fileId ?? null,
         ai_suggestion: aiSuggestion,
         revision_status: revisionStatus,
         ai_outcome: r.aiWasUsed ? aiOutcome : null,
@@ -904,9 +928,8 @@ function AddPartSheet({
       if (pErr) throw pErr;
       const partId = (partRow as { id: string }).id;
 
-      // Insert repair_part_photos rows (all photos).
-      if (r.photos.length) {
-        const photoRows = r.photos.map((p, idx) => ({
+      if (photos.length) {
+        const photoRows = photos.map((p, idx) => ({
           workspace_id: workspaceId,
           part_id: partId,
           file_id: p.fileId,
@@ -917,12 +940,10 @@ function AddPartSheet({
           .from("repair_part_photos")
           .insert(photoRows);
         if (ppErr) {
-          // Non-fatal: photos linked via photo_file_id already.
           console.warn("repair_part_photos insert failed", ppErr);
         }
       }
 
-      // Record an assessment version (append-only).
       const source = r.aiWasUsed ? (Object.keys(humanEdits).length ? "hybrid" : "ai") : "human";
       try {
         const { data: versionId, error: vErr } = await dhxWorkshop().rpc(
@@ -941,7 +962,7 @@ function AddPartSheet({
                 discoveryStage: r.discoveryStage,
                 reasonRequired: reason,
                 relatedOriginalDamage: related,
-                photoPaths: r.photos.map((p) => p.photoPath),
+                photoPaths: photos.map((p) => p.photoPath),
               },
               partId,
             },
@@ -954,7 +975,7 @@ function AddPartSheet({
             .eq("id", partId);
         }
       } catch {
-        // Non-fatal — the part is saved either way.
+        // Non-fatal
       }
     },
     onSuccess: () => {
@@ -964,6 +985,13 @@ function AddPartSheet({
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+
+  // Detect new photos added after AI ran.
+  const hasNewPhotosSinceAssessment =
+    !!review &&
+    review.aiWasUsed &&
+    (photos.length !== review.assessedFileIds.length ||
+      photos.some((p) => !review.assessedFileIds.includes(p.fileId)));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -992,8 +1020,43 @@ function AddPartSheet({
         {step === "choose" && (
           <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-3">
             <p className="text-sm text-muted-foreground">
-              {tr("Take a clear photo of the part you found.")}
+              {tr("Add photos of the part you found. You can add more than one.")}
             </p>
+
+            {(photos.length > 0 || uploadingCount > 0) && (
+              <div className="rounded-2xl border border-border bg-background p-3 space-y-2">
+                <div className="flex items-center justify-between text-xs font-medium">
+                  <span>
+                    {photos.length} {tr(photos.length === 1 ? "photo added" : "photos added")}
+                  </span>
+                  {uploadingCount > 0 && (
+                    <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" /> {tr("Uploading…")}
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2 overflow-x-auto">
+                  {photos.map((p) => (
+                    <div key={p.fileId} className="relative flex-none">
+                      <img
+                        src={URL.createObjectURL(p.file)}
+                        alt=""
+                        className="h-20 w-20 rounded-lg object-cover border border-border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(p.fileId)}
+                        aria-label={tr("Remove")}
+                        className="absolute -top-1.5 -right-1.5 grid h-6 w-6 place-items-center rounded-full bg-destructive text-destructive-foreground shadow"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={() => cameraRef.current?.click()}
               className="flex w-full items-center justify-center gap-3 rounded-2xl bg-primary py-8 text-primary-foreground shadow-md"
@@ -1008,6 +1071,17 @@ function AddPartSheet({
               <ImagePlus className="h-6 w-6" />
               <span className="text-base font-semibold">{tr("Upload Photo")}</span>
             </button>
+
+            {photos.length > 0 && (
+              <button
+                onClick={photosComplete}
+                disabled={uploadingCount > 0}
+                className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-lg font-bold text-primary-foreground disabled:opacity-50"
+              >
+                {tr("Photos Complete")} →
+              </button>
+            )}
+
             {aiSettings.partsMode === "both" && (
               <button
                 onClick={() => setStep("manual")}
@@ -1019,15 +1093,48 @@ function AddPartSheet({
           </div>
         )}
 
+        {step === "ai_choice" && (
+          <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {tr("How would you like to describe this part?")}
+            </p>
+            <div className="flex gap-2 overflow-x-auto">
+              {photos.map((p) => (
+                <img
+                  key={p.fileId}
+                  src={URL.createObjectURL(p.file)}
+                  alt=""
+                  className="h-20 w-20 flex-none rounded-lg object-cover border border-border"
+                />
+              ))}
+            </div>
+            <button
+              onClick={runAI}
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-primary py-8 text-primary-foreground shadow-md"
+            >
+              <Sparkles className="h-7 w-7" />
+              <span className="text-lg font-semibold">{tr("Run AI Assessment")}</span>
+            </button>
+            <button
+              onClick={goManualReview}
+              className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-border bg-card py-6"
+            >
+              <span className="text-base font-semibold">{tr("Enter manually instead")}</span>
+            </button>
+            <button
+              onClick={() => setStep("choose")}
+              className="w-full rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground"
+            >
+              ← {tr("Back to photos")}
+            </button>
+          </div>
+        )}
+
         {step === "analyzing" && (
           <div className="flex-1 grid place-items-center px-5">
             <div className="text-center space-y-3">
               <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-              <p className="text-sm font-medium">
-                {aiSettings.partsDetection
-                  ? tr("Analyzing photo…")
-                  : tr("Uploading photo…")}
-              </p>
+              <p className="text-sm font-medium">{tr("Analyzing photo…")}</p>
             </div>
           </div>
         )}
@@ -1036,13 +1143,19 @@ function AddPartSheet({
           <ReviewForm
             state={review}
             setState={setReview}
-            onRetake={() => {
-              setReview(null);
-              setStep(initialStep);
-            }}
+            photos={photos}
+            onAddMorePhotos={() => setStep("choose")}
             onConfirm={() => save.mutate(review)}
             saving={save.isPending}
             aiFailedMsg={aiFailedMsg}
+            showReassessNotice={hasNewPhotosSinceAssessment && !dismissedReassess}
+            onRunReassess={runAI}
+            onKeepAssessment={() =>
+              setReview({
+                ...review,
+                assessedFileIds: photos.map((p) => p.fileId),
+              })
+            }
           />
         )}
 
@@ -1052,7 +1165,6 @@ function AddPartSheet({
             saving={save.isPending}
             onCancel={() => onOpenChange(false)}
             onSubmit={async (m) => {
-              // No photo path — but table requires photo? Not enforced; save without photo.
               if (!workspaceId) return;
               const { data: userRes } = await supabase.auth.getUser();
               const createdBy = userRes.user?.id ?? null;
@@ -1089,6 +1201,7 @@ function AddPartSheet({
     </Sheet>
   );
 }
+
 
 // ============================================================
 // Review form (large photo, chips, +/- steppers)
