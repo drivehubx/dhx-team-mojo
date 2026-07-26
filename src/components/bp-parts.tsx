@@ -1445,12 +1445,13 @@ function ReviewForm({
           {tr("Confirm")}
         </button>
         <button
-          onClick={onRetake}
+          onClick={onAddMorePhotos}
           disabled={saving}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background text-base font-semibold disabled:opacity-50"
         >
-          <RefreshCw className="h-5 w-5" /> {tr("Retake Photo")}
+          <ImagePlus className="h-5 w-5" /> {tr("Add More Photos")}
         </button>
+
       </div>
     </>
   );
