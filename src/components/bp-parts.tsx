@@ -550,6 +550,28 @@ function PartCard({
             {tr("Unit cost")}: RM {Number(part.unit_cost).toFixed(2)}
           </p>
         )}
+        {canSupervise && revision === "pending" && (
+          <div className="flex gap-2 pt-1">
+            <button
+              disabled={reviewMut.isPending}
+              onClick={() =>
+                reviewMut.mutate({ partId: part.id, revision_status: "approved" })
+              }
+              className="inline-flex items-center gap-1 rounded-lg bg-success/15 text-success px-2.5 py-1 text-[11px] font-semibold hover:bg-success/25 disabled:opacity-50"
+            >
+              <Check className="h-3 w-3" /> {tr("Approve")}
+            </button>
+            <button
+              disabled={reviewMut.isPending}
+              onClick={() =>
+                reviewMut.mutate({ partId: part.id, revision_status: "rejected" })
+              }
+              className="inline-flex items-center gap-1 rounded-lg bg-destructive/15 text-destructive px-2.5 py-1 text-[11px] font-semibold hover:bg-destructive/25 disabled:opacity-50"
+            >
+              <X className="h-3 w-3" /> {tr("Reject")}
+            </button>
+          </div>
+        )}
       </div>
     </li>
   );
