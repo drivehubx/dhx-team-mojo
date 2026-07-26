@@ -39,7 +39,7 @@ export const Route = createFileRoute("/bp/$id")({
 
 function BPDetailPage() {
   const { id } = Route.useParams();
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, isAdmin } = useWorkspace();
   const jobQ = useBPJob(workspaceId, id);
   const photosQ = useBPPhotos(workspaceId, id);
 
