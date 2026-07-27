@@ -115,6 +115,25 @@ function JobDetailPage() {
   const advance = useAdvanceStage(workspaceId);
   const updateWO = useUpdateWorkOrder(workspaceId);
   const profilesQ = useWorkspaceProfiles(workspaceId);
+  const hardDelete = useHardDeleteBPJob(workspaceId);
+  const navigate = useNavigate();
+
+  const handleDeleteJob = async () => {
+    const reason = window.prompt("Reason for permanent deletion?");
+    if (!reason || !reason.trim()) return;
+    const confirmation = window.prompt('Type "DELETE" to permanently delete this job.');
+    if (confirmation !== "DELETE") {
+      toast.error('Deletion cancelled — you must type "DELETE" exactly.');
+      return;
+    }
+    try {
+      await hardDelete.mutateAsync({ jobId: id, confirmation, reason: reason.trim() });
+      toast.success("Job deleted");
+      navigate({ to: "/jobs" });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to delete job");
+    }
+  };
 
   const approverQ = useProfileById(q.data?.estimate_approved_by ?? null);
 
