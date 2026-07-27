@@ -251,14 +251,25 @@ function JobDetailPage() {
             {stageMeta.label}
           </span>
           {isStaff && (
-            <button
-              onClick={() => setEditOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground active:scale-95"
-              aria-label="Edit Job"
-            >
-              <Pencil className="h-3 w-3" />
-              Edit
-            </button>
+            <>
+              <button
+                onClick={handleDeleteJob}
+                disabled={hardDelete.isPending}
+                className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive active:scale-95 disabled:opacity-50"
+                aria-label="Delete Job"
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete
+              </button>
+              <button
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground active:scale-95"
+                aria-label="Edit Job"
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </button>
+            </>
           )}
         </div>
       </header>
