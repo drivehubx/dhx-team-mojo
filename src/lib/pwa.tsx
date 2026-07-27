@@ -32,9 +32,16 @@ export function registerPwa() {
   }
 
   window.addEventListener("load", () => {
+    let currentReg: ServiceWorkerRegistration | null = null;
+
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
       .then((reg) => {
+        currentReg = reg;
+
+        // Kick off an immediate update check (don't await — must not block rendering).
+        reg.update().catch(() => {});
+
         // If a new SW is already waiting, prompt to update.
         if (reg.waiting) promptUpdate(reg.waiting);
 
@@ -52,6 +59,13 @@ export function registerPwa() {
         /* ignore registration errors */
       });
 
+    // Check for a new deploy whenever the user returns to the app.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") return;
+      if (!currentReg) return;
+      currentReg.update().catch(() => {});
+    });
+
     let refreshing = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (refreshing) return;
@@ -62,10 +76,10 @@ export function registerPwa() {
 }
 
 function promptUpdate(sw: ServiceWorker) {
-  toast("Update available", {
-    description: "Tap to refresh and get the latest version.",
+  toast("New version available", {
+    description: "A newer version of DHX Body & Paint is ready.",
     action: {
-      label: "Refresh",
+      label: "Update now",
       onClick: () => sw.postMessage("SKIP_WAITING"),
     },
     duration: Infinity,
