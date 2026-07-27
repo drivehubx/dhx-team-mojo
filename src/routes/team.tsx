@@ -142,7 +142,7 @@ function TeamPage() {
             </div>
           )}
           {filtered.map((m) => (
-            <MemberCard key={m.id} m={m} clickable={isAdmin} />
+            <MemberCard key={m.id} m={m} clickable={true} />
           ))}
         </div>
       </div>
