@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Loader2,
   Pencil,
+  Trash2,
   Plus,
   ShieldCheck,
   Sparkles,
