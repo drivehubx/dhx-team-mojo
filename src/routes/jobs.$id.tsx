@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Loader2,
   Pencil,
+  Trash2,
   Plus,
   ShieldCheck,
   Sparkles,
@@ -41,6 +42,7 @@ import {
   type PartRecommendedAction,
   useSaveAIAssessmentDraft,
 } from "@/lib/jobs";
+import { useHardDeleteBPJob } from "@/lib/bp";
 import { analyzeInitialDamage, analyzeRepairPart } from "@/lib/ai-damage.functions";
 import { VehicleModelFixer } from "@/components/vehicle-model-fixer";
 import type {
@@ -113,6 +115,25 @@ function JobDetailPage() {
   const advance = useAdvanceStage(workspaceId);
   const updateWO = useUpdateWorkOrder(workspaceId);
   const profilesQ = useWorkspaceProfiles(workspaceId);
+  const hardDelete = useHardDeleteBPJob(workspaceId);
+  const navigate = useNavigate();
+
+  const handleDeleteJob = async () => {
+    const reason = window.prompt("Reason for permanent deletion?");
+    if (!reason || !reason.trim()) return;
+    const confirmation = window.prompt('Type "DELETE" to permanently delete this job.');
+    if (confirmation !== "DELETE") {
+      toast.error('Deletion cancelled — you must type "DELETE" exactly.');
+      return;
+    }
+    try {
+      await hardDelete.mutateAsync({ jobId: id, confirmation, reason: reason.trim() });
+      toast.success("Job deleted");
+      navigate({ to: "/jobs" });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to delete job");
+    }
+  };
 
   const approverQ = useProfileById(q.data?.estimate_approved_by ?? null);
 
@@ -230,14 +251,25 @@ function JobDetailPage() {
             {stageMeta.label}
           </span>
           {isStaff && (
-            <button
-              onClick={() => setEditOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground active:scale-95"
-              aria-label="Edit Job"
-            >
-              <Pencil className="h-3 w-3" />
-              Edit
-            </button>
+            <>
+              <button
+                onClick={handleDeleteJob}
+                disabled={hardDelete.isPending}
+                className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive active:scale-95 disabled:opacity-50"
+                aria-label="Delete Job"
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete
+              </button>
+              <button
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground active:scale-95"
+                aria-label="Edit Job"
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </button>
+            </>
           )}
         </div>
       </header>
