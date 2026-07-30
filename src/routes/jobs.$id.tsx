@@ -83,6 +83,7 @@ const stageStyle: Record<RepairStage, { bg: string; label: string }> = {
   putty: { bg: "bg-yellow-200 text-yellow-900", label: "Putty" },
   primer: { bg: "bg-blue-200 text-blue-900", label: "Primer" },
   paint: { bg: "bg-blue-200 text-blue-900", label: "Paint" },
+  assembly: { bg: "bg-indigo-200 text-indigo-900", label: "Assembly" },
   polish: { bg: "bg-teal-200 text-teal-900", label: "Polish" },
   qc: { bg: "bg-purple-200 text-purple-900", label: "QC" },
   completed: { bg: "bg-green-200 text-green-900", label: "Completed" },
@@ -610,6 +611,7 @@ const ACTIVE_STAGES_FOR_ADD: RepairStage[] = [
   "putty",
   "primer",
   "paint",
+  "assembly",
   "polish",
   "qc",
 ];

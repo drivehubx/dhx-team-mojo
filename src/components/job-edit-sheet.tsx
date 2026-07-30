@@ -34,6 +34,7 @@ const STAGE_LABELS: Record<RepairStage, string> = {
   putty: "Putty",
   primer: "Primer",
   paint: "Paint",
+  assembly: "Assembly",
   polish: "Polish",
   qc: "QC",
   completed: "Completed",

@@ -367,6 +367,7 @@ export const REPAIR_STAGES: RepairStage[] = [
   "putty",
   "primer",
   "paint",
+  "assembly",
   "polish",
   "qc",
   "completed",
