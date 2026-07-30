@@ -126,6 +126,7 @@ export type RepairStage =
   | "putty"
   | "primer"
   | "paint"
+  | "assembly"
   | "polish"
   | "qc"
   | "completed";

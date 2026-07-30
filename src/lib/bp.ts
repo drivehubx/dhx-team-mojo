@@ -30,6 +30,7 @@ export type BPRepairStage =
   | "putty"
   | "primer"
   | "paint"
+  | "assembly"
   | "polish"
   | "qc"
   | "completed";
@@ -41,6 +42,7 @@ export const BP_STAGES: BPRepairStage[] = [
   "putty",
   "primer",
   "paint",
+  "assembly",
   "polish",
   "qc",
   "completed",
@@ -53,6 +55,7 @@ export const BP_STAGE_LABEL: Record<BPRepairStage, string> = {
   putty: "Putty",
   primer: "Primer",
   paint: "Paint",
+  assembly: "Assembly",
   polish: "Polish",
   qc: "QC",
   completed: "Completed",
