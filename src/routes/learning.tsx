@@ -226,8 +226,18 @@ function LearningPage() {
       toast.error(tr("This link looks invalid — please edit or re-add it"));
       return;
     }
-    window.open(item.url, "_blank", "noopener");
+    if (isFacebookItem(item)) {
+      const fb = verifiedFacebookUrl(item.url);
+      if (!fb) {
+        toast.error(tr("This Facebook link looks invalid — please edit or re-add it"));
+        return;
+      }
+      window.open(fb, "_blank", "noopener,noreferrer");
+      return;
+    }
+    window.open(item.url, "_blank", "noopener,noreferrer");
   };
+
 
   const deleteItem = async (item: LearningItem) => {
     if (!window.confirm(tr("Delete this item?"))) return;
