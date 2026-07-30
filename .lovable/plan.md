@@ -1,39 +1,29 @@
-## Goal
-Vehicles marked `status = 'sold'` in `core.vehicles` (currently 1 unit) should disappear from day-to-day lists so the workshop only sees active units. A small "Sold" link opens an archive so sold units are still reachable.
+# Facebook video cards — open verified share link, explain no embed
 
-## Scope (confirmed by reading the code)
-Sold status lives on `core.vehicles.status`. Places that surface vehicles today:
+Scope: `src/routes/learning.tsx` only. Frontend/presentation change. No DB, no schema, no changes to the language/learning data model.
 
-1. **Jobs list** — `src/routes/jobs.index.tsx` via `useJobs` (`src/lib/jobs.ts`). Jobs are hydrated with their vehicle.
-2. **Home dashboard** — `src/routes/index.tsx` uses `useJobs` too.
-3. **New Job wizard vehicle search** — `src/routes/jobs.new.tsx` via `useSearchVehiclesByPlate` (`src/lib/jobs.ts`).
-4. **Body & Paint list** — `src/routes/bp.index.tsx` via `useBPJobs`. B&P jobs store plate/make/model on the job itself (no `vehicle_id` join), so sold-status doesn't apply here — I'll leave B&P untouched and note it in the plan.
-5. **Learning / payroll / salary / advances / multilingual** — untouched (workspace non-negotiable).
+## What changes
 
-## Changes
+1. **Facebook detection**
+   Add a small helper that treats an item as Facebook when `source === "facebook"` or the URL host matches `facebook.com`, `m.facebook.com`, `fb.watch`, or `fb.me`.
 
-### 1. Filter helpers in `src/lib/jobs.ts`
-- `useJobs(workspaceId)`: after hydration, drop jobs whose `vehicle.status === 'sold'`. Jobs with no vehicle stay visible.
-- `useVehicles(workspaceId)`: default = exclude sold. Accept an optional arg `{ includeSold?: boolean }` (or a sibling hook `useSoldVehicles`) for the archive page.
-- `useSearchVehiclesByPlate`: exclude sold from suggestions so staff can't accidentally open a new job against a sold car. (If they truly need to, they go through the Sold archive → "reactivate" later — out of scope for this turn.)
+2. **Verified share link**
+   Before opening, normalise and verify the link:
+   - must be a valid `http`/`https` URL (existing `isValidHttpUrl`)
+   - must be a recognised Facebook host from the list above
+   - normalise `m.facebook.com` / `web.facebook.com` to `www.facebook.com` and strip tracking params (`fbclid`, `mibextid`, `rdid`, etc.) so the shared link is clean
+   If it fails verification, no navigation happens — an error toast says the link is invalid and should be re-added.
 
-### 2. New archive route `src/routes/vehicles.sold.tsx`
-- Lists all `core.vehicles` where `status = 'sold'` for the workspace: plate, make/model/year, sold date (uses `updated_at` as proxy — no `sold_at` column exists and we're not adding one this turn).
-- Tap-through opens the vehicle's most recent job if one exists (reuses `/jobs/$id`), otherwise a read-only summary card. Non-destructive — no reactivate button in this pass.
+3. **Always open in a new tab**
+   Verified Facebook links open with `window.open(url, "_blank", "noopener,noreferrer")`. Tapping the card still marks the item as viewed as it does today.
 
-### 3. Small "Sold" link entry points
-- `src/routes/jobs.index.tsx`: add a small text-link "Sold ›" in the header row next to the job count, linking to `/vehicles/sold`.
-- `src/routes/index.tsx` (home): same small "Sold" link near the jobs section header.
-- Not adding it to `bp.index.tsx` since B&P jobs don't reference `core.vehicles`.
+4. **Clear explanation on the card**
+   Replace the current one-line Facebook note with an explicit, translated notice: Facebook blocks in-app embedding, so the video opens on Facebook in a new tab. Card body shows a Facebook icon tile (no thumbnail attempt, since Facebook does not expose one) plus an "Opens on Facebook" affordance on the play button area.
 
-## Out of scope for this turn
-- No schema changes (no new `sold_at` / `sold_price` columns, no new status enum values).
-- No reactivate/unsold flow.
-- B&P job list stays as-is (jobs there don't join `core.vehicles`).
-- No changes to multilingual, payroll, salary, advances (workspace rule).
+5. **Invalid Facebook links**
+   Cards whose link fails verification show the existing destructive "Invalid or missing link" style message, with wording pointing at editing/re-adding the link.
 
-## Technical notes
-- Filtering happens client-side after hydration for `useJobs` (jobs are already hydrated with the vehicle row, so no extra query). For `useVehicles` and `useSearchVehiclesByPlate` the filter is a `.neq('status', 'sold')` on the query.
-- Query keys get a `{ includeSold }` suffix so the archive view doesn't collide with the default cache.
+All new strings go through `tr()`, matching the existing pattern.
 
-Confirm and I'll implement.
+## Not in scope
+- No changes to YouTube handling, progress tracking, add/delete flows, or dictionaries beyond the new `tr()` keys falling back to English.
