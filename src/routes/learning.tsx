@@ -61,6 +61,42 @@ type LearningItem = {
 
 type ProgressEntry = { viewed: boolean; learned: boolean };
 
+/** Extract a YouTube video id from the common URL shapes. */
+function youtubeId(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw.trim());
+    const h = u.hostname.replace(/^www\./, "");
+    if (h === "youtu.be") return u.pathname.slice(1).split("/")[0] || null;
+    if (h.endsWith("youtube.com") || h.endsWith("youtube-nocookie.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return v;
+      const m = u.pathname.match(/\/(embed|shorts|live|v)\/([^/?#]+)/);
+      if (m) return m[2];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function isValidHttpUrl(raw: string | null): boolean {
+  if (!raw) return false;
+  try {
+    const u = new URL(raw.trim());
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** Best available thumbnail: explicit one, else derived from YouTube. */
+function thumbFor(item: LearningItem): string | null {
+  if (item.thumbnail_url) return item.thumbnail_url;
+  const id = youtubeId(item.url);
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+}
+
 function LearningPage() {
   const { tr } = useT();
   const { workspaceId, profile, isStaff } = useWorkspace();
@@ -143,11 +179,15 @@ function LearningPage() {
   };
 
   const openItem = (item: LearningItem) => {
-    if (item.url) {
-      window.open(item.url, "_blank", "noopener");
-    } else {
+    if (!item.url) {
       toast(tr("No link attached"));
+      return;
     }
+    if (!isValidHttpUrl(item.url)) {
+      toast.error(tr("This link looks invalid — please edit or re-add it"));
+      return;
+    }
+    window.open(item.url, "_blank", "noopener");
   };
 
   const deleteItem = async (item: LearningItem) => {
@@ -556,6 +596,10 @@ function VideoCard({
   onDelete?: () => void;
 }) {
   const { tr } = useT();
+  const thumb = thumbFor(item);
+  const valid = isValidHttpUrl(item.url);
+  const isFacebook = item.source === "facebook" || /facebook\.com|fb\.watch/.test(item.url ?? "");
+  const [imgFailed, setImgFailed] = useState(false);
   return (
     <Card className="overflow-hidden">
       <button
@@ -567,14 +611,19 @@ function VideoCard({
         className="relative block aspect-video w-full bg-muted active:opacity-90"
         aria-label={tr("Play")}
       >
-        {item.thumbnail_url && (
+        {thumb && !imgFailed ? (
           <img
-            src={item.thumbnail_url}
+            src={thumb}
             alt={item.title}
             className="h-full w-full object-cover"
             loading="lazy"
             decoding="async"
+            onError={() => setImgFailed(true)}
           />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-primary/10 text-primary">
+            {isFacebook ? <Facebook className="h-8 w-8" /> : <Youtube className="h-8 w-8" />}
+          </div>
         )}
         <div className="absolute inset-0 grid place-items-center bg-black/30">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-primary">
@@ -592,6 +641,15 @@ function VideoCard({
           <p className="flex-1 text-sm font-semibold leading-snug">{item.title}</p>
           {onDelete && <DeleteBtn onDelete={onDelete} />}
         </div>
+        {!valid ? (
+          <p className="mt-1 text-[11px] font-medium text-destructive">
+            {tr("Invalid or missing link")}
+          </p>
+        ) : isFacebook ? (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {tr("Facebook videos can't preview here — opens in the Facebook app")}
+          </p>
+        ) : null}
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
           {item.tag ? (
             <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
@@ -602,6 +660,7 @@ function VideoCard({
           )}
           <SourceBadge source={item.source} />
         </div>
+
         <MarkButtons viewed={viewed} learned={learned} onView={onView} onLearn={onLearn} />
       </div>
     </Card>
