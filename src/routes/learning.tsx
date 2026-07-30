@@ -90,12 +90,51 @@ function isValidHttpUrl(raw: string | null): boolean {
   }
 }
 
-/** Best available thumbnail: explicit one, else derived from YouTube. */
+const FB_HOSTS = ["facebook.com", "m.facebook.com", "web.facebook.com", "fb.watch", "fb.me"];
+
+function isFacebookUrl(raw: string | null): boolean {
+  if (!raw) return false;
+  try {
+    const h = new URL(raw.trim()).hostname.replace(/^www\./, "");
+    return FB_HOSTS.includes(h);
+  } catch {
+    return false;
+  }
+}
+
+function isFacebookItem(item: LearningItem): boolean {
+  return item.source === "facebook" || isFacebookUrl(item.url);
+}
+
+const FB_TRACKING_PARAMS = ["fbclid", "mibextid", "rdid", "share_url", "__cft__", "__tn__", "ref"];
+
+/** Normalise + verify a Facebook share link. Returns null when it isn't a usable FB link. */
+function verifiedFacebookUrl(raw: string | null): string | null {
+  if (!isValidHttpUrl(raw) || !isFacebookUrl(raw)) return null;
+  try {
+    const u = new URL((raw as string).trim());
+    const h = u.hostname.replace(/^www\./, "");
+    if (h === "m.facebook.com" || h === "web.facebook.com" || h === "facebook.com") {
+      u.hostname = "www.facebook.com";
+    }
+    for (const p of FB_TRACKING_PARAMS) u.searchParams.delete(p);
+    for (const key of [...u.searchParams.keys()]) {
+      if (key.startsWith("__cft__")) u.searchParams.delete(key);
+    }
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** Best available thumbnail: explicit one, else derived from YouTube. Facebook exposes none. */
 function thumbFor(item: LearningItem): string | null {
+  if (isFacebookItem(item)) return null;
   if (item.thumbnail_url) return item.thumbnail_url;
   const id = youtubeId(item.url);
   return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
 }
+
 
 function LearningPage() {
   const { tr } = useT();
