@@ -179,11 +179,15 @@ function LearningPage() {
   };
 
   const openItem = (item: LearningItem) => {
-    if (item.url) {
-      window.open(item.url, "_blank", "noopener");
-    } else {
+    if (!item.url) {
       toast(tr("No link attached"));
+      return;
     }
+    if (!isValidHttpUrl(item.url)) {
+      toast.error(tr("This link looks invalid — please edit or re-add it"));
+      return;
+    }
+    window.open(item.url, "_blank", "noopener");
   };
 
   const deleteItem = async (item: LearningItem) => {
