@@ -27,6 +27,8 @@ import {
   Plus,
   Trash2,
   Loader2,
+  ExternalLink,
+
 } from "lucide-react";
 import { sbWorkshop } from "@/integrations/supabase/shared-schema";
 import { useWorkspace } from "@/lib/workspace";
