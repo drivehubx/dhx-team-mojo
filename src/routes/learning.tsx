@@ -61,6 +61,42 @@ type LearningItem = {
 
 type ProgressEntry = { viewed: boolean; learned: boolean };
 
+/** Extract a YouTube video id from the common URL shapes. */
+function youtubeId(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw.trim());
+    const h = u.hostname.replace(/^www\./, "");
+    if (h === "youtu.be") return u.pathname.slice(1).split("/")[0] || null;
+    if (h.endsWith("youtube.com") || h.endsWith("youtube-nocookie.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return v;
+      const m = u.pathname.match(/\/(embed|shorts|live|v)\/([^/?#]+)/);
+      if (m) return m[2];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function isValidHttpUrl(raw: string | null): boolean {
+  if (!raw) return false;
+  try {
+    const u = new URL(raw.trim());
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** Best available thumbnail: explicit one, else derived from YouTube. */
+function thumbFor(item: LearningItem): string | null {
+  if (item.thumbnail_url) return item.thumbnail_url;
+  const id = youtubeId(item.url);
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+}
+
 function LearningPage() {
   const { tr } = useT();
   const { workspaceId, profile, isStaff } = useWorkspace();
