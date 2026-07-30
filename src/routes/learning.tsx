@@ -596,6 +596,10 @@ function VideoCard({
   onDelete?: () => void;
 }) {
   const { tr } = useT();
+  const thumb = thumbFor(item);
+  const valid = isValidHttpUrl(item.url);
+  const isFacebook = item.source === "facebook" || /facebook\.com|fb\.watch/.test(item.url ?? "");
+  const [imgFailed, setImgFailed] = useState(false);
   return (
     <Card className="overflow-hidden">
       <button
@@ -607,14 +611,19 @@ function VideoCard({
         className="relative block aspect-video w-full bg-muted active:opacity-90"
         aria-label={tr("Play")}
       >
-        {item.thumbnail_url && (
+        {thumb && !imgFailed ? (
           <img
-            src={item.thumbnail_url}
+            src={thumb}
             alt={item.title}
             className="h-full w-full object-cover"
             loading="lazy"
             decoding="async"
+            onError={() => setImgFailed(true)}
           />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-primary/10 text-primary">
+            {isFacebook ? <Facebook className="h-8 w-8" /> : <Youtube className="h-8 w-8" />}
+          </div>
         )}
         <div className="absolute inset-0 grid place-items-center bg-black/30">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-primary">
@@ -632,6 +641,15 @@ function VideoCard({
           <p className="flex-1 text-sm font-semibold leading-snug">{item.title}</p>
           {onDelete && <DeleteBtn onDelete={onDelete} />}
         </div>
+        {!valid ? (
+          <p className="mt-1 text-[11px] font-medium text-destructive">
+            {tr("Invalid or missing link")}
+          </p>
+        ) : isFacebook ? (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {tr("Facebook videos can't preview here — opens in the Facebook app")}
+          </p>
+        ) : null}
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
           {item.tag ? (
             <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
@@ -642,6 +660,7 @@ function VideoCard({
           )}
           <SourceBadge source={item.source} />
         </div>
+
         <MarkButtons viewed={viewed} learned={learned} onView={onView} onLearn={onLearn} />
       </div>
     </Card>
