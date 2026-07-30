@@ -611,6 +611,7 @@ const ACTIVE_STAGES_FOR_ADD: RepairStage[] = [
   "putty",
   "primer",
   "paint",
+  "assembly",
   "polish",
   "qc",
 ];
