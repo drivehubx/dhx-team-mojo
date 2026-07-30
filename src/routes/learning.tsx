@@ -27,6 +27,8 @@ import {
   Plus,
   Trash2,
   Loader2,
+  ExternalLink,
+
 } from "lucide-react";
 import { sbWorkshop } from "@/integrations/supabase/shared-schema";
 import { useWorkspace } from "@/lib/workspace";
@@ -90,12 +92,51 @@ function isValidHttpUrl(raw: string | null): boolean {
   }
 }
 
-/** Best available thumbnail: explicit one, else derived from YouTube. */
+const FB_HOSTS = ["facebook.com", "m.facebook.com", "web.facebook.com", "fb.watch", "fb.me"];
+
+function isFacebookUrl(raw: string | null): boolean {
+  if (!raw) return false;
+  try {
+    const h = new URL(raw.trim()).hostname.replace(/^www\./, "");
+    return FB_HOSTS.includes(h);
+  } catch {
+    return false;
+  }
+}
+
+function isFacebookItem(item: LearningItem): boolean {
+  return item.source === "facebook" || isFacebookUrl(item.url);
+}
+
+const FB_TRACKING_PARAMS = ["fbclid", "mibextid", "rdid", "share_url", "__cft__", "__tn__", "ref"];
+
+/** Normalise + verify a Facebook share link. Returns null when it isn't a usable FB link. */
+function verifiedFacebookUrl(raw: string | null): string | null {
+  if (!isValidHttpUrl(raw) || !isFacebookUrl(raw)) return null;
+  try {
+    const u = new URL((raw as string).trim());
+    const h = u.hostname.replace(/^www\./, "");
+    if (h === "m.facebook.com" || h === "web.facebook.com" || h === "facebook.com") {
+      u.hostname = "www.facebook.com";
+    }
+    for (const p of FB_TRACKING_PARAMS) u.searchParams.delete(p);
+    for (const key of [...u.searchParams.keys()]) {
+      if (key.startsWith("__cft__")) u.searchParams.delete(key);
+    }
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** Best available thumbnail: explicit one, else derived from YouTube. Facebook exposes none. */
 function thumbFor(item: LearningItem): string | null {
+  if (isFacebookItem(item)) return null;
   if (item.thumbnail_url) return item.thumbnail_url;
   const id = youtubeId(item.url);
   return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
 }
+
 
 function LearningPage() {
   const { tr } = useT();
@@ -187,8 +228,18 @@ function LearningPage() {
       toast.error(tr("This link looks invalid — please edit or re-add it"));
       return;
     }
-    window.open(item.url, "_blank", "noopener");
+    if (isFacebookItem(item)) {
+      const fb = verifiedFacebookUrl(item.url);
+      if (!fb) {
+        toast.error(tr("This Facebook link looks invalid — please edit or re-add it"));
+        return;
+      }
+      window.open(fb, "_blank", "noopener,noreferrer");
+      return;
+    }
+    window.open(item.url, "_blank", "noopener,noreferrer");
   };
+
 
   const deleteItem = async (item: LearningItem) => {
     if (!window.confirm(tr("Delete this item?"))) return;
@@ -597,8 +648,9 @@ function VideoCard({
 }) {
   const { tr } = useT();
   const thumb = thumbFor(item);
-  const valid = isValidHttpUrl(item.url);
-  const isFacebook = item.source === "facebook" || /facebook\.com|fb\.watch/.test(item.url ?? "");
+  const isFacebook = isFacebookItem(item);
+  const fbUrl = isFacebook ? verifiedFacebookUrl(item.url) : null;
+  const valid = isFacebook ? Boolean(fbUrl) : isValidHttpUrl(item.url);
   const [imgFailed, setImgFailed] = useState(false);
   return (
     <Card className="overflow-hidden">
@@ -609,7 +661,7 @@ function VideoCard({
           onOpen();
         }}
         className="relative block aspect-video w-full bg-muted active:opacity-90"
-        aria-label={tr("Play")}
+        aria-label={isFacebook ? tr("Open on Facebook") : tr("Play")}
       >
         {thumb && !imgFailed ? (
           <img
@@ -625,10 +677,19 @@ function VideoCard({
             {isFacebook ? <Facebook className="h-8 w-8" /> : <Youtube className="h-8 w-8" />}
           </div>
         )}
-        <div className="absolute inset-0 grid place-items-center bg-black/30">
+        <div className="absolute inset-0 grid place-items-center gap-2 bg-black/30">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-primary">
-            <Play className="h-5 w-5 fill-current" />
+            {isFacebook ? (
+              <ExternalLink className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5 fill-current" />
+            )}
           </div>
+          {isFacebook && (
+            <span className="rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white">
+              {tr("Opens on Facebook")}
+            </span>
+          )}
         </div>
         {item.duration_label && (
           <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
@@ -643,13 +704,18 @@ function VideoCard({
         </div>
         {!valid ? (
           <p className="mt-1 text-[11px] font-medium text-destructive">
-            {tr("Invalid or missing link")}
+            {isFacebook
+              ? tr("This Facebook link looks invalid — please edit or re-add it")
+              : tr("Invalid or missing link")}
           </p>
         ) : isFacebook ? (
           <p className="mt-1 text-[11px] text-muted-foreground">
-            {tr("Facebook videos can't preview here — opens in the Facebook app")}
+            {tr(
+              "Facebook blocks embedded playback, so this video can't play inside the app. Tapping it opens the verified Facebook link in a new tab.",
+            )}
           </p>
         ) : null}
+
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
           {item.tag ? (
             <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
