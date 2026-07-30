@@ -646,8 +646,9 @@ function VideoCard({
 }) {
   const { tr } = useT();
   const thumb = thumbFor(item);
-  const valid = isValidHttpUrl(item.url);
-  const isFacebook = item.source === "facebook" || /facebook\.com|fb\.watch/.test(item.url ?? "");
+  const isFacebook = isFacebookItem(item);
+  const fbUrl = isFacebook ? verifiedFacebookUrl(item.url) : null;
+  const valid = isFacebook ? Boolean(fbUrl) : isValidHttpUrl(item.url);
   const [imgFailed, setImgFailed] = useState(false);
   return (
     <Card className="overflow-hidden">
@@ -658,7 +659,7 @@ function VideoCard({
           onOpen();
         }}
         className="relative block aspect-video w-full bg-muted active:opacity-90"
-        aria-label={tr("Play")}
+        aria-label={isFacebook ? tr("Open on Facebook") : tr("Play")}
       >
         {thumb && !imgFailed ? (
           <img
@@ -674,10 +675,19 @@ function VideoCard({
             {isFacebook ? <Facebook className="h-8 w-8" /> : <Youtube className="h-8 w-8" />}
           </div>
         )}
-        <div className="absolute inset-0 grid place-items-center bg-black/30">
+        <div className="absolute inset-0 grid place-items-center gap-2 bg-black/30">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-primary">
-            <Play className="h-5 w-5 fill-current" />
+            {isFacebook ? (
+              <ExternalLink className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5 fill-current" />
+            )}
           </div>
+          {isFacebook && (
+            <span className="rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white">
+              {tr("Opens on Facebook")}
+            </span>
+          )}
         </div>
         {item.duration_label && (
           <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
@@ -692,13 +702,18 @@ function VideoCard({
         </div>
         {!valid ? (
           <p className="mt-1 text-[11px] font-medium text-destructive">
-            {tr("Invalid or missing link")}
+            {isFacebook
+              ? tr("This Facebook link looks invalid — please edit or re-add it")
+              : tr("Invalid or missing link")}
           </p>
         ) : isFacebook ? (
           <p className="mt-1 text-[11px] text-muted-foreground">
-            {tr("Facebook videos can't preview here — opens in the Facebook app")}
+            {tr(
+              "Facebook blocks embedded playback, so this video can't play inside the app. Tapping it opens the verified Facebook link in a new tab.",
+            )}
           </p>
         ) : null}
+
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
           {item.tag ? (
             <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
