@@ -19,6 +19,7 @@ import { Route as LearningRouteImport } from './routes/learning'
 import { Route as AdvanceRouteImport } from './routes/advance'
 import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MechanicJobsIndexRouteImport } from './routes/mechanic-jobs.index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as BpIndexRouteImport } from './routes/bp.index'
 import { Route as VehiclesSoldRouteImport } from './routes/vehicles.sold'
@@ -76,6 +77,11 @@ const ActivateRoute = ActivateRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MechanicJobsIndexRoute = MechanicJobsIndexRouteImport.update({
+  id: '/mechanic-jobs/',
+  path: '/mechanic-jobs/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsIndexRoute = JobsIndexRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
+  '/mechanic-jobs/': typeof MechanicJobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp': typeof BpIndexRoute
   '/jobs': typeof JobsIndexRoute
+  '/mechanic-jobs': typeof MechanicJobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
+  '/mechanic-jobs/': typeof MechanicJobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/vehicles/sold'
     | '/bp/'
     | '/jobs/'
+    | '/mechanic-jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/vehicles/sold'
     | '/bp'
     | '/jobs'
+    | '/mechanic-jobs'
   id:
     | '__root__'
     | '/'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/vehicles/sold'
     | '/bp/'
     | '/jobs/'
+    | '/mechanic-jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -261,6 +273,7 @@ export interface RootRouteChildren {
   VehiclesSoldRoute: typeof VehiclesSoldRoute
   BpIndexRoute: typeof BpIndexRoute
   JobsIndexRoute: typeof JobsIndexRoute
+  MechanicJobsIndexRoute: typeof MechanicJobsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mechanic-jobs/': {
+      id: '/mechanic-jobs/'
+      path: '/mechanic-jobs'
+      fullPath: '/mechanic-jobs/'
+      preLoaderRoute: typeof MechanicJobsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs/': {
@@ -422,17 +442,8 @@ const rootRouteChildren: RootRouteChildren = {
   VehiclesSoldRoute: VehiclesSoldRoute,
   BpIndexRoute: BpIndexRoute,
   JobsIndexRoute: JobsIndexRoute,
+  MechanicJobsIndexRoute: MechanicJobsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
