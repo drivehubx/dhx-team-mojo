@@ -107,6 +107,7 @@ export type Database = {
           completed_time: string | null
           created_at: string
           created_by: string | null
+          hours_worked: number | null
           id: string
           job_date: string
           job_no: number
@@ -127,6 +128,7 @@ export type Database = {
           completed_time?: string | null
           created_at?: string
           created_by?: string | null
+          hours_worked?: number | null
           id?: string
           job_date?: string
           job_no?: never
@@ -147,6 +149,7 @@ export type Database = {
           completed_time?: string | null
           created_at?: string
           created_by?: string | null
+          hours_worked?: number | null
           id?: string
           job_date?: string
           job_no?: never
@@ -248,6 +251,7 @@ export type Database = {
           completed_time: string
           created_at: string
           created_by: string
+          hours_worked: number
           id: string
           job_date: string
           job_no: number
