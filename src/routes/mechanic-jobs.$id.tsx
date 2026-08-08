@@ -110,6 +110,11 @@ function MechanicJobDetailPage() {
                 </div>
               </div>
             </div>
+            {job.hours_worked !== null && job.hours_worked !== undefined && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Hours worked: {Number(job.hours_worked)} hrs
+              </p>
+            )}
           </section>
 
           <MechanicJobForm
@@ -128,6 +133,10 @@ function MechanicJobDetailPage() {
               status: job.status,
               labour_amount: job.labour_amount === null ? null : Number(job.labour_amount),
               parts_amount: job.parts_amount === null ? null : Number(job.parts_amount),
+              hours_worked:
+                job.hours_worked === null || job.hours_worked === undefined
+                  ? null
+                  : Number(job.hours_worked),
               notes: job.notes,
             }}
             onSubmit={async (values) => {
@@ -143,6 +152,7 @@ function MechanicJobDetailPage() {
                   ...(values.parts_amount !== undefined
                     ? { parts_amount: values.parts_amount }
                     : {}),
+                  hours_worked: values.hours_worked ?? null,
                   notes: values.notes,
                   vehicle_external_id: values.vehicle.id,
                   registration_number: values.vehicle.plate_number,
