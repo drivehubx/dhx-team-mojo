@@ -126,8 +126,8 @@ function MechanicJobDetailPage() {
               helperId: job.helper?.id ?? null,
               work_description: job.work_description,
               status: job.status,
-              labour_amount: Number(job.labour_amount),
-              parts_amount: Number(job.parts_amount),
+              labour_amount: job.labour_amount === null ? null : Number(job.labour_amount),
+              parts_amount: job.parts_amount === null ? null : Number(job.parts_amount),
               notes: job.notes,
             }}
             onSubmit={async (values) => {
@@ -137,8 +137,12 @@ function MechanicJobDetailPage() {
                   job_date: values.job_date,
                   work_description: values.work_description,
                   status: values.status,
-                  labour_amount: values.labour_amount,
-                  parts_amount: values.parts_amount,
+                  ...(values.labour_amount !== undefined
+                    ? { labour_amount: values.labour_amount }
+                    : {}),
+                  ...(values.parts_amount !== undefined
+                    ? { parts_amount: values.parts_amount }
+                    : {}),
                   notes: values.notes,
                   vehicle_external_id: values.vehicle.id,
                   registration_number: values.vehicle.plate_number,
