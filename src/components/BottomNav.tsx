@@ -1,11 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Wrench, Wallet, HandCoins, User, Users, GraduationCap, Award } from "lucide-react";
+import { LayoutDashboard, Wrench, Wallet, HandCoins, User, Users, GraduationCap, Award, Hammer } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
 const tabs = [
   { to: "/", key: "nav.home", icon: LayoutDashboard },
   { to: "/jobs", key: "nav.jobs", icon: Wrench },
+  { to: "/mechanic-jobs", key: "nav.mechanic", icon: Hammer },
   { to: "/team", key: "nav.team", icon: Users },
+
   { to: "/skills", key: "nav.skills", icon: Award },
   { to: "/learning", key: "nav.learn", icon: GraduationCap },
   { to: "/salary", key: "nav.salary", icon: Wallet },
