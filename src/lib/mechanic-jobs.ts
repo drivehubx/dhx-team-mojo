@@ -55,6 +55,7 @@ export type MechanicJob = {
   completed_time: string | null;
   labour_amount: number | null;
   parts_amount: number | null;
+  hours_worked: number | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
@@ -176,6 +177,7 @@ export type MechanicJobInput = {
   status: MechanicJobStatus;
   labour_amount?: number;
   parts_amount?: number;
+  hours_worked?: number | null;
   notes: string | null;
 };
 
@@ -217,6 +219,7 @@ export function useCreateMechanicJob() {
           status: input.status,
           labour_amount: input.labour_amount ?? 0,
           parts_amount: input.parts_amount ?? 0,
+          hours_worked: input.hours_worked ?? null,
           notes: input.notes,
           created_by: authData?.user?.id ?? null,
         });
@@ -237,6 +240,7 @@ export type MechanicJobUpdate = {
   status?: MechanicJobStatus;
   labour_amount?: number;
   parts_amount?: number;
+  hours_worked?: number | null;
   notes?: string | null;
   vehicle_external_id?: string | null;
   registration_number?: string;
