@@ -114,9 +114,15 @@ function JobCard({ job }: { job: MechanicJobWithWorkers }) {
               </span>
             </p>
           </div>
-          {job.labour_amount !== null && (
-            <p className="text-sm font-semibold">{formatMYROrHidden(job.labour_amount)}</p>
-          )}
+          <div className="text-right">
+            {job.hours_worked !== null && job.hours_worked !== undefined && (
+              <p className="text-xs text-muted-foreground">{Number(job.hours_worked)} hrs</p>
+            )}
+            {job.labour_amount !== null && (
+              <p className="text-sm font-semibold">{formatMYROrHidden(job.labour_amount)}</p>
+            )}
+          </div>
+
         </div>
       </Link>
     </li>
