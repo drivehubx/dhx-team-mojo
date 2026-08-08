@@ -241,6 +241,30 @@ export type Database = {
         }[]
       }
       get_secret: { Args: { secret_name: string }; Returns: string }
+      mechanic_can_view_costs: { Args: never; Returns: boolean }
+      mechanic_jobs_list: {
+        Args: never
+        Returns: {
+          completed_time: string
+          created_at: string
+          created_by: string
+          id: string
+          job_date: string
+          job_no: number
+          labour_amount: number
+          location: string
+          notes: string
+          parts_amount: number
+          registration_number: string
+          start_time: string
+          status: string
+          updated_at: string
+          vehicle_external_id: string
+          vehicle_make: string
+          vehicle_model: string
+          work_description: string
+        }[]
+      }
     }
     Enums: {
       advance_status: "pending" | "approved" | "rejected"

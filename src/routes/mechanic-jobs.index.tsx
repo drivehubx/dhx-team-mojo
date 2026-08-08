@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { WorkspaceGate } from "@/lib/workspace";
 import {
   MECHANIC_JOB_STATUS_LABELS,
-  formatMYR,
+  formatMYROrHidden,
   useMechanicJobs,
   type MechanicJobStatus,
   type MechanicJobWithWorkers,
@@ -114,7 +114,9 @@ function JobCard({ job }: { job: MechanicJobWithWorkers }) {
               </span>
             </p>
           </div>
-          <p className="text-sm font-semibold">{formatMYR(job.labour_amount)}</p>
+          {job.labour_amount !== null && (
+            <p className="text-sm font-semibold">{formatMYROrHidden(job.labour_amount)}</p>
+          )}
         </div>
       </Link>
     </li>

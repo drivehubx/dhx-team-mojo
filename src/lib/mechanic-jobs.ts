@@ -53,8 +53,8 @@ export type MechanicJob = {
   status: MechanicJobStatus;
   start_time: string | null;
   completed_time: string | null;
-  labour_amount: number;
-  parts_amount: number;
+  labour_amount: number | null;
+  parts_amount: number | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
@@ -126,18 +126,28 @@ async function hydrate(jobs: MechanicJob[]): Promise<MechanicJobWithWorkers[]> {
   });
 }
 
+async function fetchMechanicJobs(): Promise<MechanicJob[]> {
+  const { data, error } = await sb().rpc("mechanic_jobs_list");
+  if (error) throw error;
+  return (data ?? []) as MechanicJob[];
+}
+
+export function useCanViewMechanicCosts() {
+  return useQuery({
+    queryKey: ["mechanic-can-view-costs"],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await sb().rpc("mechanic_can_view_costs");
+      if (error) throw error;
+      return !!data;
+    },
+  });
+}
+
 export function useMechanicJobs() {
   return useQuery({
     queryKey: ["mechanic-jobs"],
-    queryFn: async () => {
-      const { data, error } = await sb()
-        .from("mechanic_jobs")
-        .select("*")
-        .order("job_date", { ascending: false })
-        .order("job_no", { ascending: false });
-      if (error) throw error;
-      return hydrate((data ?? []) as MechanicJob[]);
-    },
+    queryFn: async () => hydrate(await fetchMechanicJobs()),
   });
 }
 
@@ -146,14 +156,10 @@ export function useMechanicJob(id: string | undefined) {
     queryKey: ["mechanic-job", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await sb()
-        .from("mechanic_jobs")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return null;
-      const [hydrated] = await hydrate([data as MechanicJob]);
+      const rows = await fetchMechanicJobs();
+      const row = rows.find((r) => r.id === id);
+      if (!row) return null;
+      const [hydrated] = await hydrate([row]);
       return hydrated ?? null;
     },
   });
@@ -168,21 +174,15 @@ export type MechanicJobInput = {
   helperId: string | null;
   work_description: string;
   status: MechanicJobStatus;
-  labour_amount: number;
-  parts_amount: number;
+  labour_amount?: number;
+  parts_amount?: number;
   notes: string | null;
 };
 
 async function nextJobNo(): Promise<number> {
-  const { data, error } = await sb()
-    .from("mechanic_jobs")
-    .select("job_no")
-    .order("job_no", { ascending: false })
-    .limit(1);
-  if (error) throw error;
-  const rows = (data ?? []) as { job_no: number }[];
-  const max = rows.length > 0 ? Number(rows[0].job_no) : 0;
-  return (Number.isFinite(max) ? max : 0) + 1;
+  const rows = await fetchMechanicJobs();
+  const max = rows.reduce((m, r) => Math.max(m, Number(r.job_no) || 0), 0);
+  return max + 1;
 }
 
 async function writeWorkers(jobId: string, mechanicId: string, helperId: string | null) {
@@ -202,9 +202,11 @@ export function useCreateMechanicJob() {
     mutationFn: async (input: MechanicJobInput) => {
       const { data: authData } = await supabase.auth.getUser();
       const job_no = await nextJobNo();
-      const { data, error } = await sb()
+      const id = crypto.randomUUID();
+      const { error } = await sb()
         .from("mechanic_jobs")
         .insert({
+          id,
           job_no,
           job_date: input.job_date,
           vehicle_external_id: input.vehicle.id,
@@ -213,17 +215,14 @@ export function useCreateMechanicJob() {
           vehicle_model: input.vehicle.model,
           work_description: input.work_description,
           status: input.status,
-          labour_amount: input.labour_amount,
-          parts_amount: input.parts_amount,
+          labour_amount: input.labour_amount ?? 0,
+          parts_amount: input.parts_amount ?? 0,
           notes: input.notes,
           created_by: authData?.user?.id ?? null,
-        })
-        .select("*")
-        .single();
+        });
       if (error) throw error;
-      const job = data as MechanicJob;
-      await writeWorkers(job.id, input.mechanicId, input.helperId);
-      return job;
+      await writeWorkers(id, input.mechanicId, input.helperId);
+      return { id };
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["mechanic-jobs"] });
@@ -281,4 +280,8 @@ export function useSetMechanicJobWorkers() {
 
 export function formatMYR(n: number) {
   return `RM ${Number(n || 0).toFixed(2)}`;
+}
+
+export function formatMYROrHidden(n: number | null) {
+  return n === null || n === undefined ? "—" : formatMYR(n);
 }
