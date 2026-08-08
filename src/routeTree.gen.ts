@@ -19,10 +19,13 @@ import { Route as LearningRouteImport } from './routes/learning'
 import { Route as AdvanceRouteImport } from './routes/advance'
 import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MechanicJobsIndexRouteImport } from './routes/mechanic-jobs.index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as BpIndexRouteImport } from './routes/bp.index'
 import { Route as VehiclesSoldRouteImport } from './routes/vehicles.sold'
 import { Route as TeamIdRouteImport } from './routes/team.$id'
+import { Route as MechanicJobsNewRouteImport } from './routes/mechanic-jobs.new'
+import { Route as MechanicJobsIdRouteImport } from './routes/mechanic-jobs.$id'
 import { Route as JobsNewRouteImport } from './routes/jobs.new'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 import { Route as BpNewRouteImport } from './routes/bp.new'
@@ -78,6 +81,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MechanicJobsIndexRoute = MechanicJobsIndexRouteImport.update({
+  id: '/mechanic-jobs/',
+  path: '/mechanic-jobs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobsIndexRoute = JobsIndexRouteImport.update({
   id: '/jobs/',
   path: '/jobs/',
@@ -97,6 +105,16 @@ const TeamIdRoute = TeamIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => TeamRoute,
+} as any)
+const MechanicJobsNewRoute = MechanicJobsNewRouteImport.update({
+  id: '/mechanic-jobs/new',
+  path: '/mechanic-jobs/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MechanicJobsIdRoute = MechanicJobsIdRouteImport.update({
+  id: '/mechanic-jobs/$id',
+  path: '/mechanic-jobs/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const JobsNewRoute = JobsNewRouteImport.update({
   id: '/jobs/new',
@@ -134,10 +152,13 @@ export interface FileRoutesByFullPath {
   '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/mechanic-jobs/$id': typeof MechanicJobsIdRoute
+  '/mechanic-jobs/new': typeof MechanicJobsNewRoute
   '/team/$id': typeof TeamIdRoute
   '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
+  '/mechanic-jobs/': typeof MechanicJobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -154,10 +175,13 @@ export interface FileRoutesByTo {
   '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/mechanic-jobs/$id': typeof MechanicJobsIdRoute
+  '/mechanic-jobs/new': typeof MechanicJobsNewRoute
   '/team/$id': typeof TeamIdRoute
   '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp': typeof BpIndexRoute
   '/jobs': typeof JobsIndexRoute
+  '/mechanic-jobs': typeof MechanicJobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -175,10 +199,13 @@ export interface FileRoutesById {
   '/bp/new': typeof BpNewRoute
   '/jobs/$id': typeof JobsIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/mechanic-jobs/$id': typeof MechanicJobsIdRoute
+  '/mechanic-jobs/new': typeof MechanicJobsNewRoute
   '/team/$id': typeof TeamIdRoute
   '/vehicles/sold': typeof VehiclesSoldRoute
   '/bp/': typeof BpIndexRoute
   '/jobs/': typeof JobsIndexRoute
+  '/mechanic-jobs/': typeof MechanicJobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -197,10 +224,13 @@ export interface FileRouteTypes {
     | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/mechanic-jobs/$id'
+    | '/mechanic-jobs/new'
     | '/team/$id'
     | '/vehicles/sold'
     | '/bp/'
     | '/jobs/'
+    | '/mechanic-jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -217,10 +247,13 @@ export interface FileRouteTypes {
     | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/mechanic-jobs/$id'
+    | '/mechanic-jobs/new'
     | '/team/$id'
     | '/vehicles/sold'
     | '/bp'
     | '/jobs'
+    | '/mechanic-jobs'
   id:
     | '__root__'
     | '/'
@@ -237,10 +270,13 @@ export interface FileRouteTypes {
     | '/bp/new'
     | '/jobs/$id'
     | '/jobs/new'
+    | '/mechanic-jobs/$id'
+    | '/mechanic-jobs/new'
     | '/team/$id'
     | '/vehicles/sold'
     | '/bp/'
     | '/jobs/'
+    | '/mechanic-jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -258,9 +294,12 @@ export interface RootRouteChildren {
   BpNewRoute: typeof BpNewRoute
   JobsIdRoute: typeof JobsIdRoute
   JobsNewRoute: typeof JobsNewRoute
+  MechanicJobsIdRoute: typeof MechanicJobsIdRoute
+  MechanicJobsNewRoute: typeof MechanicJobsNewRoute
   VehiclesSoldRoute: typeof VehiclesSoldRoute
   BpIndexRoute: typeof BpIndexRoute
   JobsIndexRoute: typeof JobsIndexRoute
+  MechanicJobsIndexRoute: typeof MechanicJobsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -335,6 +374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mechanic-jobs/': {
+      id: '/mechanic-jobs/'
+      path: '/mechanic-jobs'
+      fullPath: '/mechanic-jobs/'
+      preLoaderRoute: typeof MechanicJobsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs/': {
       id: '/jobs/'
       path: '/jobs'
@@ -362,6 +408,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/team/$id'
       preLoaderRoute: typeof TeamIdRouteImport
       parentRoute: typeof TeamRoute
+    }
+    '/mechanic-jobs/new': {
+      id: '/mechanic-jobs/new'
+      path: '/mechanic-jobs/new'
+      fullPath: '/mechanic-jobs/new'
+      preLoaderRoute: typeof MechanicJobsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mechanic-jobs/$id': {
+      id: '/mechanic-jobs/$id'
+      path: '/mechanic-jobs/$id'
+      fullPath: '/mechanic-jobs/$id'
+      preLoaderRoute: typeof MechanicJobsIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/jobs/new': {
       id: '/jobs/new'
@@ -419,9 +479,12 @@ const rootRouteChildren: RootRouteChildren = {
   BpNewRoute: BpNewRoute,
   JobsIdRoute: JobsIdRoute,
   JobsNewRoute: JobsNewRoute,
+  MechanicJobsIdRoute: MechanicJobsIdRoute,
+  MechanicJobsNewRoute: MechanicJobsNewRoute,
   VehiclesSoldRoute: VehiclesSoldRoute,
   BpIndexRoute: BpIndexRoute,
   JobsIndexRoute: JobsIndexRoute,
+  MechanicJobsIndexRoute: MechanicJobsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

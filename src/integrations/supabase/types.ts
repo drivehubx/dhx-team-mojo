@@ -14,10 +14,217 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      mechanic_job_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          job_id: string
+          photo_stage: string
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          job_id: string
+          photo_stage: string
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string
+          photo_stage?: string
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mechanic_job_photos_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "mechanic_job_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mechanic_job_photos_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "mechanic_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mechanic_job_workers: {
+        Row: {
+          created_at: string
+          job_id: string
+          team_member_id: string
+          worker_type: string
+        }
+        Insert: {
+          created_at?: string
+          job_id: string
+          team_member_id: string
+          worker_type: string
+        }
+        Update: {
+          created_at?: string
+          job_id?: string
+          team_member_id?: string
+          worker_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mechanic_job_workers_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "mechanic_job_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mechanic_job_workers_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "mechanic_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mechanic_job_workers_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "mechanic_team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mechanic_jobs: {
+        Row: {
+          completed_time: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          job_date: string
+          job_no: number
+          labour_amount: number
+          location: string | null
+          notes: string | null
+          parts_amount: number
+          registration_number: string
+          start_time: string | null
+          status: string
+          updated_at: string
+          vehicle_external_id: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          work_description: string
+        }
+        Insert: {
+          completed_time?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_date?: string
+          job_no?: never
+          labour_amount?: number
+          location?: string | null
+          notes?: string | null
+          parts_amount?: number
+          registration_number: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_external_id?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          work_description: string
+        }
+        Update: {
+          completed_time?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_date?: string
+          job_no?: never
+          labour_amount?: number
+          location?: string | null
+          notes?: string | null
+          parts_amount?: number
+          registration_number?: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_external_id?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          work_description?: string
+        }
+        Relationships: []
+      }
+      mechanic_team_members: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      mechanic_job_summary: {
+        Row: {
+          completed_time: string | null
+          created_at: string | null
+          helpers: string | null
+          id: string | null
+          job_date: string | null
+          job_no: number | null
+          labour_amount: number | null
+          labour_hours: number | null
+          location: string | null
+          mechanics: string | null
+          notes: string | null
+          parts_amount: number | null
+          registration_number: string | null
+          start_time: string | null
+          status: string | null
+          total_amount: number | null
+          updated_at: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          work_description: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       bp_public_status: {

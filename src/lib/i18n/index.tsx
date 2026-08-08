@@ -187,6 +187,8 @@ const legacyKeyMap: Record<string, string> = {
   "common.signOut": "Sign out",
   "nav.home": "Home",
   "nav.jobs": "Jobs",
+  "nav.mechanic": "Mechanic",
+
   "nav.team": "Team",
   "nav.skills": "Skills",
   "nav.learn": "Learn",
