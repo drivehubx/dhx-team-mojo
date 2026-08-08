@@ -36,6 +36,7 @@ export type MechanicJobFormValues = {
   status: MechanicJobStatus;
   labour_amount?: number;
   parts_amount?: number;
+  hours_worked?: number | null;
   notes: string | null;
 };
 
@@ -51,6 +52,7 @@ export type MechanicJobFormDefaults = {
   status?: MechanicJobStatus;
   labour_amount?: number | null;
   parts_amount?: number | null;
+  hours_worked?: number | null;
   notes?: string | null;
 };
 
@@ -306,6 +308,11 @@ export function MechanicJobForm({
   const [status, setStatus] = useState<MechanicJobStatus>(defaults?.status ?? "checking");
   const [labour, setLabour] = useState(String(defaults?.labour_amount ?? 0));
   const [parts, setParts] = useState(String(defaults?.parts_amount ?? 0));
+  const [hours, setHours] = useState(
+    defaults?.hours_worked === null || defaults?.hours_worked === undefined
+      ? ""
+      : String(defaults.hours_worked),
+  );
   const [notes, setNotes] = useState(defaults?.notes ?? "");
 
   // Default mechanic: "Kwang" if present, else first mechanic.
@@ -347,6 +354,17 @@ export function MechanicJobForm({
       status,
       notes: notes.trim() ? notes.trim() : null,
     };
+
+    if (hours.trim() === "") {
+      values.hours_worked = null;
+    } else {
+      const hoursNum = Number(hours);
+      if (!Number.isFinite(hoursNum) || hoursNum < 0) {
+        toast.error("Hours worked must be a number 0 or above.");
+        return;
+      }
+      values.hours_worked = hoursNum;
+    }
 
     if (canViewCosts) {
       const labourNum = Number(labour);
@@ -451,6 +469,16 @@ export function MechanicJobForm({
           })}
         </div>
       </div>
+
+      <Field label="Hours worked (optional)">
+        <input
+          inputMode="decimal"
+          value={hours}
+          onChange={(e) => setHours(e.target.value)}
+          placeholder="e.g. 2.5"
+          className={inputCls}
+        />
+      </Field>
 
       {canViewCosts && (
         <div className="grid grid-cols-2 gap-3">
