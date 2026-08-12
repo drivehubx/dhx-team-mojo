@@ -677,8 +677,8 @@ function VideoCard({
             {isFacebook ? <Facebook className="h-8 w-8" /> : <Youtube className="h-8 w-8" />}
           </div>
         )}
-        <div className="absolute inset-0 grid place-items-center gap-2 bg-black/30">
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-primary">
+        <div className="absolute inset-0 grid place-items-center gap-2">
+          <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-primary shadow-lg shadow-black/30">
             {isFacebook ? (
               <ExternalLink className="h-5 w-5" />
             ) : (
