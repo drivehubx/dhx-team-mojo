@@ -1,62 +1,55 @@
-# Team Screen Audit — findings and proposed fixes
+# Team screen: audit fixes 1–9 + full Team Member edit
 
-Scope: `src/routes/team.tsx` (list + Add Team Member dialog) and `src/routes/team.$id.tsx` (member detail), plus the shared hooks in `src/lib/team.ts`.
+## Backend audit result (read-only checks, nothing changed)
 
-## What is working well
+What the existing layer already allows, verified against `core`:
 
-- Both routes are gated by `WorkspaceGate`, admin-only actions (Add Team Member, role/position/engagement edits, deactivate) are correctly behind `isAdmin` from `useWorkspace`.
-- All writes go through `core` RPCs (`invite_crew`, `set_member_role`, `set_member_positions`, `set_member_engagement`, `set_member_active`) — no direct table writes, no admin key in the browser.
-- Terminology is consistently "Team Member"; owner role is correctly non-reassignable in the UI.
-- Mobile-first layout, semantic tokens only (no hardcoded colours), sensible query invalidation after each mutation.
+| Field | Path available today | Who |
+|---|---|---|
+| Full name, Phone, Email, Avatar URL, Notes, Emergency contact | direct `UPDATE core.profiles` — `authenticated` has UPDATE, RLS policy `profiles_update` allows self or `core.is_owner_or_manager()` (role rank >= 70 = owner / administrator / manager) | Owner, Administrator, Manager |
+| Permission Role | `core.set_member_role` | admin; refuses owner and anyone at/above your own rank |
+| Positions (multiple) | `core.set_member_positions(profile_id, uuid[])` | admin |
+| Engagement type | `core.set_member_engagement` (accepts null) | admin |
+| Active / Inactive | `core.set_member_active` | admin; refuses self and owner |
 
-## Issues found
+So **all requested fields except avatar image upload are already safely editable** with no new RPC, no RLS change, no schema change.
 
-### 1. Hardcoded invite URL (highest priority)
-`team.tsx` lines 298 and 307 build the activation link from a literal `https://dhx-workshop.lovable.app`. This breaks the workspace rule against hardcoded domains and produces the wrong link on the custom domain and in preview.
-Fix: derive the origin at runtime (`window.location.origin`) so the invite link always matches where the app is actually running.
+Fields that need a backend change (NOT doing now, reporting only):
+- **Avatar photo upload.** `avatar_url` text is writable, but there is no public avatar bucket; existing buckets (`staff-documents`, `dhx-docs`) are private and would need storage policies + signed-URL handling. Smallest change: one storage bucket for member avatars with an owner/admin-write, workspace-read policy. Until then the edit sheet will offer an avatar image **URL** field only.
+- **`notes` / `emergency_contact`** exist on `core.profiles` but are not exposed by the `core.team_directory` view. Rather than change the shared view, the edit sheet reads those two columns straight from `core.profiles` (SELECT is workspace-scoped) and only for admins. No backend change needed.
+- Observation, not a fix: `anon` holds an UPDATE grant on `core.profiles`; RLS blocks it (`current_workspace_id()` is null for anon), so it is not exploitable, but the grant is wider than needed. Flagging for the shared-backend owners; not touching it here.
 
-### 2. WhatsApp invite number is not normalised
-`phone.replace(/\D/g, "")` sends a local number such as `016-349-3499` to `wa.me/0163493499`, which WhatsApp rejects.
-Fix: normalise Malaysian local numbers to international form (leading `0` → `60`) before building the `wa.me` link; leave already-international numbers untouched.
+Role and Position stay strictly separate — Position never affects permissions anywhere in this work.
 
-### 3. Load errors are shown as "no results"
-The list ignores `dir.error`; a failed fetch renders "No team members match these filters." Same on the detail page, where an error renders "Team member not found."
-Fix: render a distinct error state with a Retry button on both screens.
+## Work to build
 
-### 4. Unsaved position edits get silently reset
-`team.$id.tsx` `useEffect` depends on `q.data?.positions`, a fresh array on every refetch, so any background refetch wipes in-progress selections.
-Fix: key the effect on the member id (and a stable signature of the saved positions) so it only re-syncs when the saved data actually changes.
+### A. Audit fixes 1–9 (from the earlier audit)
+1. Invite link uses `window.location.origin` instead of the hardcoded `dhx-workshop.lovable.app`.
+2. WhatsApp invite number normalised to international form (leading `0` → `60`).
+3. Real error states with Retry on both `/team` and `/team/$id`, instead of "no results" / "not found".
+4. Position selection no longer reset by background refetches.
+5. No greyed-out fake controls for non-admins — clean read-only presentation.
+6. Engagement type can be cleared (tap the selected one).
+7. Remove the dead `clickable` prop on `MemberCard`; always a link with the chevron.
+8. Search also matches position and engagement labels.
+9. Complete `head()` meta (og:title / og:description) on both routes.
 
-### 5. Non-admins get no explanation for disabled controls
-Role / position / engagement buttons render greyed out at `opacity-70` with no reason given — this is the grey, "dead" look on these cards.
-Fix: show a single short read-only notice for non-admins and drop the greyed-out interactive styling so the sections read as information, not broken buttons.
+Plus: consolidate the duplicated `initialsOf` helper.
 
-### 6. Engagement type cannot be cleared
-The RPC accepts `null` but the UI only allows selecting a value.
-Fix: allow tapping the selected engagement to clear it.
-
-### 7. Dead prop
-`MemberCard` takes `clickable`, but the only call site passes `true`; the `!clickable` branch (and the conditional chevron you selected) is unreachable.
-Fix: remove the prop and always render as a link with the chevron.
-
-### 8. Search misses positions
-Search covers name / phone / email only.
-Fix: include position labels and engagement label in the haystack.
-
-### 9. Metadata gaps
-`/team` has title + description but no `og:title`/`og:description`; `/team/$id` has only a title.
-Fix: complete the `head()` meta on both routes.
-
-### 10. Minor
-- `initialsOf` is duplicated in both files while `src/components/Avatar.tsx` exists — consolidate.
-- Team screens are English-only while the rest of the app is multilingual. Flagging only; I will not touch the language module or add translations unless you ask.
+### B. `/team/$id` becomes a real management screen
+- Read-only profile view for everyone: avatar, name, phone, email, role badge, positions, engagement, status, activity stats. Phone and email become tap-to-call / tap-to-mail links.
+- Owner/Administrator/Manager get a single **Edit** button in the header that opens one full-screen edit sheet (mobile-first), replacing today's scattered inline controls.
+- Edit sheet sections:
+  - **Details** — full name (required), phone, email, avatar image URL, notes, emergency contact.
+  - **Permission Role** — Administrator / Manager / Supervisor / Team Member, with a short "controls access" caption. Owner shown locked and non-assignable, as the database enforces.
+  - **Positions** — multi-select chips from `core.positions` (Mechanic, Painter, Panel Beater, Helper, and whatever else is active), captioned "what they do — does not affect access".
+  - **Engagement type** — single select, clearable.
+  - **Status** — Active / Inactive toggle; deactivation keeps its confirmation dialog. Hidden for yourself and for the owner, matching the database rules.
+- One **Save Changes** button diffs against loaded values and only calls the paths that actually changed (profile update + the relevant RPCs), with per-field validation (name non-empty, email shape, avatar must be an http(s) URL), a pending state, one success toast, and a per-failure error toast naming what failed. **Cancel** discards everything.
+- Because role/status rules live in the database, a rejected change surfaces the database's own message (e.g. "You cannot modify someone at or above your own System Role") rather than being pre-hidden incorrectly.
 
 ## Technical notes
 
-Changes are confined to `src/routes/team.tsx`, `src/routes/team.$id.tsx`, and possibly a small shared helper for phone normalisation. No database migration, no RPC change, no backend or schema change, no change to the learning/language module.
+Files touched: `src/routes/team.tsx`, `src/routes/team.$id.tsx`, `src/lib/team.ts` (add a `useUpdateMemberProfile` mutation + an admin-only fetch of `notes`/`emergency_contact`), a new `src/components/team-member-edit-sheet.tsx`, and a small phone-normalisation helper. `src/integrations/supabase/shared-schema.ts` gains the extra profile field types only.
 
-## Suggested order
-
-1. Items 1–3 (invite link, WhatsApp number, error states) — correctness bugs.
-2. Items 4–6 (position reset, read-only clarity, clearable engagement) — behaviour.
-3. Items 7–9 (cleanup, search, metadata).
+No migration, no RPC change, no RLS change, no schema change, no changes to the language/learning module or other screens. If avatar upload or anything else turns out to require a backend change, I will stop and ask first.
