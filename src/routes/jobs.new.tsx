@@ -12,6 +12,7 @@ import {
   Trash2,
   Plus,
   Upload,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -30,6 +31,11 @@ import {
   budgetStrategyFor,
   uploadIntakePhotos,
 } from "@/lib/jobs";
+import {
+  isExternalWorkSource,
+  CUSTOMER_VEHICLE_NOTE,
+} from "@/lib/vehicle-lane";
+
 import { analyzeInitialDamage } from "@/lib/ai-damage.functions";
 import { VehicleModelFixer } from "@/components/vehicle-model-fixer";
 import { Textarea } from "@/components/ui/textarea";
@@ -82,6 +88,15 @@ function NewWorkRequestPage() {
   const [plateQuery, setPlateQuery] = useState("");
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
+  // ---- External / customer vehicle lane (never enters core.vehicles) ----
+  const [extPlate, setExtPlate] = useState("");
+  const [extMake, setExtMake] = useState("");
+  const [extModel, setExtModel] = useState("");
+  const [custName, setCustName] = useState("");
+  const [custPhone, setCustPhone] = useState("");
+  const external = isExternalWorkSource(source);
+
+
   // ---- Step 2 state ----
   const [photos, setPhotos] = useState<File[]>([]);
   const [notes, setNotes] = useState("");
@@ -126,7 +141,14 @@ function NewWorkRequestPage() {
     setPhotos((prev) => prev.filter((_, i) => i !== idx));
 
   const goToAI = async () => {
-    if (!vehicle) return;
+    if (external) {
+      if (!extPlate.trim()) {
+        toast.error("Plate number required");
+        return;
+      }
+    } else if (!vehicle) {
+      return;
+    }
     if (photos.length === 0) {
       toast.error("Add at least one photo");
       return;
@@ -137,12 +159,20 @@ function NewWorkRequestPage() {
       let activeJobId = jobId;
       if (!activeJobId) {
         // First run: create ONE draft job with all photos.
+        // External/customer work is created WITHOUT a core.vehicles link so it
+        // never enters the DHX asset register.
         const draft = await createDraft.mutateAsync({
-          vehicle_id: vehicle.id,
+          vehicle_id: external ? null : vehicle!.id,
           work_request_source: source,
           damage_description: notes.trim(),
           photos,
+          plate_number: external ? extPlate : null,
+          car_make: external ? extMake : null,
+          car_model: external ? extModel : null,
+          customer_name: external ? custName : null,
+          customer_phone: external ? custPhone : null,
         });
+
         activeJobId = draft.id;
         setJobId(draft.id);
         setUploadedCount(photos.length);
@@ -217,7 +247,12 @@ function NewWorkRequestPage() {
         {step === 1 && (
           <StepVehicle
             source={source}
-            setSource={setSource}
+            setSource={(s) => {
+              setSource(s);
+              // Switching lanes must never leave a stale DHX asset attached to
+              // customer work (or customer facts on internal work).
+              if (isExternalWorkSource(s)) setVehicle(null);
+            }}
             plateQuery={plateQuery}
             setPlateQuery={setPlateQuery}
             workspaceId={workspaceId}
@@ -225,8 +260,20 @@ function NewWorkRequestPage() {
             setVehicle={setVehicle}
             showQuickAdd={showQuickAdd}
             setShowQuickAdd={setShowQuickAdd}
+            external={external}
+            extPlate={extPlate}
+            setExtPlate={setExtPlate}
+            extMake={extMake}
+            setExtMake={setExtMake}
+            extModel={extModel}
+            setExtModel={setExtModel}
+            custName={custName}
+            setCustName={setCustName}
+            custPhone={custPhone}
+            setCustPhone={setCustPhone}
             onNext={() => setStep(2)}
           />
+
         )}
         {step === 2 && (
           <StepPhotos
@@ -326,6 +373,17 @@ function StepVehicle({
   setVehicle,
   showQuickAdd,
   setShowQuickAdd,
+  external,
+  extPlate,
+  setExtPlate,
+  extMake,
+  setExtMake,
+  extModel,
+  setExtModel,
+  custName,
+  setCustName,
+  custPhone,
+  setCustPhone,
   onNext,
 }: {
   source: WorkRequestSource;
@@ -337,8 +395,20 @@ function StepVehicle({
   setVehicle: (v: PickedVehicle | null) => void;
   showQuickAdd: boolean;
   setShowQuickAdd: (v: boolean) => void;
+  external: boolean;
+  extPlate: string;
+  setExtPlate: (v: string) => void;
+  extMake: string;
+  setExtMake: (v: string) => void;
+  extModel: string;
+  setExtModel: (v: string) => void;
+  custName: string;
+  setCustName: (v: string) => void;
+  custPhone: string;
+  setCustPhone: (v: string) => void;
   onNext: () => void;
 }) {
+
   const searchQ = useSearchVehiclesByPlate(workspaceId, plateQuery);
   const quickAdd = useQuickAddVehicle(workspaceId);
 
@@ -373,18 +443,88 @@ function StepVehicle({
     }
   };
 
+  if (external) {
+    return (
+      <div className="space-y-5">
+        <SourcePicker source={source} setSource={setSource} />
+
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Step 1
+          </p>
+          <h2 className="mt-1 text-sm font-semibold">Customer Vehicle</h2>
+          <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+            <ShieldAlert className="h-3.5 w-3.5" />
+            Not a DHX asset
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {CUSTOMER_VEHICLE_NOTE} Details are kept on this repair order only —
+            no DHX vehicle record is created.
+          </p>
+
+          <div className="mt-3 space-y-2">
+            <input
+              autoFocus
+              value={extPlate}
+              onChange={(e) => setExtPlate(e.target.value.toUpperCase())}
+              placeholder="Plate number *"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                value={extMake}
+                onChange={(e) => setExtMake(e.target.value)}
+                placeholder="Make"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              />
+              <input
+                value={extModel}
+                onChange={(e) => setExtModel(e.target.value)}
+                placeholder="Model"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <input
+              value={custName}
+              onChange={(e) => setCustName(e.target.value)}
+              placeholder="Customer name"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <input
+              value={custPhone}
+              onChange={(e) => setCustPhone(e.target.value)}
+              inputMode="tel"
+              placeholder="Customer phone"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+          </div>
+        </section>
+
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!extPlate.trim()}
+          className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow disabled:opacity-50"
+        >
+          Continue to photos
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Step 1
         </p>
-        <h2 className="mt-1 text-sm font-semibold">Vehicle</h2>
+        <h2 className="mt-1 text-sm font-semibold">DHX Vehicle</h2>
         <p className="text-xs text-muted-foreground">
           One vehicle, one identity — always find it first.
         </p>
 
         {vehicle ? (
+
           <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary">
@@ -523,31 +663,7 @@ function StepVehicle({
         )}
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Work Request Source
-        </label>
-        <div className="mt-2">
-          <Select
-            value={source}
-            onValueChange={(v) => setSource(v as WorkRequestSource)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {WORK_REQUEST_SOURCES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {WORK_REQUEST_SOURCE_LABELS[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          Budget strategy: {BUDGET_STRATEGY_LABELS[budgetStrategyFor(source)]}
-        </p>
-      </section>
+      <SourcePicker source={source} setSource={setSource} />
 
       <button
         type="button"
@@ -559,7 +675,51 @@ function StepVehicle({
       </button>
     </div>
   );
+
 }
+
+function SourcePicker({
+  source,
+  setSource,
+}: {
+  source: WorkRequestSource;
+  setSource: (s: WorkRequestSource) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Work Request Source
+      </label>
+      <div className="mt-2">
+        <Select
+          value={source}
+          onValueChange={(v) => setSource(v as WorkRequestSource)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {WORK_REQUEST_SOURCES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {WORK_REQUEST_SOURCE_LABELS[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Budget strategy: {BUDGET_STRATEGY_LABELS[budgetStrategyFor(source)]}
+      </p>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        {isExternalWorkSource(source)
+          ? "External work — the vehicle stays a customer vehicle and is never added to the DHX asset register."
+          : "DHX-owned work — pick the vehicle from the DHX registry."}
+      </p>
+    </section>
+  );
+}
+
+
 
 // -------- Step 2 --------
 function StepPhotos({

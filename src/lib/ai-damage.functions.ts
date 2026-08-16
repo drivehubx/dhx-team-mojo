@@ -83,7 +83,7 @@ export const analyzeRepairPart = createServerFn({ method: "POST" })
     const { data: job } = await workshop
       .from("jobs")
       .select(
-        "id, vehicle_id, damage_description, repair_stage, intake_checklist",
+        "id, vehicle_id, damage_description, repair_stage, intake_checklist, plate_number, car_make, car_model",
       )
       .eq("id", data.jobId)
       .maybeSingle();
@@ -92,11 +92,13 @@ export const analyzeRepairPart = createServerFn({ method: "POST" })
 
     const [{ data: vehicle }, { data: existingParts }, { data: intakeFiles }] =
       await Promise.all([
-        core
-          .from("vehicles")
-          .select("plate_number, make, model, year, color")
-          .eq("id", job.vehicle_id)
-          .maybeSingle(),
+        job.vehicle_id
+          ? core
+              .from("vehicles")
+              .select("plate_number, make, model, year, color")
+              .eq("id", job.vehicle_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
         workshop
           .from("repair_parts")
           .select("part_name, quantity, provenance, related_damage")
@@ -132,7 +134,13 @@ export const analyzeRepairPart = createServerFn({ method: "POST" })
 
     // --- Call the shared DHX ai-vision edge function (own Gemini key) ---
 
-    const veh = vehicle ?? {};
+    const veh: any =
+      vehicle ??
+      {
+        plate_number: (job as any).plate_number,
+        make: (job as any).car_make,
+        model: (job as any).car_model,
+      };
     const partsList =
       (existingParts as any[] | null)?.length
         ? (existingParts as any[])
@@ -324,17 +332,19 @@ export const analyzeInitialDamage = createServerFn({ method: "POST" })
 
     const { data: job } = await workshop
       .from("jobs")
-      .select("id, vehicle_id, damage_description, repair_stage, work_request_source")
+      .select("id, vehicle_id, damage_description, repair_stage, work_request_source, plate_number, car_make, car_model")
       .eq("id", data.jobId)
       .maybeSingle();
     if (!job) throw new Error("Job not found");
 
     const [{ data: vehicle }, { data: intakeFiles }] = await Promise.all([
-      core
-        .from("vehicles")
-        .select("plate_number, make, model, year, color")
-        .eq("id", job.vehicle_id)
-        .maybeSingle(),
+      job.vehicle_id
+        ? core
+            .from("vehicles")
+            .select("plate_number, make, model, year, color")
+            .eq("id", job.vehicle_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
       core
         .from("files")
         .select("url")
@@ -358,7 +368,13 @@ export const analyzeInitialDamage = createServerFn({ method: "POST" })
 
 
 
-    const veh = vehicle ?? {};
+    const veh: any =
+      vehicle ??
+      {
+        plate_number: (job as any).plate_number,
+        make: (job as any).car_make,
+        model: (job as any).car_model,
+      };
     const systemPrompt = `You are the DHX Body & Paint AI damage-assessment engine (Phase 1: accident intake).
 The technician has just taken photos of an incoming damaged vehicle. Produce the ORIGINAL assessment
 that a human estimator will review and approve. Be conservative — flag low confidence rather than
@@ -547,17 +563,19 @@ export const identifyVehicleFromPhotos = createServerFn({ method: "POST" })
 
     const { data: job } = await workshop
       .from("jobs")
-      .select("id, vehicle_id")
+      .select("id, vehicle_id, plate_number, car_make, car_model")
       .eq("id", data.jobId)
       .maybeSingle();
     if (!job) throw new Error("Job not found");
 
     const [{ data: vehicle }, { data: intakeFiles }] = await Promise.all([
-      core
-        .from("vehicles")
-        .select("plate_number")
-        .eq("id", job.vehicle_id)
-        .maybeSingle(),
+      job.vehicle_id
+        ? core
+            .from("vehicles")
+            .select("plate_number")
+            .eq("id", job.vehicle_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
       core
         .from("files")
         .select("url")
@@ -579,7 +597,8 @@ export const identifyVehicleFromPhotos = createServerFn({ method: "POST" })
       .filter(Boolean) as string[];
     if (photoUrls.length === 0) return identifyFallback("storage_signed_urls_failed");
 
-    const plate = (vehicle as any)?.plate_number ?? "?";
+    const plate =
+      (vehicle as any)?.plate_number ?? (job as any).plate_number ?? "?";
     const systemPrompt = `You are a vehicle identification assistant for a Malaysian workshop.
 Look at the photos of the vehicle (plate: ${plate}) and identify:
 - make (brand, e.g. "Perodua", "Toyota", "Honda")

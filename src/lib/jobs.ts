@@ -21,12 +21,19 @@ export type JobWithRels = WorkshopJob & {
 
 async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   if (rows.length === 0) return [];
-  const vIds = Array.from(new Set(rows.map((r) => r.vehicle_id)));
+  // External/customer jobs have vehicle_id = NULL (no DHX asset) — skip them.
+  const vIds = Array.from(
+    new Set(rows.map((r) => r.vehicle_id).filter((v): v is string => !!v)),
+  );
+
   const jIds = rows.map((r) => r.id);
   const [{ data: vehicles }, { data: jws }] = await Promise.all([
-    sbCore().from("vehicles").select("id, plate_number, make, model, status").in("id", vIds),
+    vIds.length
+      ? sbCore().from("vehicles").select("id, plate_number, make, model, status").in("id", vIds)
+      : Promise.resolve({ data: [] as any[] }),
     sbWorkshop().from("job_workers").select("*").in("job_id", jIds),
   ]);
+
   const vMap = new Map((vehicles ?? []).map((v: any) => [v.id, v]));
   const workerRows = (jws ?? []) as WorkshopJobWorker[];
   const pIds = Array.from(new Set(workerRows.map((w) => w.profile_id)));
@@ -36,7 +43,7 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   const pMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
   return rows.map((j) => ({
     ...j,
-    vehicle: (vMap.get(j.vehicle_id) as any) ?? null,
+    vehicle: (j.vehicle_id ? (vMap.get(j.vehicle_id) as any) : null) ?? null,
     workers: workerRows
       .filter((w) => w.job_id === j.id)
       .map((w) => ({
@@ -1019,26 +1026,46 @@ export function useCreateDraftJobForAI(workspaceId: string | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
-      vehicle_id: string;
+      /**
+       * DHX asset lane: id of an existing core.vehicles row.
+       * External/customer lane: null — we never create a DHX asset for a
+       * customer's car. The customer_* / plate / make / model fields below
+       * carry the facts on workshop.jobs itself.
+       */
+      vehicle_id: string | null;
       work_request_source: WorkRequestSource;
       damage_description: string;
       photos: File[];
+      plate_number?: string | null;
+      car_make?: string | null;
+      car_model?: string | null;
+      customer_name?: string | null;
+      customer_phone?: string | null;
     }) => {
       if (!workspaceId) throw new Error("Workspace not ready");
+      const payload: Record<string, unknown> = {
+        workspace_id: workspaceId,
+        vehicle_id: input.vehicle_id ?? null,
+        description: input.damage_description || null,
+        damage_description: input.damage_description || null,
+        work_request_source: input.work_request_source,
+        repair_stage: "queued" as RepairStage,
+        status: "open",
+      };
+      if (!input.vehicle_id) {
+        payload.plate_number = input.plate_number?.trim().toUpperCase() || null;
+        payload.car_make = input.car_make?.trim() || null;
+        payload.car_model = input.car_model?.trim() || null;
+        payload.customer_name = input.customer_name?.trim() || null;
+        payload.customer_phone = input.customer_phone?.trim() || null;
+      }
       const { data: job, error } = await sbWorkshop()
         .from("jobs")
-        .insert({
-          workspace_id: workspaceId,
-          vehicle_id: input.vehicle_id,
-          description: input.damage_description || null,
-          damage_description: input.damage_description || null,
-          work_request_source: input.work_request_source,
-          repair_stage: "queued" as RepairStage,
-          status: "open",
-        })
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
+
       const jobRow = job as WorkshopJob;
 
       await uploadIntakePhotos(workspaceId, jobRow.id, input.photos);

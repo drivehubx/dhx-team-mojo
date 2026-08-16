@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { useJobs, type JobWithRels } from "@/lib/jobs";
+import { jobVehicleDisplay } from "@/lib/vehicle-lane";
 import { Search, Plus, Car, ChevronRight, Loader2 } from "lucide-react";
 import type { JobStatus } from "@/integrations/supabase/shared-schema";
 
@@ -68,11 +69,12 @@ function JobsPage() {
         if (j.status !== statusOfFilter[filter as keyof typeof statusOfFilter]) return false;
       }
       if (!txt) return true;
-      const plate = j.vehicle?.plate_number?.toLowerCase() ?? "";
-      const make = j.vehicle?.make?.toLowerCase() ?? "";
-      const model = j.vehicle?.model?.toLowerCase() ?? "";
+      const d = jobVehicleDisplay(j);
+      const plate = d.plate?.toLowerCase() ?? "";
+      const makeModel = d.makeModel?.toLowerCase() ?? "";
       const desc = j.description?.toLowerCase() ?? "";
-      return plate.includes(txt) || make.includes(txt) || model.includes(txt) || desc.includes(txt);
+      return plate.includes(txt) || makeModel.includes(txt) || desc.includes(txt);
+
     });
   }, [jobs, archivedJobs, filter, query, profile?.id]);
 
@@ -150,6 +152,7 @@ function JobsPage() {
 function JobCard({ job }: { job: JobWithRels }) {
   const meta = statusChip[job.status];
   const archived = (job as any).archived_at != null;
+  const v = jobVehicleDisplay(job);
   return (
     <li>
       <Link
@@ -162,13 +165,17 @@ function JobCard({ job }: { job: JobWithRels }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
-              {job.vehicle?.plate_number ?? "—"}
+              {v.plate ?? "—"}
             </p>
             <p className="text-[15px] font-semibold leading-tight truncate">
-              {[job.vehicle?.make, job.vehicle?.model].filter(Boolean).join(" ") || (
-                <span className="text-muted-foreground">No vehicle</span>
-              )}
+              {v.makeModel ?? <span className="text-muted-foreground">No vehicle</span>}
             </p>
+            {v.lane === "customer" && (
+              <span className="mt-1 inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                Customer vehicle
+              </span>
+            )}
+
             <p className="mt-0.5 text-[10px] font-mono text-muted-foreground/80">{roRef(job.id)}</p>
             {job.description && (
               <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{job.description}</p>

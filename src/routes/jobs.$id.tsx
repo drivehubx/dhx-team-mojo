@@ -45,6 +45,7 @@ import {
 import { useHardDeleteBPJob } from "@/lib/bp";
 import { analyzeInitialDamage, analyzeRepairPart } from "@/lib/ai-damage.functions";
 import { VehicleModelFixer } from "@/components/vehicle-model-fixer";
+import { jobVehicleDisplay } from "@/lib/vehicle-lane";
 import type {
   JobStatus,
   RepairStage,
@@ -168,6 +169,7 @@ function JobDetailPage() {
   const job = q.data;
   const stage = (job.repair_stage ?? "queued") as RepairStage;
   const stageMeta = stageStyle[stage];
+  const vehicleDisplay = jobVehicleDisplay(job);
   const checklist = (job.intake_checklist ?? {}) as IntakeChecklist;
 
   // Assigned Team Member may update operational sections (stage, status,
@@ -242,12 +244,18 @@ function JobDetailPage() {
           </Link>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              {job.vehicle?.plate_number ?? "—"}
+              {vehicleDisplay.plate ?? "—"}
             </p>
             <h1 className="text-base font-semibold tracking-tight truncate">
-              {[job.vehicle?.make, job.vehicle?.model].filter(Boolean).join(" ") || "Vehicle"}
+              {vehicleDisplay.makeModel ?? "Vehicle"}
             </h1>
+            {vehicleDisplay.lane === "customer" && (
+              <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                Customer vehicle — not a DHX asset
+              </span>
+            )}
           </div>
+
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${stageMeta.bg}`}>
             {stageMeta.label}
           </span>
