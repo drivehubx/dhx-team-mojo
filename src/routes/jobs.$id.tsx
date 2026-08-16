@@ -168,6 +168,7 @@ function JobDetailPage() {
   const job = q.data;
   const stage = (job.repair_stage ?? "queued") as RepairStage;
   const stageMeta = stageStyle[stage];
+  const vehicleDisplay = jobVehicleDisplay(job);
   const checklist = (job.intake_checklist ?? {}) as IntakeChecklist;
 
   // Assigned Team Member may update operational sections (stage, status,
