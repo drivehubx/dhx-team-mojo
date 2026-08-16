@@ -82,6 +82,15 @@ function NewWorkRequestPage() {
   const [plateQuery, setPlateQuery] = useState("");
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
+  // ---- External / customer vehicle lane (never enters core.vehicles) ----
+  const [extPlate, setExtPlate] = useState("");
+  const [extMake, setExtMake] = useState("");
+  const [extModel, setExtModel] = useState("");
+  const [custName, setCustName] = useState("");
+  const [custPhone, setCustPhone] = useState("");
+  const external = isExternalWorkSource(source);
+
+
   // ---- Step 2 state ----
   const [photos, setPhotos] = useState<File[]>([]);
   const [notes, setNotes] = useState("");
