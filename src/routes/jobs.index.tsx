@@ -68,11 +68,12 @@ function JobsPage() {
         if (j.status !== statusOfFilter[filter as keyof typeof statusOfFilter]) return false;
       }
       if (!txt) return true;
-      const plate = j.vehicle?.plate_number?.toLowerCase() ?? "";
-      const make = j.vehicle?.make?.toLowerCase() ?? "";
-      const model = j.vehicle?.model?.toLowerCase() ?? "";
+      const d = jobVehicleDisplay(j);
+      const plate = d.plate?.toLowerCase() ?? "";
+      const makeModel = d.makeModel?.toLowerCase() ?? "";
       const desc = j.description?.toLowerCase() ?? "";
-      return plate.includes(txt) || make.includes(txt) || model.includes(txt) || desc.includes(txt);
+      return plate.includes(txt) || makeModel.includes(txt) || desc.includes(txt);
+
     });
   }, [jobs, archivedJobs, filter, query, profile?.id]);
 
