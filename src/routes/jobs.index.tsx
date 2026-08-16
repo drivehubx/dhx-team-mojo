@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { useJobs, type JobWithRels } from "@/lib/jobs";
+import { jobVehicleDisplay } from "@/lib/vehicle-lane";
 import { Search, Plus, Car, ChevronRight, Loader2 } from "lucide-react";
 import type { JobStatus } from "@/integrations/supabase/shared-schema";
 
