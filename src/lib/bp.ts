@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { dhxCore, dhxWorkshop, dhxStorage, DHX_DOCS_BUCKET } from "@/lib/dhx";
+import { dhxCore, dhxWorkshop, dhxStorage } from "@/lib/dhx";
 import { supabase } from "@/integrations/supabase/client";
 
 export type BPSource =
@@ -124,10 +124,14 @@ export type BPPhoto = {
   created_at: string;
 };
 
+// Canonical job-photo lane, shared with /jobs (src/lib/jobs.ts) and the AI
+// assessment reads: bucket `job-photos`, core.files.owner_type = "workshop.jobs".
+const JOB_PHOTOS_BUCKET = "job-photos";
+
 async function signPaths(paths: string[]): Promise<Record<string, string>> {
   if (!paths.length) return {};
   const { data, error } = await dhxStorage
-    .from(DHX_DOCS_BUCKET)
+    .from(JOB_PHOTOS_BUCKET)
     .createSignedUrls(paths, 60 * 60);
   if (error) return {};
   const out: Record<string, string> = {};
@@ -200,7 +204,7 @@ export function useBPPhotos(workspaceId: string | null, jobId: string) {
         .from("files")
         .select("id, doc_type, storage_path, url, created_at")
         .eq("workspace_id", workspaceId)
-        .eq("owner_type", "workshop_job")
+        .eq("owner_type", "workshop.jobs")
         .eq("owner_id", jobId)
         .in("doc_type", ["before", "after"])
         .order("created_at", { ascending: true });
@@ -248,14 +252,14 @@ async function uploadPhotos(
     const uuid =
       (globalThis.crypto as any)?.randomUUID?.() ??
       Math.random().toString(36).slice(2);
-    const path = `${workspaceId}/workshop_jobs/${jobId}/${docType}/${uuid}.${extOf(file.name)}`;
+    const path = `${workspaceId}/${jobId}/${docType}/${uuid}.${extOf(file.name)}`;
     const { error: upErr } = await dhxStorage
-      .from(DHX_DOCS_BUCKET)
+      .from(JOB_PHOTOS_BUCKET)
       .upload(path, file, { contentType: file.type || undefined });
     if (upErr) throw upErr;
     const { error: fErr } = await dhxCore().from("files").insert({
       workspace_id: workspaceId,
-      owner_type: "workshop_job",
+      owner_type: "workshop.jobs",
       owner_id: jobId,
       file_type: file.type || "image/jpeg",
       doc_type: docType,
