@@ -45,6 +45,7 @@ import {
 import { useHardDeleteBPJob } from "@/lib/bp";
 import { analyzeInitialDamage, analyzeRepairPart } from "@/lib/ai-damage.functions";
 import { VehicleModelFixer } from "@/components/vehicle-model-fixer";
+import { jobVehicleDisplay } from "@/lib/vehicle-lane";
 import type {
   JobStatus,
   RepairStage,
