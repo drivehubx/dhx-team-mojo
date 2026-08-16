@@ -21,7 +21,11 @@ export type JobWithRels = WorkshopJob & {
 
 async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   if (rows.length === 0) return [];
-  const vIds = Array.from(new Set(rows.map((r) => r.vehicle_id)));
+  // External/customer jobs have vehicle_id = NULL (no DHX asset) — skip them.
+  const vIds = Array.from(
+    new Set(rows.map((r) => r.vehicle_id).filter((v): v is string => !!v)),
+  );
+
   const jIds = rows.map((r) => r.id);
   const [{ data: vehicles }, { data: jws }] = await Promise.all([
     sbCore().from("vehicles").select("id, plate_number, make, model, status").in("id", vIds),
