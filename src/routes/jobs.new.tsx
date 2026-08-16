@@ -140,7 +140,14 @@ function NewWorkRequestPage() {
     setPhotos((prev) => prev.filter((_, i) => i !== idx));
 
   const goToAI = async () => {
-    if (!vehicle) return;
+    if (external) {
+      if (!extPlate.trim()) {
+        toast.error("Plate number required");
+        return;
+      }
+    } else if (!vehicle) {
+      return;
+    }
     if (photos.length === 0) {
       toast.error("Add at least one photo");
       return;
@@ -151,12 +158,20 @@ function NewWorkRequestPage() {
       let activeJobId = jobId;
       if (!activeJobId) {
         // First run: create ONE draft job with all photos.
+        // External/customer work is created WITHOUT a core.vehicles link so it
+        // never enters the DHX asset register.
         const draft = await createDraft.mutateAsync({
-          vehicle_id: vehicle.id,
+          vehicle_id: external ? null : vehicle!.id,
           work_request_source: source,
           damage_description: notes.trim(),
           photos,
+          plate_number: external ? extPlate : null,
+          car_make: external ? extMake : null,
+          car_model: external ? extModel : null,
+          customer_name: external ? custName : null,
+          customer_phone: external ? custPhone : null,
         });
+
         activeJobId = draft.id;
         setJobId(draft.id);
         setUploadedCount(photos.length);
