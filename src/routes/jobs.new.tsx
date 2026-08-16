@@ -30,6 +30,11 @@ import {
   budgetStrategyFor,
   uploadIntakePhotos,
 } from "@/lib/jobs";
+import {
+  isExternalWorkSource,
+  CUSTOMER_VEHICLE_NOTE,
+} from "@/lib/vehicle-lane";
+
 import { analyzeInitialDamage } from "@/lib/ai-damage.functions";
 import { VehicleModelFixer } from "@/components/vehicle-model-fixer";
 import { Textarea } from "@/components/ui/textarea";
