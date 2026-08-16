@@ -372,6 +372,17 @@ function StepVehicle({
   setVehicle,
   showQuickAdd,
   setShowQuickAdd,
+  external,
+  extPlate,
+  setExtPlate,
+  extMake,
+  setExtMake,
+  extModel,
+  setExtModel,
+  custName,
+  setCustName,
+  custPhone,
+  setCustPhone,
   onNext,
 }: {
   source: WorkRequestSource;
@@ -383,8 +394,20 @@ function StepVehicle({
   setVehicle: (v: PickedVehicle | null) => void;
   showQuickAdd: boolean;
   setShowQuickAdd: (v: boolean) => void;
+  external: boolean;
+  extPlate: string;
+  setExtPlate: (v: string) => void;
+  extMake: string;
+  setExtMake: (v: string) => void;
+  extModel: string;
+  setExtModel: (v: string) => void;
+  custName: string;
+  setCustName: (v: string) => void;
+  custPhone: string;
+  setCustPhone: (v: string) => void;
   onNext: () => void;
 }) {
+
   const searchQ = useSearchVehiclesByPlate(workspaceId, plateQuery);
   const quickAdd = useQuickAddVehicle(workspaceId);
 
