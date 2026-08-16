@@ -662,31 +662,7 @@ function StepVehicle({
         )}
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Work Request Source
-        </label>
-        <div className="mt-2">
-          <Select
-            value={source}
-            onValueChange={(v) => setSource(v as WorkRequestSource)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {WORK_REQUEST_SOURCES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {WORK_REQUEST_SOURCE_LABELS[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          Budget strategy: {BUDGET_STRATEGY_LABELS[budgetStrategyFor(source)]}
-        </p>
-      </section>
+      <SourcePicker source={source} setSource={setSource} />
 
       <button
         type="button"
@@ -698,6 +674,7 @@ function StepVehicle({
       </button>
     </div>
   );
+
 }
 
 // -------- Step 2 --------
