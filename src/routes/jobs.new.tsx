@@ -442,18 +442,88 @@ function StepVehicle({
     }
   };
 
+  if (external) {
+    return (
+      <div className="space-y-5">
+        <SourcePicker source={source} setSource={setSource} />
+
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Step 1
+          </p>
+          <h2 className="mt-1 text-sm font-semibold">Customer Vehicle</h2>
+          <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+            <ShieldAlert className="h-3.5 w-3.5" />
+            Not a DHX asset
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {CUSTOMER_VEHICLE_NOTE} Details are kept on this repair order only —
+            no DHX vehicle record is created.
+          </p>
+
+          <div className="mt-3 space-y-2">
+            <input
+              autoFocus
+              value={extPlate}
+              onChange={(e) => setExtPlate(e.target.value.toUpperCase())}
+              placeholder="Plate number *"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                value={extMake}
+                onChange={(e) => setExtMake(e.target.value)}
+                placeholder="Make"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              />
+              <input
+                value={extModel}
+                onChange={(e) => setExtModel(e.target.value)}
+                placeholder="Model"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <input
+              value={custName}
+              onChange={(e) => setCustName(e.target.value)}
+              placeholder="Customer name"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <input
+              value={custPhone}
+              onChange={(e) => setCustPhone(e.target.value)}
+              inputMode="tel"
+              placeholder="Customer phone"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+          </div>
+        </section>
+
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!extPlate.trim()}
+          className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow disabled:opacity-50"
+        >
+          Continue to photos
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Step 1
         </p>
-        <h2 className="mt-1 text-sm font-semibold">Vehicle</h2>
+        <h2 className="mt-1 text-sm font-semibold">DHX Vehicle</h2>
         <p className="text-xs text-muted-foreground">
           One vehicle, one identity — always find it first.
         </p>
 
         {vehicle ? (
+
           <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary">
