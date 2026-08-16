@@ -246,7 +246,12 @@ function NewWorkRequestPage() {
         {step === 1 && (
           <StepVehicle
             source={source}
-            setSource={setSource}
+            setSource={(s) => {
+              setSource(s);
+              // Switching lanes must never leave a stale DHX asset attached to
+              // customer work (or customer facts on internal work).
+              if (isExternalWorkSource(s)) setVehicle(null);
+            }}
             plateQuery={plateQuery}
             setPlateQuery={setPlateQuery}
             workspaceId={workspaceId}
@@ -254,8 +259,20 @@ function NewWorkRequestPage() {
             setVehicle={setVehicle}
             showQuickAdd={showQuickAdd}
             setShowQuickAdd={setShowQuickAdd}
+            external={external}
+            extPlate={extPlate}
+            setExtPlate={setExtPlate}
+            extMake={extMake}
+            setExtMake={setExtMake}
+            extModel={extModel}
+            setExtModel={setExtModel}
+            custName={custName}
+            setCustName={setCustName}
+            custPhone={custPhone}
+            setCustPhone={setCustPhone}
             onNext={() => setStep(2)}
           />
+
         )}
         {step === 2 && (
           <StepPhotos
