@@ -1026,26 +1026,46 @@ export function useCreateDraftJobForAI(workspaceId: string | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
-      vehicle_id: string;
+      /**
+       * DHX asset lane: id of an existing core.vehicles row.
+       * External/customer lane: null — we never create a DHX asset for a
+       * customer's car. The customer_* / plate / make / model fields below
+       * carry the facts on workshop.jobs itself.
+       */
+      vehicle_id: string | null;
       work_request_source: WorkRequestSource;
       damage_description: string;
       photos: File[];
+      plate_number?: string | null;
+      car_make?: string | null;
+      car_model?: string | null;
+      customer_name?: string | null;
+      customer_phone?: string | null;
     }) => {
       if (!workspaceId) throw new Error("Workspace not ready");
+      const payload: Record<string, unknown> = {
+        workspace_id: workspaceId,
+        vehicle_id: input.vehicle_id ?? null,
+        description: input.damage_description || null,
+        damage_description: input.damage_description || null,
+        work_request_source: input.work_request_source,
+        repair_stage: "queued" as RepairStage,
+        status: "open",
+      };
+      if (!input.vehicle_id) {
+        payload.plate_number = input.plate_number?.trim().toUpperCase() || null;
+        payload.car_make = input.car_make?.trim() || null;
+        payload.car_model = input.car_model?.trim() || null;
+        payload.customer_name = input.customer_name?.trim() || null;
+        payload.customer_phone = input.customer_phone?.trim() || null;
+      }
       const { data: job, error } = await sbWorkshop()
         .from("jobs")
-        .insert({
-          workspace_id: workspaceId,
-          vehicle_id: input.vehicle_id,
-          description: input.damage_description || null,
-          damage_description: input.damage_description || null,
-          work_request_source: input.work_request_source,
-          repair_stage: "queued" as RepairStage,
-          status: "open",
-        })
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
+
       const jobRow = job as WorkshopJob;
 
       await uploadIntakePhotos(workspaceId, jobRow.id, input.photos);
