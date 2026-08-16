@@ -43,7 +43,7 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   const pMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
   return rows.map((j) => ({
     ...j,
-    vehicle: (vMap.get(j.vehicle_id) as any) ?? null,
+    vehicle: (j.vehicle_id ? (vMap.get(j.vehicle_id) as any) : null) ?? null,
     workers: workerRows
       .filter((w) => w.job_id === j.id)
       .map((w) => ({
