@@ -143,8 +143,20 @@ export type IntakeChecklist = Partial<Record<
 export type WorkshopJob = {
   id: UUID;
   workspace_id: UUID;
-  vehicle_id: UUID;
+  /**
+   * NULL for external/customer vehicles (walk-in, insurance, partner workshop).
+   * Those never enter core.vehicles / the DHX asset register — the denormalized
+   * plate_number / car_make / car_model / customer_* fields below carry the facts.
+   */
+  vehicle_id: UUID | null;
+  plate_number: string | null;
+  car_make: string | null;
+  car_model: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  work_request_source: string | null;
   description: string | null;
+
   status: JobStatus;
   created_at: string;
   updated_at: string;
