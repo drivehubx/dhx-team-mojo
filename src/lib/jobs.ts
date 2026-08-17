@@ -1074,12 +1074,27 @@ export function useCreateDraftJobForAI(workspaceId: string | null) {
         status: "open",
       };
       if (!input.vehicle_id) {
+        // Snapshot fallback stays on the job itself.
         payload.plate_number = input.plate_number?.trim().toUpperCase() || null;
         payload.car_make = input.car_make?.trim() || null;
         payload.car_model = input.car_model?.trim() || null;
         payload.customer_name = input.customer_name?.trim() || null;
         payload.customer_phone = input.customer_phone?.trim() || null;
+
+        // Dedicated customer lane — never core.vehicles.
+        if (isExternalWorkSource(input.work_request_source)) {
+          const { customer_vehicle_id } = await upsertCustomerLane({
+            workspaceId,
+            plate_number: input.plate_number,
+            car_make: input.car_make,
+            car_model: input.car_model,
+            customer_name: input.customer_name,
+            customer_phone: input.customer_phone,
+          });
+          payload.customer_vehicle_id = customer_vehicle_id;
+        }
       }
+
       const { data: job, error } = await sbWorkshop()
         .from("jobs")
         .insert(payload)
