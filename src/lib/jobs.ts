@@ -8,6 +8,12 @@ import {
   type CoreProfile,
   type JobStatus,
 } from "@/integrations/supabase/shared-schema";
+import {
+  fetchCustomerVehicles,
+  upsertCustomerLane,
+  type CustomerVehicle,
+} from "@/lib/customer-vehicles";
+
 
 export type JobWithRels = WorkshopJob & {
   vehicle: Pick<CoreVehicle, "id" | "plate_number" | "make" | "model" | "status"> | null;
