@@ -885,6 +885,9 @@ export function useSearchVehiclesByPlate(
         .eq("workspace_id", workspaceId)
         .or(`plate_number.ilike.%${q}%,make.ilike.%${q}%,model.ilike.%${q}%`)
         .neq("status", "sold")
+        // Retired/archived DHX assets (tombstones) must not be selectable.
+        .is("archived_at", null)
+
         .order("plate_number")
         .limit(10);
       if (error) throw error;
