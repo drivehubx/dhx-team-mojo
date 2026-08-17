@@ -8,9 +8,17 @@ import {
   type CoreProfile,
   type JobStatus,
 } from "@/integrations/supabase/shared-schema";
+import { isExternalWorkSource } from "@/lib/vehicle-lane";
+import {
+  fetchCustomerVehicles,
+  upsertCustomerLane,
+  type CustomerVehicle,
+} from "@/lib/customer-vehicles";
+
 
 export type JobWithRels = WorkshopJob & {
   vehicle: Pick<CoreVehicle, "id" | "plate_number" | "make" | "model" | "status"> | null;
+  customer_vehicle: CustomerVehicle | null;
   workers: Array<{
     id: string;
     profile_id: string;
@@ -34,6 +42,12 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
     sbWorkshop().from("job_workers").select("*").in("job_id", jIds),
   ]);
 
+  // Customer lane: workshop.customer_vehicles (never a DHX asset).
+  const cvMap = await fetchCustomerVehicles(
+    rows[0]!.workspace_id,
+    rows.map((r) => r.customer_vehicle_id).filter((v): v is string => !!v),
+  );
+
   const vMap = new Map((vehicles ?? []).map((v: any) => [v.id, v]));
   const workerRows = (jws ?? []) as WorkshopJobWorker[];
   const pIds = Array.from(new Set(workerRows.map((w) => w.profile_id)));
@@ -44,6 +58,8 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   return rows.map((j) => ({
     ...j,
     vehicle: (j.vehicle_id ? (vMap.get(j.vehicle_id) as any) : null) ?? null,
+    customer_vehicle:
+      (j.customer_vehicle_id ? cvMap.get(j.customer_vehicle_id) : null) ?? null,
     workers: workerRows
       .filter((w) => w.job_id === j.id)
       .map((w) => ({
@@ -54,6 +70,7 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
       })),
   }));
 }
+
 
 export function useJobs(
   workspaceId: string | null,
@@ -113,8 +130,10 @@ export function useVehicles(
       let qb = sbCore()
         .from("vehicles")
         .select("*")
-        .eq("workspace_id", workspaceId);
+        .eq("workspace_id", workspaceId)
+        .is("archived_at", null);
       if (!includeSold) qb = qb.neq("status", "sold");
+
       const { data, error } = await qb.order("plate_number");
       if (error) throw error;
       return (data ?? []) as CoreVehicle[];
@@ -869,6 +888,9 @@ export function useSearchVehiclesByPlate(
         .eq("workspace_id", workspaceId)
         .or(`plate_number.ilike.%${q}%,make.ilike.%${q}%,model.ilike.%${q}%`)
         .neq("status", "sold")
+        // Retired/archived DHX assets (tombstones) must not be selectable.
+        .is("archived_at", null)
+
         .order("plate_number")
         .limit(10);
       if (error) throw error;
@@ -1053,12 +1075,27 @@ export function useCreateDraftJobForAI(workspaceId: string | null) {
         status: "open",
       };
       if (!input.vehicle_id) {
+        // Snapshot fallback stays on the job itself.
         payload.plate_number = input.plate_number?.trim().toUpperCase() || null;
         payload.car_make = input.car_make?.trim() || null;
         payload.car_model = input.car_model?.trim() || null;
         payload.customer_name = input.customer_name?.trim() || null;
         payload.customer_phone = input.customer_phone?.trim() || null;
+
+        // Dedicated customer lane — never core.vehicles.
+        if (isExternalWorkSource(input.work_request_source)) {
+          const { customer_vehicle_id } = await upsertCustomerLane({
+            workspaceId,
+            plate_number: input.plate_number,
+            car_make: input.car_make,
+            car_model: input.car_model,
+            customer_name: input.customer_name,
+            customer_phone: input.customer_phone,
+          });
+          payload.customer_vehicle_id = customer_vehicle_id;
+        }
       }
+
       const { data: job, error } = await sbWorkshop()
         .from("jobs")
         .insert(payload)

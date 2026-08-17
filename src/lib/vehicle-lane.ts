@@ -35,6 +35,7 @@ export type VehicleLane = "dhx_asset" | "customer";
 
 export type JobVehicleFacts = {
   vehicle_id?: string | null;
+  customer_vehicle_id?: string | null;
   plate_number?: string | null;
   car_make?: string | null;
   car_model?: string | null;
@@ -44,12 +45,19 @@ export type JobVehicleFacts = {
     make?: string | null;
     model?: string | null;
   } | null;
+  /** Current record from workshop.customer_vehicles, when linked. */
+  customer_vehicle?: {
+    plate_number?: string | null;
+    make?: string | null;
+    model?: string | null;
+  } | null;
 };
 
 /**
  * Single source of truth for showing a job's vehicle in the UI, whichever lane
  * it lives in. DHX assets read from the linked core.vehicles row; customer
- * vehicles read the job's own denormalized fields.
+ * vehicles prefer the linked workshop.customer_vehicles record and fall back to
+ * the job's own denormalized snapshot.
  */
 export function jobVehicleDisplay(job: JobVehicleFacts): {
   lane: VehicleLane;
@@ -66,10 +74,14 @@ export function jobVehicleDisplay(job: JobVehicleFacts): {
         [linked?.make, linked?.model].filter(Boolean).join(" ") || null,
     };
   }
+  const cv = job.customer_vehicle ?? null;
   return {
     lane: "customer",
-    plate: job.plate_number ?? null,
+    plate: cv?.plate_number ?? job.plate_number ?? null,
     makeModel:
-      [job.car_make, job.car_model].filter(Boolean).join(" ") || null,
+      [cv?.make ?? job.car_make, cv?.model ?? job.car_model]
+        .filter(Boolean)
+        .join(" ") || null,
   };
 }
+

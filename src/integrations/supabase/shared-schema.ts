@@ -149,8 +149,11 @@ export type WorkshopJob = {
    * plate_number / car_make / car_model / customer_* fields below carry the facts.
    */
   vehicle_id: UUID | null;
+  /** Dedicated customer lane: workshop.customer_vehicles row (external jobs). */
+  customer_vehicle_id: UUID | null;
   plate_number: string | null;
   car_make: string | null;
+
   car_model: string | null;
   customer_name: string | null;
   customer_phone: string | null;
