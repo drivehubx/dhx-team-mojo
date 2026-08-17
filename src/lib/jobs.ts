@@ -11,6 +11,7 @@ import {
 
 export type JobWithRels = WorkshopJob & {
   vehicle: Pick<CoreVehicle, "id" | "plate_number" | "make" | "model" | "status"> | null;
+  customer_vehicle: CustomerVehicle | null;
   workers: Array<{
     id: string;
     profile_id: string;
@@ -34,6 +35,12 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
     sbWorkshop().from("job_workers").select("*").in("job_id", jIds),
   ]);
 
+  // Customer lane: workshop.customer_vehicles (never a DHX asset).
+  const cvMap = await fetchCustomerVehicles(
+    rows[0]!.workspace_id,
+    rows.map((r) => r.customer_vehicle_id).filter((v): v is string => !!v),
+  );
+
   const vMap = new Map((vehicles ?? []).map((v: any) => [v.id, v]));
   const workerRows = (jws ?? []) as WorkshopJobWorker[];
   const pIds = Array.from(new Set(workerRows.map((w) => w.profile_id)));
@@ -44,6 +51,8 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
   return rows.map((j) => ({
     ...j,
     vehicle: (j.vehicle_id ? (vMap.get(j.vehicle_id) as any) : null) ?? null,
+    customer_vehicle:
+      (j.customer_vehicle_id ? cvMap.get(j.customer_vehicle_id) : null) ?? null,
     workers: workerRows
       .filter((w) => w.job_id === j.id)
       .map((w) => ({
@@ -54,6 +63,7 @@ async function hydrateJobs(rows: WorkshopJob[]): Promise<JobWithRels[]> {
       })),
   }));
 }
+
 
 export function useJobs(
   workspaceId: string | null,
