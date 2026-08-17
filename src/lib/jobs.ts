@@ -129,8 +129,10 @@ export function useVehicles(
       let qb = sbCore()
         .from("vehicles")
         .select("*")
-        .eq("workspace_id", workspaceId);
+        .eq("workspace_id", workspaceId)
+        .is("archived_at", null);
       if (!includeSold) qb = qb.neq("status", "sold");
+
       const { data, error } = await qb.order("plate_number");
       if (error) throw error;
       return (data ?? []) as CoreVehicle[];
