@@ -8,6 +8,7 @@ import {
   type CoreProfile,
   type JobStatus,
 } from "@/integrations/supabase/shared-schema";
+import { isExternalWorkSource } from "@/lib/vehicle-lane";
 import {
   fetchCustomerVehicles,
   upsertCustomerLane,
