@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dhxCore, dhxWorkshop, dhxStorage } from "@/lib/dhx";
 import { supabase } from "@/integrations/supabase/client";
+import { upsertCustomerLane } from "@/lib/customer-vehicles";
+import { isExternalWorkSource } from "@/lib/vehicle-lane";
 
 export type BPSource =
   | "walk_in"
@@ -65,6 +67,7 @@ export type BPJob = {
   id: string;
   workspace_id: string;
   vehicle_id: string | null;
+  customer_vehicle_id: string | null;
   customer_name: string | null;
   customer_phone: string | null;
   plate_number: string | null;
@@ -292,6 +295,17 @@ export function useCreateBPJob(workspaceId: string | null) {
       };
       if (!input.asDraft && input.estimate_amount != null) {
         payload.estimate_amount = input.estimate_amount;
+      }
+      if (isExternalWorkSource(input.source)) {
+        const { customer_vehicle_id } = await upsertCustomerLane({
+          workspaceId,
+          plate_number: input.plate_number,
+          car_make: input.car_make,
+          car_model: input.car_model,
+          customer_name: input.customer_name,
+          customer_phone: input.customer_phone,
+        });
+        payload.customer_vehicle_id = customer_vehicle_id;
       }
       if (input.duplicate_override_reason && input.duplicate_override_reason.trim()) {
         payload.duplicate_override_reason = input.duplicate_override_reason.trim();
