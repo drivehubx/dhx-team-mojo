@@ -836,6 +836,25 @@ function VideoCard({
           </p>
         ) : null}
 
+        {onSetCover && (
+          <label className="mt-2 inline-flex cursor-pointer items-center gap-1 rounded-md border border-input px-2 py-1 text-[11px] text-muted-foreground active:opacity-80">
+            <ImagePlus className="h-3.5 w-3.5" />
+            {item.storage_path ? tr("Change cover image") : tr("Add cover image")}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onSetCover(f);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+        )}
+
+
+
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
           {item.tag ? (
             <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
