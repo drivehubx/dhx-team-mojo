@@ -31,7 +31,9 @@ import {
 
 } from "lucide-react";
 import { sbWorkshop } from "@/integrations/supabase/shared-schema";
+import { dhxStorage } from "@/lib/dhx";
 import { useWorkspace } from "@/lib/workspace";
+
 
 export const Route = createFileRoute("/learning")({
   head: () => ({
