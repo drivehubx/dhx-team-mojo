@@ -614,6 +614,33 @@ function AddItemDialog({
             </div>
           )}
 
+          {type === "video" && (
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-1">
+                {tr("Cover image")}{" "}
+                {source === "facebook" ? (
+                  <span className="text-amber-400">
+                    {tr("(recommended — Facebook gives no preview image)")}
+                  </span>
+                ) : (
+                  <span>{tr("(optional)")}</span>
+                )}
+              </p>
+              <label className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-md border border-input px-3 text-xs text-muted-foreground">
+                <ImagePlus className="h-3.5 w-3.5" />
+                <span className="truncate">{cover ? cover.name : tr("Choose a photo")}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => setCover(e.target.files?.[0] ?? null)}
+                />
+              </label>
+            </div>
+          )}
+
+
+
           <div>
             <p className="text-[11px] text-muted-foreground mb-1">{tr("Tag")}</p>
             <Input
