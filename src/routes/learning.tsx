@@ -303,8 +303,33 @@ function LearningPage() {
     void loadAll();
   };
 
+  /** Upload/replace an item's cover image. */
+  const setCover = async (item: LearningItem, file: File) => {
+    if (!workspaceId) {
+      toast.error(tr("Workspace not ready"));
+      return;
+    }
+    try {
+      const path = await uploadCover(workspaceId, file);
+      const { error } = await sbWorkshop()
+        .from("learning_items")
+        .update({ storage_path: path })
+        .eq("id", item.id);
+      if (error) throw error;
+      const signed = await signCovers([path]);
+      setCovers((m) => ({ ...m, [path]: signed[path] ?? "" }));
+      setItems((list) =>
+        list.map((i) => (i.id === item.id ? { ...i, storage_path: path } : i)),
+      );
+      toast.success(tr("Cover image updated"));
+    } catch (e: any) {
+      toast.error(e?.message ?? tr("Upload failed"));
+    }
+  };
+
   const canDelete = (item: LearningItem) =>
     isStaff || (profile && item.added_by_id === profile.id);
+
 
   const videos = useMemo(() => items.filter((i) => i.item_type === "video"), [items]);
   const notes = useMemo(() => items.filter((i) => i.item_type === "note"), [items]);
