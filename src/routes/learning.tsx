@@ -31,7 +31,9 @@ import {
 
 } from "lucide-react";
 import { sbWorkshop } from "@/integrations/supabase/shared-schema";
+import { dhxStorage } from "@/lib/dhx";
 import { useWorkspace } from "@/lib/workspace";
+
 
 export const Route = createFileRoute("/learning")({
   head: () => ({
@@ -129,13 +131,55 @@ function verifiedFacebookUrl(raw: string | null): string | null {
   }
 }
 
-/** Best available thumbnail: explicit one, else derived from YouTube. Facebook exposes none. */
-function thumbFor(item: LearningItem): string | null {
-  if (isFacebookItem(item)) return null;
+/** Bucket reused for learning cover images (workspace-scoped folder policy). */
+const LEARNING_BUCKET = "job-photos";
+
+function extOf(name: string): string {
+  const m = name.match(/\.([a-zA-Z0-9]+)$/);
+  return (m?.[1] ?? "jpg").toLowerCase();
+}
+
+/** Upload a cover image and return its storage path. */
+async function uploadCover(workspaceId: string, file: File): Promise<string> {
+  const uuid =
+    (globalThis.crypto as any)?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  const path = `${workspaceId}/learning/${uuid}.${extOf(file.name)}`;
+  const { error } = await dhxStorage
+    .from(LEARNING_BUCKET)
+    .upload(path, file, { contentType: file.type || undefined });
+
+  if (error) throw error;
+  return path;
+}
+
+/** Sign uploaded cover paths for display. */
+async function signCovers(paths: string[]): Promise<Record<string, string>> {
+  if (paths.length === 0) return {};
+  const { data, error } = await dhxStorage
+    .from(LEARNING_BUCKET)
+    .createSignedUrls(paths, 60 * 60);
+  if (error) return {};
+  const out: Record<string, string> = {};
+  for (const it of (data ?? []) as Array<{ path: string | null; signedUrl: string | null }>) {
+    if (it.path && it.signedUrl) out[it.path] = it.signedUrl;
+  }
+  return out;
+}
+
+
+
+/**
+ * Best available thumbnail:
+ * uploaded cover (signed) → explicit thumbnail_url → derived YouTube frame.
+ * Facebook exposes no public thumbnail, so an uploaded cover is the only option there.
+ */
+function thumbFor(item: LearningItem, coverUrl?: string | null): string | null {
+  if (coverUrl) return coverUrl;
   if (item.thumbnail_url) return item.thumbnail_url;
   const id = youtubeId(item.url);
   return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
 }
+
 
 
 function LearningPage() {
@@ -145,6 +189,7 @@ function LearningPage() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<LearningItem[]>([]);
   const [progress, setProgress] = useState<Map<string, ProgressEntry>>(new Map());
+  const [covers, setCovers] = useState<Record<string, string>>({});
 
   const [addOpen, setAddOpen] = useState(false);
   const [addTab, setAddTab] = useState<ItemType>("video");
@@ -165,7 +210,13 @@ function LearningPage() {
           .eq("workspace_id", workspaceId)
           .eq("profile_id", profile.id),
       ]);
-      setItems((itemsRes.data ?? []) as LearningItem[]);
+      const rows = (itemsRes.data ?? []) as LearningItem[];
+      setItems(rows);
+      const coverPaths = rows
+        .map((r) => r.storage_path)
+        .filter((p): p is string => !!p);
+      setCovers(await signCovers(coverPaths));
+
       const map = new Map<string, ProgressEntry>();
       for (const p of (progressRes.data ?? []) as Array<{
         item_id: string;
@@ -252,8 +303,33 @@ function LearningPage() {
     void loadAll();
   };
 
+  /** Upload/replace an item's cover image. */
+  const setCover = async (item: LearningItem, file: File) => {
+    if (!workspaceId) {
+      toast.error(tr("Workspace not ready"));
+      return;
+    }
+    try {
+      const path = await uploadCover(workspaceId, file);
+      const { error } = await sbWorkshop()
+        .from("learning_items")
+        .update({ storage_path: path })
+        .eq("id", item.id);
+      if (error) throw error;
+      const signed = await signCovers([path]);
+      setCovers((m) => ({ ...m, [path]: signed[path] ?? "" }));
+      setItems((list) =>
+        list.map((i) => (i.id === item.id ? { ...i, storage_path: path } : i)),
+      );
+      toast.success(tr("Cover image updated"));
+    } catch (e: any) {
+      toast.error(e?.message ?? tr("Upload failed"));
+    }
+  };
+
   const canDelete = (item: LearningItem) =>
     isStaff || (profile && item.added_by_id === profile.id);
+
 
   const videos = useMemo(() => items.filter((i) => i.item_type === "video"), [items]);
   const notes = useMemo(() => items.filter((i) => i.item_type === "note"), [items]);
@@ -310,13 +386,16 @@ function LearningPage() {
                 <VideoCard
                   key={v.id}
                   item={v}
+                  coverUrl={v.storage_path ? covers[v.storage_path] ?? null : null}
                   viewed={getProg(v.id).viewed}
                   learned={getProg(v.id).learned}
                   onOpen={() => openItem(v)}
                   onView={() => toggleProgress(v, "viewed")}
                   onLearn={() => toggleProgress(v, "learned")}
                   onDelete={canDelete(v) ? () => deleteItem(v) : undefined}
+                  onSetCover={canDelete(v) ? (f: File) => setCover(v, f) : undefined}
                 />
+
               ))}
             </TabsContent>
 
@@ -411,6 +490,7 @@ function AddItemDialog({
   const [url, setUrl] = useState("");
   const [tag, setTag] = useState("");
   const [duration, setDuration] = useState("");
+  const [cover, setCover] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -420,6 +500,7 @@ function AddItemDialog({
     setUrl("");
     setTag("");
     setDuration("");
+    setCover(null);
     setSource(type === "video" ? "youtube" : type === "note" ? "photo" : "doc");
   }, [open, type]);
 
@@ -437,26 +518,32 @@ function AddItemDialog({
       return;
     }
     setSubmitting(true);
-    const { error } = await sbWorkshop()
-      .from("learning_items")
-      .insert({
-        workspace_id: workspaceId,
-        added_by_id: profileId,
-        item_type: type,
-        source,
-        title: title.trim(),
-        url: url.trim() || null,
-        tag: tag.trim() || null,
-        duration_label: duration.trim() || null,
-      });
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      let storagePath: string | null = null;
+      if (cover) storagePath = await uploadCover(workspaceId, cover);
+      const { error } = await sbWorkshop()
+        .from("learning_items")
+        .insert({
+          workspace_id: workspaceId,
+          added_by_id: profileId,
+          item_type: type,
+          source,
+          title: title.trim(),
+          url: url.trim() || null,
+          tag: tag.trim() || null,
+          duration_label: duration.trim() || null,
+          storage_path: storagePath,
+        });
+      if (error) throw error;
+      toast.success(tr("Added"));
+      onAdded();
+    } catch (e: any) {
+      toast.error(e?.message ?? tr("Failed to add"));
+    } finally {
+      setSubmitting(false);
     }
-    toast.success(tr("Added"));
-    onAdded();
   };
+
 
   const sourceOptions: { value: Source; label: string }[] =
     type === "video"
@@ -526,6 +613,33 @@ function AddItemDialog({
               />
             </div>
           )}
+
+          {type === "video" && (
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-1">
+                {tr("Cover image")}{" "}
+                {source === "facebook" ? (
+                  <span className="text-amber-400">
+                    {tr("(recommended — Facebook gives no preview image)")}
+                  </span>
+                ) : (
+                  <span>{tr("(optional)")}</span>
+                )}
+              </p>
+              <label className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-md border border-input px-3 text-xs text-muted-foreground">
+                <ImagePlus className="h-3.5 w-3.5" />
+                <span className="truncate">{cover ? cover.name : tr("Choose a photo")}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => setCover(e.target.files?.[0] ?? null)}
+                />
+              </label>
+            </div>
+          )}
+
+
 
           <div>
             <p className="text-[11px] text-muted-foreground mb-1">{tr("Tag")}</p>
@@ -631,27 +745,33 @@ function DeleteBtn({ onDelete }: { onDelete: () => void }) {
 
 function VideoCard({
   item,
+  coverUrl,
   viewed,
   learned,
   onOpen,
   onView,
   onLearn,
   onDelete,
+  onSetCover,
 }: {
   item: LearningItem;
+  coverUrl?: string | null;
   viewed: boolean;
   learned: boolean;
   onOpen: () => void;
   onView: () => void;
   onLearn: () => void;
   onDelete?: () => void;
+  onSetCover?: (file: File) => void;
 }) {
   const { tr } = useT();
-  const thumb = thumbFor(item);
+  const thumb = thumbFor(item, coverUrl);
   const isFacebook = isFacebookItem(item);
   const fbUrl = isFacebook ? verifiedFacebookUrl(item.url) : null;
   const valid = isFacebook ? Boolean(fbUrl) : isValidHttpUrl(item.url);
   const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => setImgFailed(false), [thumb]);
+
   return (
     <Card className="overflow-hidden">
       <button
@@ -715,6 +835,25 @@ function VideoCard({
             )}
           </p>
         ) : null}
+
+        {onSetCover && (
+          <label className="mt-2 inline-flex cursor-pointer items-center gap-1 rounded-md border border-input px-2 py-1 text-[11px] text-muted-foreground active:opacity-80">
+            <ImagePlus className="h-3.5 w-3.5" />
+            {item.storage_path ? tr("Change cover image") : tr("Add cover image")}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onSetCover(f);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+        )}
+
+
 
         <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
           {item.tag ? (
