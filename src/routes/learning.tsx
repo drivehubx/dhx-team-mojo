@@ -144,9 +144,10 @@ async function uploadCover(workspaceId: string, file: File): Promise<string> {
   const uuid =
     (globalThis.crypto as any)?.randomUUID?.() ?? Math.random().toString(36).slice(2);
   const path = `${workspaceId}/learning/${uuid}.${extOf(file.name)}`;
-  const { error } = await sbStorage()
+  const { error } = await dhxStorage
     .from(LEARNING_BUCKET)
     .upload(path, file, { contentType: file.type || undefined });
+
   if (error) throw error;
   return path;
 }
