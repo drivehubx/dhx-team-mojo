@@ -745,27 +745,33 @@ function DeleteBtn({ onDelete }: { onDelete: () => void }) {
 
 function VideoCard({
   item,
+  coverUrl,
   viewed,
   learned,
   onOpen,
   onView,
   onLearn,
   onDelete,
+  onSetCover,
 }: {
   item: LearningItem;
+  coverUrl?: string | null;
   viewed: boolean;
   learned: boolean;
   onOpen: () => void;
   onView: () => void;
   onLearn: () => void;
   onDelete?: () => void;
+  onSetCover?: (file: File) => void;
 }) {
   const { tr } = useT();
-  const thumb = thumbFor(item);
+  const thumb = thumbFor(item, coverUrl);
   const isFacebook = isFacebookItem(item);
   const fbUrl = isFacebook ? verifiedFacebookUrl(item.url) : null;
   const valid = isFacebook ? Boolean(fbUrl) : isValidHttpUrl(item.url);
   const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => setImgFailed(false), [thumb]);
+
   return (
     <Card className="overflow-hidden">
       <button
