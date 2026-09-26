@@ -129,13 +129,38 @@ function verifiedFacebookUrl(raw: string | null): string | null {
   }
 }
 
-/** Best available thumbnail: explicit one, else derived from YouTube. Facebook exposes none. */
-function thumbFor(item: LearningItem): string | null {
-  if (isFacebookItem(item)) return null;
+/** Bucket reused for learning cover images (workspace-scoped folder policy). */
+const LEARNING_BUCKET = "job-photos";
+
+function extOf(name: string): string {
+  const m = name.match(/\.([a-zA-Z0-9]+)$/);
+  return (m?.[1] ?? "jpg").toLowerCase();
+}
+
+/** Upload a cover image and return its storage path. */
+async function uploadCover(workspaceId: string, file: File): Promise<string> {
+  const uuid =
+    (globalThis.crypto as any)?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  const path = `${workspaceId}/learning/${uuid}.${extOf(file.name)}`;
+  const { error } = await sbStorage()
+    .from(LEARNING_BUCKET)
+    .upload(path, file, { contentType: file.type || undefined });
+  if (error) throw error;
+  return path;
+}
+
+/**
+ * Best available thumbnail:
+ * uploaded cover (signed) → explicit thumbnail_url → derived YouTube frame.
+ * Facebook exposes no public thumbnail, so an uploaded cover is the only option there.
+ */
+function thumbFor(item: LearningItem, coverUrl?: string | null): string | null {
+  if (coverUrl) return coverUrl;
   if (item.thumbnail_url) return item.thumbnail_url;
   const id = youtubeId(item.url);
   return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
 }
+
 
 
 function LearningPage() {
