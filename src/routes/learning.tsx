@@ -152,6 +152,22 @@ async function uploadCover(workspaceId: string, file: File): Promise<string> {
   return path;
 }
 
+/** Sign uploaded cover paths for display. */
+async function signCovers(paths: string[]): Promise<Record<string, string>> {
+  if (paths.length === 0) return {};
+  const { data, error } = await dhxStorage
+    .from(LEARNING_BUCKET)
+    .createSignedUrls(paths, 60 * 60);
+  if (error) return {};
+  const out: Record<string, string> = {};
+  for (const it of (data ?? []) as Array<{ path: string | null; signedUrl: string | null }>) {
+    if (it.path && it.signedUrl) out[it.path] = it.signedUrl;
+  }
+  return out;
+}
+
+
+
 /**
  * Best available thumbnail:
  * uploaded cover (signed) → explicit thumbnail_url → derived YouTube frame.
