@@ -189,6 +189,7 @@ function LearningPage() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<LearningItem[]>([]);
   const [progress, setProgress] = useState<Map<string, ProgressEntry>>(new Map());
+  const [covers, setCovers] = useState<Record<string, string>>({});
 
   const [addOpen, setAddOpen] = useState(false);
   const [addTab, setAddTab] = useState<ItemType>("video");
@@ -209,7 +210,13 @@ function LearningPage() {
           .eq("workspace_id", workspaceId)
           .eq("profile_id", profile.id),
       ]);
-      setItems((itemsRes.data ?? []) as LearningItem[]);
+      const rows = (itemsRes.data ?? []) as LearningItem[];
+      setItems(rows);
+      const coverPaths = rows
+        .map((r) => r.storage_path)
+        .filter((p): p is string => !!p);
+      setCovers(await signCovers(coverPaths));
+
       const map = new Map<string, ProgressEntry>();
       for (const p of (progressRes.data ?? []) as Array<{
         item_id: string;
