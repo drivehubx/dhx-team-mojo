@@ -386,13 +386,16 @@ function LearningPage() {
                 <VideoCard
                   key={v.id}
                   item={v}
+                  coverUrl={v.storage_path ? covers[v.storage_path] ?? null : null}
                   viewed={getProg(v.id).viewed}
                   learned={getProg(v.id).learned}
                   onOpen={() => openItem(v)}
                   onView={() => toggleProgress(v, "viewed")}
                   onLearn={() => toggleProgress(v, "learned")}
                   onDelete={canDelete(v) ? () => deleteItem(v) : undefined}
+                  onSetCover={canDelete(v) ? (f: File) => setCover(v, f) : undefined}
                 />
+
               ))}
             </TabsContent>
 
