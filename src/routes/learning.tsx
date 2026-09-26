@@ -490,6 +490,7 @@ function AddItemDialog({
   const [url, setUrl] = useState("");
   const [tag, setTag] = useState("");
   const [duration, setDuration] = useState("");
+  const [cover, setCover] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -499,6 +500,7 @@ function AddItemDialog({
     setUrl("");
     setTag("");
     setDuration("");
+    setCover(null);
     setSource(type === "video" ? "youtube" : type === "note" ? "photo" : "doc");
   }, [open, type]);
 
@@ -516,26 +518,32 @@ function AddItemDialog({
       return;
     }
     setSubmitting(true);
-    const { error } = await sbWorkshop()
-      .from("learning_items")
-      .insert({
-        workspace_id: workspaceId,
-        added_by_id: profileId,
-        item_type: type,
-        source,
-        title: title.trim(),
-        url: url.trim() || null,
-        tag: tag.trim() || null,
-        duration_label: duration.trim() || null,
-      });
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      let storagePath: string | null = null;
+      if (cover) storagePath = await uploadCover(workspaceId, cover);
+      const { error } = await sbWorkshop()
+        .from("learning_items")
+        .insert({
+          workspace_id: workspaceId,
+          added_by_id: profileId,
+          item_type: type,
+          source,
+          title: title.trim(),
+          url: url.trim() || null,
+          tag: tag.trim() || null,
+          duration_label: duration.trim() || null,
+          storage_path: storagePath,
+        });
+      if (error) throw error;
+      toast.success(tr("Added"));
+      onAdded();
+    } catch (e: any) {
+      toast.error(e?.message ?? tr("Failed to add"));
+    } finally {
+      setSubmitting(false);
     }
-    toast.success(tr("Added"));
-    onAdded();
   };
+
 
   const sourceOptions: { value: Source; label: string }[] =
     type === "video"
