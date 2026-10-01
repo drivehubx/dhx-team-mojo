@@ -1,6 +1,20 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+declare const __APP_BUILD__: string;
+export const APP_BUILD: string = typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "dev";
+let activeReg: ServiceWorkerRegistration | null = null;
+
+/** Manual check from Settings. Returns true if an update was found. */
+export async function checkForUpdate(): Promise<boolean> {
+  const reg = activeReg ?? (await navigator.serviceWorker?.getRegistration());
+  if (!reg) { window.location.reload(); return false; }
+  await reg.update().catch(() => {});
+  const w = reg.waiting ?? reg.installing;
+  if (w) { w.postMessage("SKIP_WAITING"); return true; }
+  return false;
+}
+
 function isPreviewOrDevHost(): boolean {
   if (typeof window === "undefined") return true;
   const h = window.location.hostname;
@@ -35,15 +49,16 @@ export function registerPwa() {
     let currentReg: ServiceWorkerRegistration | null = null;
 
     navigator.serviceWorker
-      .register("/sw.js", { scope: "/" })
+      .register(`/sw.js?v=${APP_BUILD}`, { scope: "/" })
       .then((reg) => {
         currentReg = reg;
+        activeReg = reg;
 
         // Kick off an immediate update check (don't await — must not block rendering).
         reg.update().catch(() => {});
 
-        // If a new SW is already waiting, prompt to update.
-        if (reg.waiting) promptUpdate(reg.waiting);
+        // Fresh launch with an update already downloaded: apply it straight away.
+        if (reg.waiting) reg.waiting.postMessage("SKIP_WAITING");
 
         reg.addEventListener("updatefound", () => {
           const sw = reg.installing;
@@ -83,6 +98,7 @@ function promptUpdate(sw: ServiceWorker) {
       onClick: () => sw.postMessage("SKIP_WAITING"),
     },
     duration: Infinity,
+    id: "pwa-update",
   });
 }
 
