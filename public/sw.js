@@ -2,7 +2,7 @@
  * Network-first for HTML/navigation so new deploys are never trapped behind an old page.
  * Cache-first only for safe, versioned static assets. Never caches Supabase API/auth/DB/signed-storage.
  */
-const VERSION = 'dhx-v2';
+const VERSION = 'dhx-v3';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -20,7 +20,6 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(SHELL_CACHE)
       .then((cache) => cache.addAll(SHELL_ASSETS).catch(() => {}))
-      .then(() => self.skipWaiting())
   );
 });
 
