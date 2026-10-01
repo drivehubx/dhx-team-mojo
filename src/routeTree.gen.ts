@@ -9,66 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ActivateRouteImport } from './routes/activate'
-import { Route as AdvanceRouteImport } from './routes/advance'
-import { Route as LearningRouteImport } from './routes/learning'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as SalaryRouteImport } from './routes/salary'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as TeamRouteImport } from './routes/team'
-import { Route as BpIndexRouteImport } from './routes/bp.index'
-import { Route as BpIdRouteImport } from './routes/bp.$id'
-import { Route as BpNewRouteImport } from './routes/bp.new'
-import { Route as JobsIndexRouteImport } from './routes/jobs.index'
-import { Route as JobsIdRouteImport } from './routes/jobs.$id'
-import { Route as JobsNewRouteImport } from './routes/jobs.new'
+import { Route as SkillsRouteImport } from './routes/skills'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SalaryRouteImport } from './routes/salary'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LearningRouteImport } from './routes/learning'
+import { Route as AdvanceRouteImport } from './routes/advance'
+import { Route as ActivateRouteImport } from './routes/activate'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as MechanicJobsIndexRouteImport } from './routes/mechanic-jobs.index'
-import { Route as MechanicJobsIdRouteImport } from './routes/mechanic-jobs.$id'
-import { Route as MechanicJobsNewRouteImport } from './routes/mechanic-jobs.new'
-import { Route as TeamIdRouteImport } from './routes/team.$id'
+import { Route as JobsIndexRouteImport } from './routes/jobs.index'
+import { Route as BpIndexRouteImport } from './routes/bp.index'
 import { Route as VehiclesSoldRouteImport } from './routes/vehicles.sold'
+import { Route as TeamIdRouteImport } from './routes/team.$id'
+import { Route as MechanicJobsNewRouteImport } from './routes/mechanic-jobs.new'
+import { Route as MechanicJobsIdRouteImport } from './routes/mechanic-jobs.$id'
+import { Route as JobsNewRouteImport } from './routes/jobs.new'
+import { Route as JobsIdRouteImport } from './routes/jobs.$id'
+import { Route as BpNewRouteImport } from './routes/bp.new'
+import { Route as BpIdRouteImport } from './routes/bp.$id'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ActivateRoute = ActivateRouteImport.update({
-  id: '/activate',
-  path: '/activate',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdvanceRoute = AdvanceRouteImport.update({
-  id: '/advance',
-  path: '/advance',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LearningRoute = LearningRouteImport.update({
-  id: '/learning',
-  path: '/learning',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SalaryRoute = SalaryRouteImport.update({
-  id: '/salary',
-  path: '/salary',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SkillsRoute = SkillsRouteImport.update({
@@ -76,39 +41,44 @@ const SkillsRoute = SkillsRouteImport.update({
   path: '/skills',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TeamRoute = TeamRouteImport.update({
-  id: '/team',
-  path: '/team',
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BpIndexRoute = BpIndexRouteImport.update({
-  id: '/bp/',
-  path: '/bp/',
+const SalaryRoute = SalaryRouteImport.update({
+  id: '/salary',
+  path: '/salary',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BpIdRoute = BpIdRouteImport.update({
-  id: '/bp/$id',
-  path: '/bp/$id',
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BpNewRoute = BpNewRouteImport.update({
-  id: '/bp/new',
-  path: '/bp/new',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JobsIndexRoute = JobsIndexRouteImport.update({
-  id: '/jobs/',
-  path: '/jobs/',
+const LearningRoute = LearningRouteImport.update({
+  id: '/learning',
+  path: '/learning',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JobsIdRoute = JobsIdRouteImport.update({
-  id: '/jobs/$id',
-  path: '/jobs/$id',
+const AdvanceRoute = AdvanceRouteImport.update({
+  id: '/advance',
+  path: '/advance',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JobsNewRoute = JobsNewRouteImport.update({
-  id: '/jobs/new',
-  path: '/jobs/new',
+const ActivateRoute = ActivateRouteImport.update({
+  id: '/activate',
+  path: '/activate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MechanicJobsIndexRoute = MechanicJobsIndexRouteImport.update({
@@ -116,14 +86,19 @@ const MechanicJobsIndexRoute = MechanicJobsIndexRouteImport.update({
   path: '/mechanic-jobs/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MechanicJobsIdRoute = MechanicJobsIdRouteImport.update({
-  id: '/mechanic-jobs/$id',
-  path: '/mechanic-jobs/$id',
+const JobsIndexRoute = JobsIndexRouteImport.update({
+  id: '/jobs/',
+  path: '/jobs/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MechanicJobsNewRoute = MechanicJobsNewRouteImport.update({
-  id: '/mechanic-jobs/new',
-  path: '/mechanic-jobs/new',
+const BpIndexRoute = BpIndexRouteImport.update({
+  id: '/bp/',
+  path: '/bp/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VehiclesSoldRoute = VehiclesSoldRouteImport.update({
+  id: '/vehicles/sold',
+  path: '/vehicles/sold',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TeamIdRoute = TeamIdRouteImport.update({
@@ -131,9 +106,34 @@ const TeamIdRoute = TeamIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => TeamRoute,
 } as any)
-const VehiclesSoldRoute = VehiclesSoldRouteImport.update({
-  id: '/vehicles/sold',
-  path: '/vehicles/sold',
+const MechanicJobsNewRoute = MechanicJobsNewRouteImport.update({
+  id: '/mechanic-jobs/new',
+  path: '/mechanic-jobs/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MechanicJobsIdRoute = MechanicJobsIdRouteImport.update({
+  id: '/mechanic-jobs/$id',
+  path: '/mechanic-jobs/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsNewRoute = JobsNewRouteImport.update({
+  id: '/jobs/new',
+  path: '/jobs/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsIdRoute = JobsIdRouteImport.update({
+  id: '/jobs/$id',
+  path: '/jobs/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BpNewRoute = BpNewRouteImport.update({
+  id: '/bp/new',
+  path: '/bp/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BpIdRoute = BpIdRouteImport.update({
+  id: '/bp/$id',
+  path: '/bp/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -304,60 +304,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/activate': {
-      id: '/activate'
-      path: '/activate'
-      fullPath: '/activate'
-      preLoaderRoute: typeof ActivateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/advance': {
-      id: '/advance'
-      path: '/advance'
-      fullPath: '/advance'
-      preLoaderRoute: typeof AdvanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/learning': {
-      id: '/learning'
-      path: '/learning'
-      fullPath: '/learning'
-      preLoaderRoute: typeof LearningRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/salary': {
-      id: '/salary'
-      path: '/salary'
-      fullPath: '/salary'
-      preLoaderRoute: typeof SalaryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/skills': {
@@ -367,53 +318,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SkillsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/team': {
-      id: '/team'
-      path: '/team'
-      fullPath: '/team'
-      preLoaderRoute: typeof TeamRouteImport
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bp/': {
-      id: '/bp/'
-      path: '/bp'
-      fullPath: '/bp/'
-      preLoaderRoute: typeof BpIndexRouteImport
+    '/salary': {
+      id: '/salary'
+      path: '/salary'
+      fullPath: '/salary'
+      preLoaderRoute: typeof SalaryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bp/$id': {
-      id: '/bp/$id'
-      path: '/bp/$id'
-      fullPath: '/bp/$id'
-      preLoaderRoute: typeof BpIdRouteImport
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bp/new': {
-      id: '/bp/new'
-      path: '/bp/new'
-      fullPath: '/bp/new'
-      preLoaderRoute: typeof BpNewRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/jobs/': {
-      id: '/jobs/'
-      path: '/jobs'
-      fullPath: '/jobs/'
-      preLoaderRoute: typeof JobsIndexRouteImport
+    '/learning': {
+      id: '/learning'
+      path: '/learning'
+      fullPath: '/learning'
+      preLoaderRoute: typeof LearningRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/jobs/$id': {
-      id: '/jobs/$id'
-      path: '/jobs/$id'
-      fullPath: '/jobs/$id'
-      preLoaderRoute: typeof JobsIdRouteImport
+    '/advance': {
+      id: '/advance'
+      path: '/advance'
+      fullPath: '/advance'
+      preLoaderRoute: typeof AdvanceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/jobs/new': {
-      id: '/jobs/new'
-      path: '/jobs/new'
-      fullPath: '/jobs/new'
-      preLoaderRoute: typeof JobsNewRouteImport
+    '/activate': {
+      id: '/activate'
+      path: '/activate'
+      fullPath: '/activate'
+      preLoaderRoute: typeof ActivateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mechanic-jobs/': {
@@ -423,18 +381,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MechanicJobsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mechanic-jobs/$id': {
-      id: '/mechanic-jobs/$id'
-      path: '/mechanic-jobs/$id'
-      fullPath: '/mechanic-jobs/$id'
-      preLoaderRoute: typeof MechanicJobsIdRouteImport
+    '/jobs/': {
+      id: '/jobs/'
+      path: '/jobs'
+      fullPath: '/jobs/'
+      preLoaderRoute: typeof JobsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mechanic-jobs/new': {
-      id: '/mechanic-jobs/new'
-      path: '/mechanic-jobs/new'
-      fullPath: '/mechanic-jobs/new'
-      preLoaderRoute: typeof MechanicJobsNewRouteImport
+    '/bp/': {
+      id: '/bp/'
+      path: '/bp'
+      fullPath: '/bp/'
+      preLoaderRoute: typeof BpIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vehicles/sold': {
+      id: '/vehicles/sold'
+      path: '/vehicles/sold'
+      fullPath: '/vehicles/sold'
+      preLoaderRoute: typeof VehiclesSoldRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/team/$id': {
@@ -444,11 +409,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamIdRouteImport
       parentRoute: typeof TeamRoute
     }
-    '/vehicles/sold': {
-      id: '/vehicles/sold'
-      path: '/vehicles/sold'
-      fullPath: '/vehicles/sold'
-      preLoaderRoute: typeof VehiclesSoldRouteImport
+    '/mechanic-jobs/new': {
+      id: '/mechanic-jobs/new'
+      path: '/mechanic-jobs/new'
+      fullPath: '/mechanic-jobs/new'
+      preLoaderRoute: typeof MechanicJobsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mechanic-jobs/$id': {
+      id: '/mechanic-jobs/$id'
+      path: '/mechanic-jobs/$id'
+      fullPath: '/mechanic-jobs/$id'
+      preLoaderRoute: typeof MechanicJobsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs/new': {
+      id: '/jobs/new'
+      path: '/jobs/new'
+      fullPath: '/jobs/new'
+      preLoaderRoute: typeof JobsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs/$id': {
+      id: '/jobs/$id'
+      path: '/jobs/$id'
+      fullPath: '/jobs/$id'
+      preLoaderRoute: typeof JobsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bp/new': {
+      id: '/bp/new'
+      path: '/bp/new'
+      fullPath: '/bp/new'
+      preLoaderRoute: typeof BpNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bp/$id': {
+      id: '/bp/$id'
+      path: '/bp/$id'
+      fullPath: '/bp/$id'
+      preLoaderRoute: typeof BpIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
