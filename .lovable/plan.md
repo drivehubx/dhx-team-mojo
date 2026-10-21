@@ -1,55 +1,93 @@
-# Team screen: audit fixes 1–9 + full Team Member edit
+# Salary Advance on Behalf + Disbursement + Payroll Deduction — Audit and Plan
 
-## Backend audit result (read-only checks, nothing changed)
+Audit only. Nothing changes until you approve each phase.
 
-What the existing layer already allows, verified against `core`:
+## 1. Findings (verified this turn)
 
-| Field | Path available today | Who |
-|---|---|---|
-| Full name, Phone, Email, Avatar URL, Notes, Emergency contact | direct `UPDATE core.profiles` — `authenticated` has UPDATE, RLS policy `profiles_update` allows self or `core.is_owner_or_manager()` (role rank >= 70 = owner / administrator / manager) | Owner, Administrator, Manager |
-| Permission Role | `core.set_member_role` | admin; refuses owner and anyone at/above your own rank |
-| Positions (multiple) | `core.set_member_positions(profile_id, uuid[])` | admin |
-| Engagement type | `core.set_member_engagement` (accepts null) | admin |
-| Active / Inactive | `core.set_member_active` | admin; refuses self and owner |
+**workshop.advances**: id, workspace_id, profile_id, amount, reason, status (pending/approved/rejected), requested_at, reviewed_at, reviewed_by, created_at.
+- No fields for: created-by (who keyed it in), payment method, paid date, paid-by, paid amount, settled amount, cancel/void.
+- "Approved" is the last state. There is no way today to say the money was actually handed over.
 
-So **all requested fields except avatar image upload are already safely editable** with no new RPC, no RLS change, no schema change.
+**workshop.salaries**: one row per person per period: basic, allowances, bonus, deductions (one number), paid (yes/no), notes.
+- No EPF / SOCSO / EIS / PCB fields. Statutory deductions are not in the system; "deductions" is one manual number.
+- No link between a salary row and which advances it repaid, so duplicate deduction cannot be detected.
+- Uniqueness on (workspace, person, period): not confirmed.
 
-Fields that need a backend change (NOT doing now, reporting only):
-- **Avatar photo upload.** `avatar_url` text is writable, but there is no public avatar bucket; existing buckets (`staff-documents`, `dhx-docs`) are private and would need storage policies + signed-URL handling. Smallest change: one storage bucket for member avatars with an owner/admin-write, workspace-read policy. Until then the edit sheet will offer an avatar image **URL** field only.
-- **`notes` / `emergency_contact`** exist on `core.profiles` but are not exposed by the `core.team_directory` view. Rather than change the shared view, the edit sheet reads those two columns straight from `core.profiles` (SELECT is workspace-scoped) and only for admins. No backend change needed.
-- Observation, not a fix: `anon` holds an UPDATE grant on `core.profiles`; RLS blocks it (`current_workspace_id()` is null for anon), so it is not exploitable, but the grant is wider than needed. Flagging for the shared-backend owners; not touching it here.
+**Access rules (RLS)**
+- Advance create: only for yourself (`profile_id = auth.uid()`). So owner on-behalf entry is blocked today by the database — the change cannot be done in the screen alone.
+- Advance view: own records, or owner/manager.
+- Advance approve/edit: owner/manager. Delete: owner only.
+- Salary write: owner only. Salary view: own, or owner/manager.
+- Gap: the app treats Supervisors as "staff" (sees the Pending/Approve tab), but the database only lets owner/manager approve — supervisors would get an error.
+- Policies are written for role `public`, not `authenticated` (works, but untidy).
 
-Role and Position stay strictly separate — Position never affects permissions anywhere in this work.
+**Legacy data**: the audit query returned no rows in either table. Must be re-confirmed before migrating (possible permission view limit).
 
-## Work to build
+**Payroll process today**: owner types basic/allowances/bonus/deductions by hand per period; net = basic + allowances + bonus − deductions. Advances are not linked automatically.
 
-### A. Audit fixes 1–9 (from the earlier audit)
-1. Invite link uses `window.location.origin` instead of the hardcoded `dhx-workshop.lovable.app`.
-2. WhatsApp invite number normalised to international form (leading `0` → `60`).
-3. Real error states with Retry on both `/team` and `/team/$id`, instead of "no results" / "not found".
-4. Position selection no longer reset by background refetches.
-5. No greyed-out fake controls for non-admins — clean read-only presentation.
-6. Engagement type can be cleared (tap the selected one).
-7. Remove the dead `clickable` prop on `MemberCard`; always a link with the chevron.
-8. Search also matches position and engagement labels.
-9. Complete `head()` meta (og:title / og:description) on both routes.
+## 2. Unresolved questions (need your answer)
 
-Plus: consolidate the duplicated `initialsOf` helper.
+1. Who may create on behalf and record payment: owner only, or owner + administrator + manager? Supervisors?
+2. On-behalf entry by owner: auto-approved, or still needs a second person to approve?
+3. Default deduction per month: full remaining balance, or a fixed instalment set per advance (e.g. RM 100/month)?
+4. If net pay would go below zero (or below a minimum), carry the rest to next month? Minimum take-home?
+5. EPF/SOCSO/EIS/PCB: done outside (accountant/payroll software)? If yes, this system stays "advance deduction only" and we do not compute statutory amounts.
+6. Any old approved advances already repaid in cash or already deducted manually? Plan: mark all existing approved ones as "legacy — not auto-deducted" unless you tick them individually.
+7. Can a paid advance be cancelled? Proposal: never delete — only reverse with a reason.
 
-### B. `/team/$id` becomes a real management screen
-- Read-only profile view for everyone: avatar, name, phone, email, role badge, positions, engagement, status, activity stats. Phone and email become tap-to-call / tap-to-mail links.
-- Owner/Administrator/Manager get a single **Edit** button in the header that opens one full-screen edit sheet (mobile-first), replacing today's scattered inline controls.
-- Edit sheet sections:
-  - **Details** — full name (required), phone, email, avatar image URL, notes, emergency contact.
-  - **Permission Role** — Administrator / Manager / Supervisor / Team Member, with a short "controls access" caption. Owner shown locked and non-assignable, as the database enforces.
-  - **Positions** — multi-select chips from `core.positions` (Mechanic, Painter, Panel Beater, Helper, and whatever else is active), captioned "what they do — does not affect access".
-  - **Engagement type** — single select, clearable.
-  - **Status** — Active / Inactive toggle; deactivation keeps its confirmation dialog. Hidden for yourself and for the owner, matching the database rules.
-- One **Save Changes** button diffs against loaded values and only calls the paths that actually changed (profile update + the relevant RPCs), with per-field validation (name non-empty, email shape, avatar must be an http(s) URL), a pending state, one success toast, and a per-failure error toast naming what failed. **Cancel** discards everything.
-- Because role/status rules live in the database, a rejected change surfaces the database's own message (e.g. "You cannot modify someone at or above your own System Role") rather than being pre-hidden incorrectly.
+## 3. Proposed design (minimal)
+
+```text
+pending -> approved -> paid -> (partially settled) -> settled
+        \-> rejected        \-> reversed (with reason)
+```
+
+- Approval and payment are separate steps with separate people/timestamps.
+- Only **paid** advances with a remaining balance are offered to payroll.
+- Each deduction is a separate ledger line tied to one salary period, so the same money is never deducted twice.
+
+### Database changes (one migration, additive only — no drops, no renames)
+- `workshop.advances` add: created_by, entry_mode (self / on_behalf), payment_method (cash / bank / duitnow), paid_at (date), paid_by, payment_reference, is_legacy (default false), reversed_at, reversed_by, reverse_reason, instalment_amount (optional).
+- Extend status values with `paid`, `settled`, `reversed` (keep existing values).
+- New `workshop.advance_deductions`: advance_id, salary_id, period, amount, created_by, created_at; unique (advance_id, salary_id).
+- `workshop.salaries`: add `advance_deduction_total`; unique (workspace_id, profile_id, period) if no duplicates exist.
+- Mark all existing approved rows `is_legacy = true` (excluded from auto-deduct).
+- Server-side functions (transaction + row lock to prevent double clicks / two people at once):
+  - `create_advance_on_behalf(profile, amount, reason, method, paid_at, operator)`
+  - `record_advance_payment(advance, method, paid_at, reference)` — only from `approved`
+  - `apply_advance_deductions(salary_id, lines[])` — locks advances, checks remaining balance, writes ledger lines, updates statuses; re-running for the same salary is rejected or replaces lines safely
+  - `reverse_advance(advance, reason)`
+- Access: self-insert rule stays as is; on-behalf, payment and deduction only via the functions above, checked against `core.roles` for the allowed roles. Policies moved to `authenticated`.
+- Audit: write every create/approve/pay/deduct/reverse to the existing core audit table (to verify it exists first; otherwise a small `workshop.advance_events` table).
+
+This is a shared backend — the change touches only `workshop.*` advance/salary objects; Rental and Driver apps are not expected to use them, to confirm before running.
+
+## 4. Phased build
+
+**Phase 0 — confirm (no changes)**: answer questions above; re-check row counts, duplicate salary periods, audit table, whether sibling apps read `workshop.advances`.
+
+**Phase 1 — database**: run the migration above; tests in SQL for: self-request still works; worker cannot create for others; approved-not-paid never deducted; legacy never auto-deducted; partial deduction leaves correct balance; same salary cannot deduct twice; two parallel deductions cannot exceed balance.
+
+**Phase 2 — Advance screen**:
+- Keep the worker's own "Request Advance" and "My history" exactly as now.
+- Owner/admin: "Add for Team Member" — pick person, amount, optional reason, method (Cash/Bank/DuitNow), paid date, operator shown automatically. Option "already paid now".
+- Approved tab gets "Mark as paid" button.
+- Tabs: Pending / Approved (unpaid) / Paid (outstanding) / Settled / Rejected.
+- Fix the supervisor mismatch (hide approve buttons for roles the database refuses).
+
+**Phase 3 — Salary screen**:
+- When opening a period, show "Outstanding paid advances" with suggested amount each (editable down, never above balance); carry the rest forward.
+- Deduction saved through the server function; manual "other deductions" stays separate.
+- Statutory: unchanged (manual) unless you answer Q5 otherwise.
+
+**Phase 4 — Ledger and audit**:
+- Per Team Member ledger: each advance, paid date, method, deductions by month, balance left. Worker sees only their own.
+- Audit list for owner.
+
+**Phase 5 — tests and check**: unit tests for balance/carryover math and status rules; run on preview; you test on phone with Ngah's case.
 
 ## Technical notes
-
-Files touched: `src/routes/team.tsx`, `src/routes/team.$id.tsx`, `src/lib/team.ts` (add a `useUpdateMemberProfile` mutation + an admin-only fetch of `notes`/`emergency_contact`), a new `src/components/team-member-edit-sheet.tsx`, and a small phone-normalisation helper. `src/integrations/supabase/shared-schema.ts` gains the extra profile field types only.
-
-No migration, no RPC change, no RLS change, no schema change, no changes to the language/learning module or other screens. If avatar upload or anything else turns out to require a backend change, I will stop and ask first.
+- Use `createServerFn` + `requireSupabaseAuth` calling the database functions; no edge functions.
+- Money in numeric, rounded to 2 decimals in the function, never in the browser only.
+- Concurrency: `SELECT ... FOR UPDATE` on advances inside the deduction function; unique constraint on the ledger as a second guard.
+- Multilingual/learning features untouched.
