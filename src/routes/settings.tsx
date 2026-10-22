@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { useWorkspace, WorkspaceGate } from "@/lib/workspace";
 import { sbCore } from "@/integrations/supabase/shared-schema";
 import { APP_BUILD, checkForUpdate } from "@/lib/pwa";
+import { DeductionPolicyEditor } from "@/components/deduction-policy-editor";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -47,7 +48,7 @@ function SettingsPage() {
   const router = useRouter();
   const { tr, lang } = useT();
   const { user } = useAuth();
-  const { workspaceId, isAdmin } = useWorkspace();
+  const { workspaceId, isAdmin, isOwner } = useWorkspace();
   const [personalLangOpen, setPersonalLangOpen] = useState(false);
   const currentLang = LANGS.find((l) => l.code === lang) ?? LANGS[0];
 
@@ -103,6 +104,12 @@ function SettingsPage() {
 
       {isAdmin && workspaceId && user && (
         <WorkspaceSection workspaceId={workspaceId} actorId={user.id} />
+      )}
+
+      {isOwner && workspaceId && (
+        <div className="mt-5 px-5">
+          <DeductionPolicyEditor workspaceId={workspaceId} />
+        </div>
       )}
 
       <p className="mt-8 mb-4 text-center text-[11px] text-muted-foreground">
