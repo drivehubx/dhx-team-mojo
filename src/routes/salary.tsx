@@ -7,6 +7,7 @@ import { useWorkspaceProfiles } from "@/lib/jobs";
 import { sbWorkshop, type WorkshopSalary, type CoreProfile } from "@/integrations/supabase/shared-schema";
 import { useAdvances, useRequestAdvance, type AdvanceWithProfile } from "@/lib/advances";
 import { Wallet, Loader2, Save, Plus } from "lucide-react";
+import { AdvanceDeductionPanel } from "@/components/advance-deduction-panel";
 
 export const Route = createFileRoute("/salary")({
   head: () => ({
@@ -31,7 +32,7 @@ const thisPeriod = () => {
 };
 
 function SalaryPage() {
-  const { profile, workspaceId, isStaff, isOwner, isManager, isWorker } = useWorkspace();
+  const { profile, workspaceId, isStaff, isOwner, isManager, isWorker, isAdmin } = useWorkspace();
   const profilesQ = useWorkspaceProfiles(workspaceId);
 
   const [period, setPeriod] = useState(thisPeriod());
@@ -127,6 +128,16 @@ function SalaryPage() {
           />
         )}
 
+        {!fetching && workspaceId && selectedId && (
+          <AdvanceDeductionPanel
+            key={`ded-${selectedId}-${period}-${salary?.id ?? "none"}`}
+            workspaceId={workspaceId}
+            profileId={selectedId}
+            salary={salary as any}
+            canEdit={isAdmin}
+          />
+        )}
+
         {isWorker && profile && workspaceId && (
           <CrewAdvanceSection workspaceId={workspaceId} userId={profile.id} />
         )}
@@ -163,8 +174,8 @@ function SalaryEditor({
   const [saving, setSaving] = useState(false);
 
   const net = useMemo(
-    () => Number(basic) + Number(allowances) + Number(bonus) - Number(deductions),
-    [basic, allowances, bonus, deductions],
+    () => Number(basic) + Number(allowances) + Number(bonus) - Number(deductions) - Number((initial as any)?.other_s114_deductions ?? 0) - Number((initial as any)?.advance_deduction_total ?? 0),
+    [basic, allowances, bonus, deductions, initial],
   );
 
   const save = async () => {
@@ -219,7 +230,7 @@ function SalaryEditor({
       <Field label="Basic" value={basic} onChange={setBasic} disabled={readOnly} />
       <Field label="Allowances (OT etc)" value={allowances} onChange={setAllowances} disabled={readOnly} />
       <Field label="Bonus" value={bonus} onChange={setBonus} disabled={readOnly} />
-      <Field label="Deductions" value={deductions} onChange={setDeductions} disabled={readOnly} />
+      <Field label="Other deductions (EPF/SOCSO etc, not advances)" value={deductions} onChange={setDeductions} disabled={readOnly} />
 
       <label className="block">
         <span className="text-[11px] text-muted-foreground">Notes</span>
@@ -415,6 +426,9 @@ function StatusBadge({ status }: { status: string }) {
     pending: "bg-amber-500/15 text-amber-600",
     approved: "bg-success/15 text-success",
     rejected: "bg-destructive/15 text-destructive",
+    paid: "bg-primary/15 text-primary",
+    partially_settled: "bg-primary/15 text-primary",
+    settled: "bg-success/15 text-success",
   };
   return (
     <span

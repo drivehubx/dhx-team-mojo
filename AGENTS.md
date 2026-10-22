@@ -1,0 +1,1 @@
+- Salary-advance recovery rules (balance, s.114 cap, paid-only, legacy exclusion) are enforced in workshop.save_period_deductions and related workshop.* RPCs; the UI (src/lib/advance-rules.ts) only mirrors them — why: the database must be the final legal check.

@@ -50,7 +50,7 @@ export type TeamDirectoryRow = {
   created_at?: string | null;
 };
 export type FileStatus = "pending" | "approved" | "rejected";
-export type AdvanceStatus = "pending" | "approved" | "rejected";
+export type AdvanceStatus = "pending" | "approved" | "rejected" | "repaid" | "paid" | "partially_settled" | "settled" | "reversed";
 export type JobStatus = "open" | "in_progress" | "completed" | "cancelled";
 export type IdType = "ic" | "passport";
 
